@@ -1,0 +1,87 @@
+{
+  "bundles": [
+    {
+      "name": "city",
+      "assets": [
+        {
+          "alias": "city_homes_slab",
+          "src": "assets/city/buildings/house.png"
+        },
+        {
+          "alias": "city_services_tower",
+          "src": "assets/city/buildings/business.png"
+        },
+        {
+          "alias": "city_data_bunker",
+          "src": "assets/city/buildings/data_center.png"
+        }
+      ]
+    },
+    {
+      "name": "plants",
+      "assets": [
+        {
+          "alias": "plant_reactor",
+          "src": "assets/city/buildings/nuclear.png"
+        },
+        {
+          "alias": "plant_boiler",
+          "src": "assets/city/buildings/thermal.png"
+        },
+        {
+          "alias": "plant_renewables",
+          "src": "assets/city/buildings/solar.png"
+        },
+        {
+          "alias": "plant_solar",
+          "src": "assets/city/buildings/solar.png"
+        },
+        {
+          "alias": "plant_wind_turbine",
+          "src": "assets/city/buildings/wind_turbine.png"
+        },
+        {
+          "alias": "plant_water_dam",
+          "src": "assets/city/buildings/dam.png"
+        }
+      ]
+    },
+    {
+      "name": "reference",
+      "assets": [
+        {
+          "alias": "reference_house",
+          "src": "assets/city/buildings/house.png"
+        },
+        {
+          "alias": "reference_business",
+          "src": "assets/city/buildings/business.png"
+        },
+        {
+          "alias": "reference_data_center",
+          "src": "assets/city/buildings/data_center.png"
+        },
+        {
+          "alias": "reference_nuclear",
+          "src": "assets/city/buildings/nuclear.png"
+        },
+        {
+          "alias": "reference_thermal",
+          "src": "assets/city/buildings/thermal.png"
+        },
+        {
+          "alias": "reference_solar",
+          "src": "assets/city/buildings/solar.png"
+        },
+        {
+          "alias": "reference_wind_turbine",
+          "src": "assets/city/buildings/wind_turbine.png"
+        },
+        {
+          "alias": "reference_dam",
+          "src": "assets/city/buildings/dam.png"
+        }
+      ]
+    }
+  ]
+}
