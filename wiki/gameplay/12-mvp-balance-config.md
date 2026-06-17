@@ -24,9 +24,8 @@ export const GAME_CONFIG = {
   demand: {
     baseTotalMW: 140,
     sectors: {
-      householdsMW: 55,
+      householdsMW: 80,
       businessMW: 45,
-      heatingMW: 25,
       dataCentersMW: 15,
     },
   },
@@ -116,11 +115,6 @@ export const GAME_CONFIG = {
 
   upgrades: {
     repeatCostMultiplier: 1.25,
-    network: {
-      baseCost: 55,
-      buildSeconds: 15,
-      gridCapacityMW: 25,
-    },
     renewable: {
       baseCost: 45,
       buildSeconds: 10,
@@ -193,7 +187,7 @@ A match meets the first tuning target when:
 | Capacity utilization exceeds 105% | breaker trips immediately |
 | One event hits | manageable with good manual reaction |
 | Two events overlap | creates panic and likely breaker if unprepared |
-| Early network/plant overbuild | short-term efficiency/price penalty |
+| Early plant overbuild | short-term efficiency/price penalty |
 | Good player | earns more money but has more real-time control risk |
 | Bad player | loses customers, gets recovery room, earns less |
 
@@ -244,7 +238,7 @@ This is intentional: fixed contracts are high reward, high risk.
 - Does accepting a fixed contract feel tempting but dangerous?
 - Does the 5% supply/demand band create understandable breaker pressure?
 - Are renewable and dam controls useful without becoming automatic safety nets?
-- Does overbuilding reduce efficiency enough to matter?
+- Does overbuilding dependable generation reduce efficiency enough to matter?
 - Are production controls responsive but not trivial?
 - Are event warnings readable?
 - Does the player switch screens under pressure?

@@ -99,8 +99,8 @@ expect(capacityBreaker({ contractLoadMW: 85, deterministicMaxMW: 80 }).tripped).
 ### Upgrade tests
 
 ```ts
-expect(buyUpgrade(player, networkUpgrade).cash).toBeLessThan(player.cash);
-expect(applyUpgrade(player, networkUpgrade).gridCapacityMW).toBeGreaterThan(player.gridCapacityMW);
+expect(buyUpgrade(player, thermalUpgrade).cash).toBeLessThan(player.cash);
+expect(applyUpgrade(player, thermalUpgrade).thermalCapacityMW).toBeGreaterThan(player.thermalCapacityMW);
 ```
 
 ## Do not mix presentation state and simulation state
@@ -121,7 +121,7 @@ presentation timing value becomes source of gameplay truth
 
 ## Avoid hidden auto-corrections
 
-If the player makes a bad manual adjustment, the game should show the consequence. Do not silently fix production mismatch, overproduction, underproduction, or capacity overload.
+If the player makes a bad manual adjustment, the game should show the consequence. Do not silently fix production mismatch, overload, underload, or capacity overload.
 
 Allowed:
 

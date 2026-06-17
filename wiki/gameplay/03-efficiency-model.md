@@ -149,7 +149,7 @@ Breaker risk comes from real-time mismatch:
 
 ```txt
 delivered supply too low compared to current demand = underload / shortage risk
-delivered supply too high compared to current demand = overproduction / over-frequency risk
+delivered supply too high compared to current demand = overload / surplus-production risk
 ```
 
 Keep this separation:

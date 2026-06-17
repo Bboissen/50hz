@@ -1,16 +1,16 @@
 ---
-title: "Grid Overload and Reliability"
+title: "Grid Overload, Underload, and Reliability"
 type: "system"
 status: "draft"
 updated: "2026-06-17"
 tags: ["50hz", "overload", "reliability", "strikes", "breaker"]
-summary: "Capacity overload, supply/demand mismatch, breaker thresholds, strikes, and reliability tradeoffs."
+summary: "Capacity overload, real-time overload/underload, breaker thresholds, strikes, and reliability tradeoffs."
 related: []
 ---
 
-# Grid Overload and Reliability
+# Grid Overload, Underload, and Reliability
 
-Grid overload and supply/demand mismatch are the central failure paths.
+Grid overload and underload are the central reliability failure paths.
 
 ## Design goal
 
@@ -76,13 +76,13 @@ Interpretation:
 | Mismatch | State |
 |---:|---|
 | -5% to +5% | safe |
-| below -5% | underproduction / shortage risk |
-| above +5% | overproduction / underload risk |
+| below -5% | underload / shortage risk |
+| above +5% | overload / surplus risk |
 | below -15% or above +15% | severe mismatch |
 
 ## Supply/demand breaker timer
 
-Both underproduction and overproduction can trip a breaker after a delay.
+Both underload and overload can trip a breaker after a delay.
 
 ```ts
 if (Math.abs(supplyDemandMismatch) > SEVERE_BALANCE_MISMATCH) {
@@ -94,7 +94,7 @@ if (Math.abs(supplyDemandMismatch) > SEVERE_BALANCE_MISMATCH) {
 }
 
 if (balanceBreakerTimer >= BALANCE_BREAKER_SECONDS) {
-  tripBreaker(supplyDemandMismatch < 0 ? 'underproduction' : 'overproduction');
+  tripBreaker(supplyDemandMismatch < 0 ? 'underload' : 'overload');
 }
 ```
 

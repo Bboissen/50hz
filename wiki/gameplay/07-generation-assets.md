@@ -193,7 +193,7 @@ Recommended weather factors:
 | Cloud front | 0.30 |
 | Night/dim period, if used | 0.10 |
 
-Solar surplus can be used to manually fill the water dam if the dam is not full. Otherwise it can create overproduction risk unless curtailed.
+Solar surplus can be used to manually fill the water dam if the dam is not full. Otherwise it can create overload risk unless curtailed.
 
 ## Renewable wind
 
@@ -232,7 +232,7 @@ Manual control:
 wind turbine ON / OFF
 ```
 
-If wind is outside the valid range, ON still produces `0 MW`. If wind is strong enough to create surplus, switching OFF can prevent overproduction.
+If wind is outside the valid range, ON still produces `0 MW`. If wind is strong enough to create surplus, switching OFF can prevent overload.
 
 ## Water dam
 
@@ -262,14 +262,14 @@ const RAIN_FILL_MWH_PER_SECOND = 0.50;
 const RAIN_AUTODRAIN_THRESHOLD = 0.95;
 ```
 
-Manual fill during overproduction:
+Manual fill during overload / surplus:
 
 ```ts
 const fillMW = Math.min(surplusMW, WATER_DAM_MAX_POWER_MW);
 storedWaterMWh += fillMW * WATER_DAM_FILL_EFFICIENCY * dtHours;
 ```
 
-Manual drain during underproduction:
+Manual drain during underload:
 
 ```ts
 const drainMW = Math.min(WATER_DAM_MAX_POWER_MW, storedWaterMWh / dtHours);
@@ -295,8 +295,8 @@ if (rainActive && storedWaterMWh >= WATER_DAM_CAPACITY_MWH * RAIN_AUTODRAIN_THRE
 
 Interpretation:
 
-- full dam: cannot absorb overproduction, but can generate immediately,
-- empty dam: cannot generate, but can absorb overproduction or rain,
+- full dam: cannot absorb overload/surplus, but can generate immediately,
+- empty dam: cannot generate, but can absorb overload/surplus or rain,
 - neutral dam: both fill and drain are actionable.
 
 ## Total delivered power

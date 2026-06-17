@@ -27,11 +27,10 @@ upgrade too early -> underused infrastructure -> lower efficiency -> higher pric
 
 | Upgrade | Cost | Build time | Effect | Strategic purpose |
 |---|---:|---:|---|---|
-| Network | 55 | 15s | +25 MW grid capacity | Handle customer growth |
 | Renewable farm | 45 | 10s | +15 MW solar peak, +15 MW wind peak | Lower production cost potential |
 | Thermal turbine | 40 | 8s | +25 MW thermal capacity | Survive spikes and raise deterministic capacity |
 | Nuclear extension | 85 | 20s | +35 MW nuclear capacity | Long-term baseload |
-| Water dam | 50 | 12s | +15 MWh stored water, +10 MW power | Buffer overproduction/underproduction |
+| Water dam | 50 | 12s | +15 MWh stored water, +10 MW power | Buffer overload/underload |
 
 ## Repeat cost scaling
 
@@ -53,7 +52,7 @@ Do not add explicit fixed maintenance costs unless necessary. Prefer to express 
 Example:
 
 ```txt
-player buys network early
+player buys deterministic capacity early
 load stays the same
 grid utilization falls
 efficiency falls slightly
@@ -70,9 +69,9 @@ Players can specialize through upgrade sequence.
 | Strategy | Upgrade pattern | Strength | Weakness |
 |---|---|---|---|
 | Cheap green provider | Renewable + water dam | Low operating cost potential | Weather/surplus vulnerable |
-| Reliable provider | Nuclear + network | Stable under load | Slow/expensive |
+| Reliable provider | Nuclear + thermal | Stable dependable capacity | Slow/expensive |
 | Crisis survivor | Thermal + water dam | Handles events | Heat/cost pressure if overused |
-| Infrastructure player | Network first | Can absorb customers | Early underuse penalty |
+| Storage operator | Water dam first | Buffers underload/overload events | Limited stored energy |
 | Aggressive market grabber | Renewable + PR cards | Fast growth | Breaker risk |
 
 

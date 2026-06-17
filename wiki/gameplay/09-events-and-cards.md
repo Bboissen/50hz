@@ -44,10 +44,10 @@ Public events affect both players.
 | High wind | Wind inside valid range | Renewable opportunity | Fill dam or reduce thermal |
 | Wind storm | Wind above cut-out speed | Renewable loss | Thermal + dam |
 | Data center burst | Demand +35% | Digital infrastructure spikes | water dam + thermal |
-| Cold wave | Heating +25% | Weather-driven demand | Nuclear pre-ramp + network |
+| Cold wave | Household demand +25% | Weather-driven demand | Nuclear pre-ramp + thermal/dam |
 | Football final | Household +20% | Synchronized behavior | water dam + thermal |
 | Business rush | Demand ramps +20% | Predictable peak | Nuclear + upgrade planning |
-| Sunny interval | Solar surge | Overproduction risk | Fill water dam or curtail renewable |
+| Sunny interval | Solar surge | Overload / surplus risk | Fill water dam or curtail renewable |
 
 ## MVP event values
 
@@ -76,7 +76,7 @@ const PUBLIC_EVENTS = {
   coldWave: {
     warningSeconds: 8,
     durationSeconds: 18,
-    heatingDemandMultiplier: 1.30,
+    householdDemandMultiplier: 1.30,
   },
 };
 ```

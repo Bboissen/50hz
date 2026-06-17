@@ -24,7 +24,6 @@ Do not simulate every individual customer. Use sector labels to make demand unde
 const totalDemandMW =
   householdDemandMW +
   businessDemandMW +
-  heatingDemandMW +
   dataCenterDemandMW +
   eventDemandMW;
 ```
@@ -33,9 +32,8 @@ Recommended baseline:
 
 | Sector | Baseline |
 |---|---:|
-| Households | 55 MW |
+| Households | 80 MW |
 | Business | 45 MW |
-| Heating | 25 MW |
 | Data centers | 15 MW |
 | **Total** | **140 MW** |
 
@@ -157,7 +155,7 @@ Demand should shift through recognizable social/industrial events.
 | Event | Sector | Effect |
 |---|---|---:|
 | Football final | Households | +20% to +30% short spike |
-| Cold wave | Heating | +20% to +35% long pressure |
+| Cold wave | Households | +20% to +35% long pressure |
 | Data center burst | Data centers | +35% to +50% short spike |
 | Business rush | Business | +15% to +25% ramp |
 | Heatwave | Households/data centers | +15% to +30% cooling demand |

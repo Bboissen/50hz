@@ -96,4 +96,4 @@ The customer share the market wants based on current price. Used for revenue cal
 
 ## Water dam
 
-A limited buffer that can fill from rain or manual overproduction and drain into power generation. Empty means no dam generation is possible; full means it cannot absorb more water.
+A limited buffer that can fill from rain or manual overload/surplus and drain into power generation. Empty means no dam generation is possible; full means it cannot absorb more water.

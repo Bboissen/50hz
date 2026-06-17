@@ -14,7 +14,7 @@ Manual adjustment is the core of the game.
 
 ## Design target
 
-The player must adjust the right system before events chain into overload, underproduction, or overproduction.
+The player must adjust the right system before events chain into overload, underload, or capacity overload.
 
 The game should not be mostly automatic.
 
@@ -79,7 +79,7 @@ const supplyDemandMismatch = (deliveredSupplyMW - currentDemandMW) / Math.max(cu
 const supplyDemandSafe = Math.abs(supplyDemandMismatch) <= 0.05;
 ```
 
-If supply is too low, the grid is under-supplied. If supply is too high, the grid is overproducing. Both paths can trip a breaker after a delay.
+If supply is too low, the grid is in underload. If supply is too high, the grid is in overload. Both paths can trip a breaker after a delay.
 
 Controls:
 
