@@ -15,17 +15,19 @@ import { clamp, clamp01 } from "./math";
 import { priceFromEfficiency, updateSubscribedLoadShare } from "./market";
 import { createInitialPlayerState } from "./playerState";
 import { computeRevenueTick } from "./revenue";
-import { buyUpgrade, tickUpgrades } from "./upgrades";
+import { buyUpgrade, tickUpgrades, upgradeCost } from "./upgrades";
 import type {
   BreakerReason,
   CardKind,
   DerivedPlayerStats,
+  DispatchCardState,
   DispatchConsoleState,
   FinalResult,
   MatchState,
   PlayerCommand,
   PlayerId,
   PlayerState,
+  SectorVisualState,
   ProductionConsoleState,
 } from "./types";
 
@@ -344,6 +346,87 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
   const rival = state.players.rival;
   const events = getPublicEventState(state.timeSeconds);
   const demand = computeDemand(events);
+  const plantState = {
+    reactor: {
+      level: Math.min(3, 1 + player.upgradePurchases.nuclear) as 0 | 1 | 2 | 3,
+      upgradeCost: upgradeCost("nuclear", player.upgradePurchases.nuclear),
+      canAfford: player.cash >= upgradeCost("nuclear", player.upgradePurchases.nuclear),
+      isMaxed: player.upgradePurchases.nuclear >= 2,
+    },
+    boiler: {
+      level: Math.min(3, 1 + player.upgradePurchases.thermal) as 0 | 1 | 2 | 3,
+      upgradeCost: upgradeCost("thermal", player.upgradePurchases.thermal),
+      canAfford: player.cash >= upgradeCost("thermal", player.upgradePurchases.thermal),
+      isMaxed: player.upgradePurchases.thermal >= 2,
+    },
+    renewables: {
+      level: Math.min(3, 1 + player.upgradePurchases.renewable) as 0 | 1 | 2 | 3,
+      upgradeCost: upgradeCost("renewable", player.upgradePurchases.renewable),
+      canAfford: player.cash >= upgradeCost("renewable", player.upgradePurchases.renewable),
+      isMaxed: player.upgradePurchases.renewable >= 2,
+    },
+    waterDam: {
+      level: Math.min(3, 1 + player.upgradePurchases.waterDam) as 0 | 1 | 2 | 3,
+      upgradeCost: upgradeCost("waterDam", player.upgradePurchases.waterDam),
+      canAfford: player.cash >= upgradeCost("waterDam", player.upgradePurchases.waterDam),
+      isMaxed: player.upgradePurchases.waterDam >= 2,
+    },
+  };
+  const sectorLevel = (ratio: number): 0 | 1 | 2 | 3 => {
+    if (ratio > 1.25) {
+      return 3;
+    }
+    if (ratio > 1.05) {
+      return 2;
+    }
+    if (ratio > 0.5) {
+      return 1;
+    }
+    return 0;
+  };
+  const activeEventId = state.activeEvents[0]?.id;
+  const sectors: Record<"homes" | "services" | "dataCenters", SectorVisualState> = {
+    homes: {
+      demandLevel: sectorLevel(demand.householdsMW / GAME_CONFIG.demand.sectors.householdsMW),
+      isSpiking: state.activeEvents.some((event) => event.id === "footballFinal" && event.phase === "impact"),
+      isDemandCritical: demand.householdsMW > GAME_CONFIG.demand.sectors.householdsMW * 1.25,
+      isBrownedOut: player.strikes > 0 && player.lastSupplyDemandMismatch < -0.15,
+      activeEventId,
+    },
+    services: {
+      demandLevel: sectorLevel(demand.businessMW / GAME_CONFIG.demand.sectors.businessMW),
+      isSpiking: false,
+      isDemandCritical: false,
+      isBrownedOut: false,
+      activeEventId: undefined,
+    },
+    dataCenters: {
+      demandLevel: sectorLevel(demand.dataCentersMW / GAME_CONFIG.demand.sectors.dataCentersMW),
+      isSpiking: state.activeEvents.some((event) => event.id === "dataCenterBurst" && event.phase === "impact"),
+      isDemandCritical: demand.dataCentersMW > GAME_CONFIG.demand.sectors.dataCentersMW * 1.35,
+      isBrownedOut: player.strikes > 0 && player.lastSupplyDemandMismatch < -0.15,
+      activeEventId,
+    },
+  };
+  const cardState = (
+    id: "demandResponse" | "cloudFront" | "windStorm",
+    title: string,
+    type: "defense" | "offense",
+    effectText: string,
+  ): DispatchCardState => {
+    const cooldown = player.cardCooldowns[id];
+    const maxCooldown = GAME_CONFIG.cards[id].cooldownSeconds;
+    const state: DispatchCardState["state"] =
+      cooldown > 0 ? "cooldown" : player.cash >= GAME_CONFIG.cards[id].cost ? "available" : "disabled";
+    return {
+      id,
+      title,
+      type,
+      effectText,
+      state,
+      cooldownRatio: Math.min(1, cooldown / maxCooldown),
+    };
+  };
 
   return {
     cash: player.cash,
@@ -367,6 +450,36 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
     balanceZone: balanceZone(player.lastSupplyDemandMismatch),
     breakerTimer: Math.max(player.runtime.balanceBreakerTimer, player.runtime.capacityOverloadTimer),
     activeEventLabel: state.activeEvents[0]?.label ?? "BASELINE",
+    plants: plantState,
+    sectors,
+    forecast: [
+      { id: "sun", label: "SUN", phase: "impact", remainingSeconds: 0 },
+      { id: "cloud", label: "CLOUD", phase: "warning", remainingSeconds: 15 },
+      { id: "wind", label: "WIND", phase: "warning", remainingSeconds: 30 },
+      { id: "cold", label: "COLD", phase: "warning", remainingSeconds: 45 },
+    ],
+    incidents: state.activeEvents,
+    cards: [
+      cardState("demandResponse", "DEMAND RESPONSE", "defense", "-15% LOAD / -TRUST"),
+      cardState("cloudFront", "CLOUD FRONT", "offense", "RIVAL SOLAR DOWN"),
+      cardState("windStorm", "WIND STORM", "offense", "RIVAL WIND CUTOUT"),
+      {
+        id: "business",
+        title: "BUSINESS CONTRACT",
+        type: "fixedContract",
+        effectText: "+15 MW / +35 CASH",
+        state: "available",
+        cooldownRatio: 0,
+      },
+      {
+        id: "dataCenter",
+        title: "DATA CONTRACT",
+        type: "fixedContract",
+        effectText: "+25 MW / +60 CASH",
+        state: "available",
+        cooldownRatio: 0,
+      },
+    ],
   };
 }
 

@@ -111,6 +111,33 @@ export type TimelineToken = {
   remainingSeconds: number;
 };
 
+export type PlantKey = "reactor" | "boiler" | "renewables" | "waterDam";
+export type SectorKey = "homes" | "services" | "dataCenters";
+
+export type PlantUpgradeState = {
+  level: 0 | 1 | 2 | 3;
+  upgradeCost: number;
+  canAfford: boolean;
+  isMaxed?: boolean;
+};
+
+export type SectorVisualState = {
+  demandLevel: 0 | 1 | 2 | 3;
+  isSpiking: boolean;
+  isDemandCritical: boolean;
+  isBrownedOut?: boolean;
+  activeEventId?: string;
+};
+
+export type DispatchCardState = {
+  id: string;
+  title: string;
+  type: "defense" | "offense" | "fixedContract";
+  effectText: string;
+  state: "available" | "active" | "cooldown" | "disabled";
+  cooldownRatio: number;
+};
+
 export type PublicEventState = {
   tokens: TimelineToken[];
   householdMultiplier: number;
@@ -176,6 +203,11 @@ export type DispatchConsoleState = {
   balanceZone: "severeUnderload" | "underload" | "lock" | "overload" | "severeOverload";
   breakerTimer: number;
   activeEventLabel: string;
+  plants: Record<PlantKey, PlantUpgradeState>;
+  sectors: Record<SectorKey, SectorVisualState>;
+  forecast: TimelineToken[];
+  incidents: TimelineToken[];
+  cards: DispatchCardState[];
 };
 
 export type ProductionConsoleState = DispatchConsoleState & {
