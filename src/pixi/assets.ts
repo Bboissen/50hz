@@ -6,6 +6,8 @@ export type VisualAssetKey =
   | "city_data_bunker"
   | "plant_reactor"
   | "plant_boiler"
+  | "plant_solar"
+  | "plant_wind_turbine"
   | "plant_renewables"
   | "plant_water_dam"
   | "event_football"
@@ -25,6 +27,8 @@ const assetSources: Partial<Record<VisualAssetKey, string>> = {
   city_data_bunker: "/assets/city/buildings/data_center.png",
   plant_reactor: "/assets/city/buildings/nuclear.png",
   plant_boiler: "/assets/city/buildings/thermal.png",
+  plant_solar: "/assets/city/buildings/solar.png",
+  plant_wind_turbine: "/assets/city/buildings/wind_turbine.png",
   plant_renewables: "/assets/city/buildings/solar.png",
   plant_water_dam: "/assets/city/buildings/dam.png",
 };
@@ -35,7 +39,9 @@ export async function createAssetResolver(): Promise<AssetResolver> {
   await Promise.all(
     Object.entries(assetSources).map(async ([key, src]) => {
       try {
-        textures.set(key as VisualAssetKey, await Assets.load<Texture>(src));
+        const texture = await Assets.load<Texture>({ src, data: { scaleMode: "nearest" } });
+        texture.source.scaleMode = "nearest";
+        textures.set(key as VisualAssetKey, texture);
       } catch {
         // Missing authored assets are expected during prototype work.
       }

@@ -43,7 +43,7 @@ export class ScreenManager extends Container {
   public constructor(assets: AssetResolver, sink: (command: PlayerCommand) => void) {
     super();
     this.dispatchScreen = new DispatchConsoleScreen(assets, sink);
-    this.productionScreen = new ProductionConsoleScreen(sink);
+    this.productionScreen = new ProductionConsoleScreen(sink, assets);
     this.addChild(
       this.dispatchScreen,
       this.productionScreen,

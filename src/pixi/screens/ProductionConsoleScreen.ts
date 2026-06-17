@@ -1,6 +1,7 @@
-import { Container, Graphics, Text } from "pixi.js";
+import { Container, Graphics, Sprite, Text } from "pixi.js";
 
 import type { PlayerCommand, ProductionConsoleState, WaterDamMode } from "../../gameplay/types";
+import type { AssetResolver, VisualAssetKey } from "../assets";
 import { DESIGN_TOKENS } from "../tokens";
 
 type CommandSink = (command: PlayerCommand) => void;
@@ -35,17 +36,34 @@ function button(text: string, bounds: Rect, onTap: () => void): Container {
   return root;
 }
 
+function sceneSprite(assets: AssetResolver, key: VisualAssetKey, bounds: Rect, alpha = 0.42): Sprite | undefined {
+  const texture = assets.texture(key);
+  if (!texture) {
+    return undefined;
+  }
+
+  const sprite = new Sprite(texture);
+  const scale = Math.min(bounds.w / texture.width, bounds.h / texture.height);
+  sprite.scale.set(scale);
+  sprite.position.set(bounds.x + (bounds.w - texture.width * scale) / 2, bounds.y + (bounds.h - texture.height * scale) / 2);
+  sprite.alpha = alpha;
+  sprite.roundPixels = true;
+  return sprite;
+}
+
 export class ProductionConsoleScreen extends Container {
   private readonly g = new Graphics();
+  private readonly assetLayer = new Container();
   private readonly readout = label("", 64, 74, 24);
   private resetHeld = false;
   private lastTimeSeconds = 0;
   private current?: ProductionConsoleState;
 
-  public constructor(private readonly sink: CommandSink) {
+  public constructor(private readonly sink: CommandSink, assets: AssetResolver) {
     super();
     this.addChild(
       this.g,
+      this.assetLayer,
       label("PRODUCTION CONSOLE", 48, 28, 34, DESIGN_TOKENS.colors.phosphorGreen),
       label("REACTOR TARGET", 72, 142, 22),
       label("BOILER THROTTLE", 574, 142, 22),
@@ -55,6 +73,7 @@ export class ProductionConsoleScreen extends Container {
       label("GRID STATUS", 1594, 142, 22),
       this.readout,
     );
+    this.addBackdrops(assets);
     this.addButtons();
   }
 
@@ -118,15 +137,34 @@ export class ProductionConsoleScreen extends Container {
     this.sink({ type: "setWindEnabled", playerId: "player", enabled });
   }
 
+  private addBackdrops(assets: AssetResolver): void {
+    const scenes: Array<[VisualAssetKey, Rect, number]> = [
+      ["plant_reactor", { x: 70, y: 178, w: 420, h: 210 }, 0.5],
+      ["plant_boiler", { x: 570, y: 178, w: 390, h: 210 }, 0.5],
+      ["plant_water_dam", { x: 1038, y: 176, w: 470, h: 220 }, 0.5],
+      ["plant_solar", { x: 82, y: 650, w: 370, h: 160 }, 0.42],
+      ["plant_wind_turbine", { x: 430, y: 636, w: 390, h: 184 }, 0.42],
+    ];
+
+    for (const [key, bounds, alpha] of scenes) {
+      const sprite = sceneSprite(assets, key, bounds, alpha);
+      if (sprite) {
+        this.assetLayer.addChild(sprite);
+      }
+    }
+  }
+
   private drawPanel(bounds: Rect): void {
     this.g
       .roundRect(bounds.x, bounds.y, bounds.w, bounds.h, 12)
-      .fill({ color: DESIGN_TOKENS.colors.panelGreen })
-      .stroke({ color: DESIGN_TOKENS.colors.fadedOlive, width: 6 });
+      .fill({ color: 0xd0c6a0 })
+      .stroke({ color: DESIGN_TOKENS.colors.inkBlack, width: 7 })
+      .roundRect(bounds.x + 12, bounds.y + 12, bounds.w - 24, bounds.h - 24, 8)
+      .stroke({ color: DESIGN_TOKENS.colors.fadedOlive, width: 3, alpha: 0.9 });
   }
 
   private draw(state: ProductionConsoleState): void {
-    this.g.clear().rect(0, 0, 1920, 1080).fill({ color: DESIGN_TOKENS.colors.inkBlack });
+    this.g.clear().rect(0, 0, 1920, 1080).fill({ color: 0x171a14 });
     this.drawPanel({ x: 48, y: 120, w: 470, h: 430 });
     this.drawPanel({ x: 550, y: 120, w: 430, h: 430 });
     this.drawPanel({ x: 1012, y: 120, w: 522, h: 430 });

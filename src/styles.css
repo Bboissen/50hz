@@ -39,6 +39,7 @@ canvas {
   height: auto;
   border: 1px solid rgba(141, 252, 122, 0.35);
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+  image-rendering: pixelated;
 }
 
 .debug-panel {
