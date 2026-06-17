@@ -1,0 +1,188 @@
+{
+  "meta": {
+    "title": "50Hz Design Tokens",
+    "status": "draft",
+    "updated": "2026-06-17",
+    "targetResolution": {
+      "width": 1920,
+      "height": 1080
+    },
+    "notes": "Machine-readable implementation tokens for the 50Hz DispatchConsole PixiJS prototype."
+  },
+  "colors": {
+    "inkBlack": "#101711",
+    "panelGreen": "#1f2b22",
+    "oxideGreen": "#3d4b36",
+    "fadedOlive": "#7b8060",
+    "paperTan": "#c8b982",
+    "phosphorGreen": "#8dfc7a",
+    "amberWarn": "#ffbd45",
+    "overloadRed": "#e34b35",
+    "dataCyan": "#6fcad1",
+    "windowWarm": "#f2dd8a",
+    "smokeGrey": "#8d9380"
+  },
+  "layout": {
+    "safeMargin": 36,
+    "zones": {
+      "cashReservePanel": {
+        "x": 36,
+        "y": 36,
+        "w": 225,
+        "h": 138
+      },
+      "forecastTape": {
+        "x": 276,
+        "y": 36,
+        "w": 750,
+        "h": 138
+      },
+      "incidentQueue": {
+        "x": 1044,
+        "y": 36,
+        "w": 840,
+        "h": 138
+      },
+      "yourGenerationStack": {
+        "x": 36,
+        "y": 186,
+        "w": 285,
+        "h": 468
+      },
+      "yourTariffBoard": {
+        "x": 336,
+        "y": 186,
+        "w": 225,
+        "h": 468
+      },
+      "cityLoadWindow": {
+        "x": 576,
+        "y": 186,
+        "w": 750,
+        "h": 468
+      },
+      "rivalTariffBoard": {
+        "x": 1341,
+        "y": 186,
+        "w": 225,
+        "h": 468
+      },
+      "rivalGridStack": {
+        "x": 1581,
+        "y": 186,
+        "w": 303,
+        "h": 468
+      },
+      "upgradeRack": {
+        "x": 36,
+        "y": 672,
+        "w": 495,
+        "h": 372
+      },
+      "gridPressureMeter": {
+        "x": 549,
+        "y": 672,
+        "w": 672,
+        "h": 372
+      },
+      "dispatchCardsPanel": {
+        "x": 1239,
+        "y": 672,
+        "w": 645,
+        "h": 372
+      }
+    }
+  },
+  "layers": {
+    "background": 0,
+    "panelFrames": 10,
+    "topAnticipation": 20,
+    "marketConfrontation": 30,
+    "operatorConsole": 40,
+    "alarms": 90,
+    "debug": 100
+  },
+  "typography": {
+    "labelCase": "uppercase",
+    "labelFontFallback": "monospace",
+    "numberFontFallback": "monospace",
+    "labelSize": 18,
+    "bodySize": 21,
+    "tariffSize": 48,
+    "meterNumberSize": 33
+  },
+  "animation": {
+    "needleLagMs": 320,
+    "contractSplitShiftMs": 450,
+    "cardSlideMs": 280,
+    "stampMs": 120,
+    "digitTickMs": 350,
+    "alarmBlinkMs": 320,
+    "upgradeLampFlashMs": 220
+  },
+  "meter": {
+    "capacityZones": {
+      "idle": {
+        "min": 0.0,
+        "max": 0.7,
+        "label": "IDLE"
+      },
+      "safe": {
+        "min": 0.7,
+        "max": 0.85,
+        "label": "SAFE"
+      },
+      "efficient": {
+        "min": 0.85,
+        "max": 0.98,
+        "label": "EFFICIENT"
+      },
+      "strain": {
+        "min": 0.98,
+        "max": 1.0,
+        "label": "STRAIN"
+      },
+      "tripRisk": {
+        "min": 1.0,
+        "max": 1.05,
+        "label": "TRIP RISK"
+      },
+      "trip": {
+        "min": 1.05,
+        "max": 1.2,
+        "label": "TRIP"
+      }
+    },
+    "balanceZones": {
+      "severeUnderload": {
+        "min": -1.0,
+        "max": -0.15,
+        "label": "SEVERE UNDERLOAD"
+      },
+      "underload": {
+        "min": -0.15,
+        "max": -0.05,
+        "label": "UNDERLOAD"
+      },
+      "lock": {
+        "min": -0.05,
+        "max": 0.05,
+        "label": "LOCK"
+      },
+      "overload": {
+        "min": 0.05,
+        "max": 0.15,
+        "label": "OVERLOAD"
+      },
+      "severeOverload": {
+        "min": 0.15,
+        "max": 1.0,
+        "label": "SEVERE OVERLOAD"
+      }
+    },
+    "needleAngleDeg": {
+      "min": -70,
+      "max": 70
+    }
+  }
+}
