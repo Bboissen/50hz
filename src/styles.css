@@ -22,8 +22,10 @@ body {
 }
 
 #app {
-  display: grid;
-  place-items: center;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background:
     radial-gradient(circle at center, rgba(141, 252, 122, 0.12), transparent 38rem),
     linear-gradient(135deg, #101711 0%, #1f2b22 100%);
@@ -37,4 +39,45 @@ canvas {
   height: auto;
   border: 1px solid rgba(141, 252, 122, 0.35);
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+}
+
+.debug-panel {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  padding: 12px;
+  color: #c8b982;
+  background: rgba(16, 23, 17, 0.88);
+  border: 1px solid rgba(141, 252, 122, 0.42);
+  box-shadow: 0 16px 60px rgba(0, 0, 0, 0.45);
+}
+
+.debug-readout {
+  margin: 0 0 10px;
+  white-space: pre-wrap;
+}
+
+.debug-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.debug-controls label {
+  display: grid;
+  gap: 4px;
+  grid-column: span 2;
+}
+
+.debug-controls button,
+.debug-controls select {
+  color: #101711;
+  background: #c8b982;
+  border: 0;
+  padding: 6px 8px;
+  font: inherit;
+  text-transform: uppercase;
 }
