@@ -19,7 +19,7 @@ Do not use this skill for routine code edits, framework debugging, test failures
    ```bash
    python3 scripts/wiki.py search "<query>"
    ```
-3. Read only the top relevant wiki pages under `wiki/gameplay/`.
+3. Read only the top relevant wiki pages under `wiki/gameplay/` or `wiki/visual/`.
 4. If the wiki is insufficient, say what is missing instead of filling gaps with realism or speculation.
 5. When the answer creates durable gameplay knowledge, create or update the relevant wiki page metadata and `wiki/index.md`.
 

@@ -5,7 +5,7 @@ status: "draft"
 updated: "2026-06-17"
 tags: ["50hz", "screen", "layout", "dispatch-console", "pixijs"]
 summary: "Refined composition for the main game screen, with visual hierarchy, dimensions, zones, states, and PixiJS scene grouping."
-related: ["06-manual-control-room.md", "20-visual-design-index.md", "22-art-direction-bible.md", "25-grid-pressure-meter.md", "30-pixijs-agent-integration-brief.md"]
+related: ["../gameplay/06-manual-control-room.md", "20-visual-design-index.md", "22-art-direction-bible.md", "25-grid-pressure-meter.md", "30-pixijs-agent-integration-brief.md"]
 ---
 
 # Dispatch Console Layout

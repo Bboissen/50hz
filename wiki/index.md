@@ -10,7 +10,7 @@ related: []
 
 # 50Hz Wiki Index
 
-This wiki is the durable design reference for 50Hz. For gameplay work, start with the gameplay index and then read the mechanic-specific page. The first playable version is single-player against an AI opponent, not multiplayer.
+This wiki is the durable design reference for 50Hz. For gameplay work, start with the gameplay index and then read the mechanic-specific page. For visual or PixiJS implementation work, start with the visual index and then read only the screen or component page needed. The first playable version is single-player against an AI opponent, not multiplayer.
 
 ## Gameplay
 
@@ -31,8 +31,25 @@ This wiki is the durable design reference for 50Hz. For gameplay work, start wit
 - [`gameplay/13-implementation-guardrails.md`](./gameplay/13-implementation-guardrails.md) - implementation guardrails
 - [`gameplay/99-glossary.md`](./gameplay/99-glossary.md) - glossary
 
+## Visual
+
+- [`visual/README.md`](./visual/README.md) - visual design reading order and implementation map
+- [`visual/20-visual-design-index.md`](./visual/20-visual-design-index.md) - visual design and PixiJS entry point
+- [`visual/21-dispatch-console-layout.md`](./visual/21-dispatch-console-layout.md) - main screen layout and scene grouping
+- [`visual/22-art-direction-bible.md`](./visual/22-art-direction-bible.md) - art direction, palette, typography, and alarms
+- [`visual/23-ui-naming-and-taxonomy.md`](./visual/23-ui-naming-and-taxonomy.md) - player-facing names and code taxonomy
+- [`visual/24-city-sectors-visual-design.md`](./visual/24-city-sectors-visual-design.md) - City Load Window states and sector visuals
+- [`visual/25-grid-pressure-meter.md`](./visual/25-grid-pressure-meter.md) - central pressure meter visual spec
+- [`visual/26-events-cards-timelines.md`](./visual/26-events-cards-timelines.md) - forecast, incident, and card visual grammar
+- [`visual/27-upgrades-generation-tariffs.md`](./visual/27-upgrades-generation-tariffs.md) - generation, tariff, and upgrade UI
+- [`visual/28-animation-and-feedback-priorities.md`](./visual/28-animation-and-feedback-priorities.md) - animation priority list
+- [`visual/29-asset-inventory-and-ownership.md`](./visual/29-asset-inventory-and-ownership.md) - asset ownership and swap contract
+- [`visual/30-pixijs-agent-integration-brief.md`](./visual/30-pixijs-agent-integration-brief.md) - PixiJS implementation brief
+- [`visual/31-production-console-visual-direction.md`](./visual/31-production-console-visual-direction.md) - production console visual direction
+
 ## Operating Entry Points
 
 - `AGENTS.md` - repo-level agent policy and invariants
 - `.agents/skills/` - task-scoped agent instructions
 - `wiki/gameplay/` - canonical gameplay design reference
+- `wiki/visual/` - visual design and PixiJS implementation reference

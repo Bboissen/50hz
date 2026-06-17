@@ -5,7 +5,7 @@ status: "draft"
 updated: "2026-06-17"
 tags: ["50hz", "visual-design", "production-console", "manual-control", "controls"]
 summary: "Early visual direction for the manual production control center: gauges, potentiometers, switches, and breaker/reset controls."
-related: ["06-manual-control-room.md", "07-generation-assets.md", "08-grid-overload-and-reliability.md", "21-dispatch-console-layout.md", "25-grid-pressure-meter.md"]
+related: ["../gameplay/06-manual-control-room.md", "../gameplay/07-generation-assets.md", "../gameplay/08-grid-overload-and-reliability.md", "21-dispatch-console-layout.md", "25-grid-pressure-meter.md"]
 ---
 
 # Production Console Visual Direction

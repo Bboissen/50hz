@@ -5,7 +5,7 @@ status: "draft"
 updated: "2026-06-17"
 tags: ["50hz", "naming", "taxonomy", "copy", "ui"]
 summary: "Final player-facing names, code names, power plant categories, city sectors, and copy rules for the DispatchConsole."
-related: ["20-visual-design-index.md", "21-dispatch-console-layout.md", "99-glossary.md"]
+related: ["20-visual-design-index.md", "21-dispatch-console-layout.md", "../gameplay/99-glossary.md"]
 ---
 
 # UI Naming and Taxonomy

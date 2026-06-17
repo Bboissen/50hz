@@ -17,6 +17,7 @@ Read only:
 2. `wiki/gameplay/05-demand-and-customers.md` for demand/customer shocks
 3. `wiki/gameplay/08-grid-overload-and-reliability.md` for overload, reliability, breaker, or strike effects
 4. `wiki/gameplay/07-generation-assets.md` for production or weather effects
+5. `wiki/visual/26-events-cards-timelines.md` only when implementing event, forecast, incident, or card UI
 
 ## Event canon
 

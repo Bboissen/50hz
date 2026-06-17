@@ -23,6 +23,7 @@ Read only:
 3. `wiki/gameplay/05-demand-and-customers.md`
 4. `wiki/gameplay/12-mvp-balance-config.md` only when changing numeric values
 5. `wiki/gameplay/13-implementation-guardrails.md` only when adding or moving gameplay modules
+6. `wiki/visual/27-upgrades-generation-tariffs.md` only when implementing tariff, customer-share, generation, or upgrade UI
 
 ## Non-negotiable invariant
 

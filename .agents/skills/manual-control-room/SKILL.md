@@ -22,6 +22,8 @@ Read only:
 2. `wiki/gameplay/07-generation-assets.md` for production controls
 3. `wiki/gameplay/08-grid-overload-and-reliability.md` for overload alarms, breakers, reroutes, shedding, or reliability UI
 4. `wiki/gameplay/09-events-and-cards.md` for event/card screens
+5. `wiki/visual/21-dispatch-console-layout.md` only when implementing the main visual layout
+6. `wiki/visual/31-production-console-visual-direction.md` only when implementing the production console visual language
 
 ## Core principle
 

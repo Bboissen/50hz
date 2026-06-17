@@ -12,7 +12,24 @@ ROOT = Path(__file__).resolve().parents[1]
 WIKI = ROOT / "wiki"
 
 REQUIRED_KEYS = ["title", "type", "status", "updated", "tags", "summary", "related"]
-ALLOWED_TYPES = {"index", "canon", "axioms", "loop", "model", "system", "config", "guardrails", "glossary"}
+ALLOWED_TYPES = {
+    "index",
+    "canon",
+    "axioms",
+    "loop",
+    "model",
+    "system",
+    "config",
+    "guardrails",
+    "glossary",
+    "screen",
+    "art_direction",
+    "naming",
+    "visual_system",
+    "system_ui",
+    "production",
+    "agent_brief",
+}
 ALLOWED_STATUS = {"draft", "reviewed", "stale"}
 HEADING_RE = re.compile(r"^(#{1,3})\s+(.+?)\s*$", re.M)
 
