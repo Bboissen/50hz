@@ -2,14 +2,16 @@ import { chooseBotCommands } from "./gameplay/bot";
 import {
   applyPlayerCommand,
   createInitialMatchState,
+  computeFinalResult,
   selectDispatchConsoleState,
   selectProductionConsoleState,
+  isMatchOver,
   tickMatch,
 } from "./gameplay/match";
 import type { MatchState, PlayerCommand } from "./gameplay/types";
 import { createAssetResolver } from "./pixi/assets";
 import { createPixiApp } from "./pixi/createPixiApp";
-import { DispatchConsoleScreen } from "./pixi/DispatchConsoleScreen";
+import { ScreenManager } from "./pixi/screens/ScreenManager";
 import { createDebugPanel } from "./ui/debugPanel";
 import "./styles.css";
 
@@ -37,8 +39,9 @@ async function bootstrap(): Promise<void> {
     },
   });
   root.appendChild(debugPanel.element);
-  const screen = new DispatchConsoleScreen(assets, dispatch);
-  app.stage.addChild(screen);
+  const screenManager = new ScreenManager(assets, dispatch);
+  app.stage.addChild(screenManager);
+  window.addEventListener("keydown", (event) => screenManager.handleKey(event));
 
   let accumulator = 0;
   const fixedDt = 1 / 30;
@@ -55,7 +58,14 @@ async function bootstrap(): Promise<void> {
 
     const dispatchState = selectDispatchConsoleState(state);
     const productionState = selectProductionConsoleState(state);
-    screen.update(dispatchState);
+    screenManager.update({
+      dispatch: dispatchState,
+      production: productionState,
+      result: computeFinalResult(state),
+      match: state,
+      isMatchOver: isMatchOver(state),
+      dt: Math.min(ticker.deltaMS / 1000, 0.1),
+    });
     debugPanel.update(dispatchState, productionState, state.isPaused);
   });
 }

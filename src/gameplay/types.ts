@@ -33,6 +33,7 @@ export type AssetRuntime = {
   capacityOverloadTimer: number;
   balanceBreakerTimer: number;
   breakerTrippedSeconds: number;
+  breakerResetHoldSeconds: number;
   lastBreakerReason?: BreakerReason;
 };
 
@@ -161,6 +162,7 @@ export type PlayerCommand =
   | { type: "setWaterDamMode"; playerId: PlayerId; mode: WaterDamMode }
   | { type: "setWindEnabled"; playerId: PlayerId; enabled: boolean }
   | { type: "shedLoad"; playerId: PlayerId }
+  | { type: "holdBreakerReset"; playerId: PlayerId; seconds: number }
   | { type: "buyUpgrade"; playerId: PlayerId; kind: UpgradeKind }
   | { type: "playCard"; playerId: PlayerId; kind: CardKind }
   | { type: "acceptContract"; playerId: PlayerId; kind: ContractKind }
@@ -215,9 +217,16 @@ export type ProductionConsoleState = DispatchConsoleState & {
   nuclearOutputMW: number;
   thermalThrottle: number;
   thermalHeat: number;
+  thermalOutputMW: number;
+  solarOutputMW: number;
+  windOutputMW: number;
+  damOutputMW: number;
   storedWaterMWh: number;
+  waterDamCapacityMWh: number;
   waterDamMode: WaterDamMode;
   windEnabled: boolean;
+  breakerTrippedSeconds: number;
+  breakerResetProgress: number;
 };
 
 export type FinalResult = {

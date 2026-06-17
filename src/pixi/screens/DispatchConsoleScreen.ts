@@ -1,12 +1,12 @@
 import { Container, Graphics, Sprite, Text } from "pixi.js";
 
-import type { PlayerCommand } from "../gameplay/types";
+import type { PlayerCommand } from "../../gameplay/types";
 import type {
   AssetResolver,
   VisualAssetKey,
-} from "./assets";
-import { DESIGN_TOKENS, type DesignTokens } from "./tokens";
-import type { DispatchCardState, DispatchConsoleState, PlantKey, SectorKey, SectorVisualState } from "../gameplay/types";
+} from "../assets";
+import { DESIGN_TOKENS, type DesignTokens } from "../tokens";
+import type { DispatchCardState, DispatchConsoleState, PlantKey, SectorKey, SectorVisualState } from "../../gameplay/types";
 
 type Rect = { x: number; y: number; w: number; h: number };
 type CommandSink = (command: PlayerCommand) => void;
