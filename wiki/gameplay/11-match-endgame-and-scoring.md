@@ -26,6 +26,8 @@ Winner:
 highest final score
 ```
 
+This mode is designed for a single human player facing an AI opponent in the first version. Multiplayer is out of scope for the MVP.
+
 ## Cash vs score
 
 Use separate values.

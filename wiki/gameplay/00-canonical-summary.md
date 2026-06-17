@@ -12,7 +12,7 @@ related: []
 
 ## One-line pitch
 
-**Grid Duel** is a 1v1 real-time electricity-grid control game where the provider with the best contract-to-capacity efficiency offers the cheapest price, attracts customers, earns more money, and risks breaker trips if supply and demand drift too far apart.
+**Grid Duel** is a single-player real-time electricity-grid control game where the player faces an AI opponent, and the provider with the best contract-to-capacity efficiency offers the cheapest price, attracts customers, earns more money, and risks breaker trips if supply and demand drift too far apart.
 
 ## Core player role
 
@@ -76,3 +76,5 @@ high contract utilization, supply within 5% of demand
 Use synthetic gameplay numbers. External data is not a core mechanic for the first prototype.
 
 Do not implement a deep real electricity market. The game must remain legible in a 1-2 minute demo.
+
+The first version is explicitly not multiplayer. Time should go into the AI opponent, readable pacing, and strong single-player decision pressure instead of player-vs-player networking or matchmaking.

@@ -32,11 +32,13 @@ This folder is the canonical gameplay reference for **Grid Duel**.
 
 ## Main design
 
-**Grid Duel** is a real-time manual electricity-grid duel.
+**Grid Duel** is a real-time manual electricity-grid duel against an AI opponent.
 
-Two electricity providers compete for a shared regional demand. The better operator keeps contracted load close to the current capacity basis, which creates a higher efficiency score. Higher efficiency lowers customer price. Lower price attracts more customers. More customers create more revenue but also force the player to manually keep supply and demand matched in real time.
+Two electricity providers compete for a shared regional demand. In the first version, the other provider is AI-controlled rather than another human player. The better operator keeps contracted load close to the current capacity basis, which creates a higher efficiency score. Higher efficiency lowers customer price. Lower price attracts more customers. More customers create more revenue but also force the player to manually keep supply and demand matched in real time.
 
 The player wins by pricing efficiently, accepting the right contracts, and keeping real-time supply within the breaker-safe range.
+
+Multiplayer is not part of the first release plan.
 
 ## Demo target
 

@@ -12,7 +12,7 @@ related: []
 
 ## Match loop
 
-Each match is a short real-time duel, typically **180-300 seconds**.
+Each match is a short real-time single-player duel against an AI opponent, typically **180-300 seconds**.
 
 Every simulation tick:
 

@@ -127,3 +127,9 @@ Use real data only as non-mechanical context unless specifically promoted into a
 Every mechanic should be explainable quickly. Prefer 4 strong operational surfaces over 12 shallow systems.
 
 The demo should communicate the loop in less than 30 seconds.
+
+## AX-13 — First version is single-player
+
+The first version should not depend on multiplayer, matchmaking, or human-vs-human networking.
+
+The opponent should be AI-controlled for the MVP so the team can focus on pacing, readability, and balance.

@@ -10,7 +10,7 @@ related: []
 
 # Events and Cards
 
-Events create synchronized shocks. Cards create 1v1 interaction.
+Events create synchronized shocks. Cards create interaction against the AI opponent.
 
 ## Design goal
 
@@ -87,7 +87,7 @@ Cards are player-triggered bonus/malus actions.
 
 | Type | Meaning |
 |---|---|
-| Attack | Creates stress for opponent |
+| Attack | Creates stress for the AI opponent |
 | Contract | Shared fixed-load offer accepted by the first player to commit |
 
 ## Starter card set

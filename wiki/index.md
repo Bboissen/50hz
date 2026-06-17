@@ -10,7 +10,7 @@ related: []
 
 # 50Hz Wiki Index
 
-This wiki is the durable design reference for 50Hz. For gameplay work, start with the gameplay index and then read the mechanic-specific page.
+This wiki is the durable design reference for 50Hz. For gameplay work, start with the gameplay index and then read the mechanic-specific page. The first playable version is single-player against an AI opponent, not multiplayer.
 
 ## Gameplay
 
