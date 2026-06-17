@@ -5,7 +5,7 @@ status: "draft"
 updated: "2026-06-17"
 tags: ["50hz", "grid-pressure", "meter", "overload", "ui"]
 summary: "Definition and visual spec for the central dual indicator showing capacity utilization and real-time overload/underload balance."
-related: ["00-canonical-summary.md", "06-manual-control-room.md", "21-dispatch-console-layout.md", "28-animation-and-feedback-priorities.md"]
+related: ["../gameplay/00-canonical-summary.md", "../gameplay/06-manual-control-room.md", "21-dispatch-console-layout.md", "28-animation-and-feedback-priorities.md"]
 ---
 
 # Grid Pressure Meter

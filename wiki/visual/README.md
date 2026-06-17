@@ -5,7 +5,7 @@ status: "draft"
 updated: "2026-06-17"
 tags: ["50hz", "visual-design", "art-direction", "pixijs", "mvp"]
 summary: "Navigation source for the DispatchConsole visual direction, art bible, UI systems, assets, ownership, and PixiJS agent handoff."
-related: ["00-canonical-summary.md", "06-manual-control-room.md", "99-glossary.md", "21-dispatch-console-layout.md", "22-art-direction-bible.md", "29-asset-inventory-and-ownership.md", "30-pixijs-agent-integration-brief.md"]
+related: ["../gameplay/00-canonical-summary.md", "../gameplay/06-manual-control-room.md", "../gameplay/99-glossary.md", "21-dispatch-console-layout.md", "22-art-direction-bible.md", "29-asset-inventory-and-ownership.md", "30-pixijs-agent-integration-brief.md"]
 ---
 
 # Visual Design Index
@@ -48,7 +48,6 @@ Lower tariff -> more customers -> higher grid pressure -> overload risk
 | `29-asset-inventory-and-ownership.md` | What is authored art vs code-generated UI vs hybrid | Human + coder |
 | `30-pixijs-agent-integration-brief.md` | Direct build brief for PixiJS MCP / coding agent | Agentic coder |
 | `31-production-console-visual-direction.md` | Early visual direction for the manual control center screen | Human + coder |
-| `design-tokens.50hz.json` | Machine-readable color, layout, layer, and animation tokens | Agentic coder |
 | `asset-manifest.prototype.json` | Proposed PixiJS asset bundle names and file paths | Agentic coder |
 
 ## Non-negotiable design decisions

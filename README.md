@@ -1,6 +1,6 @@
 # 50Hz Gameplay Wiki
 
-The game is a **real-time 1v1 educational electricity-grid duel**. Two electricity companies supply a shared regional demand. The better operator runs a more efficient grid, obtains a lower customer price, attracts more consumers, earns more money, and is then pushed toward overload by that same success.
+The game is a **real-time 1v1 educational electricity-grid duel**. The first playable version is single-player against an AI opponent. Two electricity companies supply a shared regional demand. The better operator runs a more efficient grid, obtains a lower customer price, attracts more consumers, earns more money, and is then pushed toward overload by that same success.
 
 ## Canonical reference order
 
@@ -57,4 +57,19 @@ Use [`wiki/index.md`](./wiki/index.md) or `python3 scripts/wiki.py search "<quer
 │       ├── 12-mvp-balance-config.md
 │       ├── 13-implementation-guardrails.md
 │       └── 99-glossary.md
+│   └── visual/
+│       ├── README.md
+│       ├── 20-visual-design-index.md
+│       ├── 21-dispatch-console-layout.md
+│       ├── 22-art-direction-bible.md
+│       ├── 23-ui-naming-and-taxonomy.md
+│       ├── 24-city-sectors-visual-design.md
+│       ├── 25-grid-pressure-meter.md
+│       ├── 26-events-cards-timelines.md
+│       ├── 27-upgrades-generation-tariffs.md
+│       ├── 28-animation-and-feedback-priorities.md
+│       ├── 29-asset-inventory-and-ownership.md
+│       ├── 30-pixijs-agent-integration-brief.md
+│       ├── 31-production-console-visual-direction.md
+│       └── asset-manifest.prototype.json
 ```
