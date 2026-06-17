@@ -1,32 +1,19 @@
 {
   "bundles": [
     {
-      "name": "ui",
-      "assets": [
-        {
-          "alias": "card_paper_base",
-          "src": "assets/ui/cards/card_paper_base.png"
-        },
-        {
-          "alias": "meter_glass_overlay",
-          "src": "assets/ui/meters/meter_glass_overlay.png"
-        }
-      ]
-    },
-    {
       "name": "city",
       "assets": [
         {
           "alias": "city_homes_slab",
-          "src": "assets/city/buildings/building_homes_slab.png"
+          "src": "assets/city/buildings/house.png"
         },
         {
           "alias": "city_services_tower",
-          "src": "assets/city/buildings/building_services_tower.png"
+          "src": "assets/city/buildings/business.png"
         },
         {
           "alias": "city_data_bunker",
-          "src": "assets/city/buildings/building_data_bunker.png"
+          "src": "assets/city/buildings/data_center.png"
         }
       ]
     },
@@ -35,102 +22,64 @@
       "assets": [
         {
           "alias": "plant_reactor",
-          "src": "assets/icons/plants/plant_reactor.png"
+          "src": "assets/city/buildings/nuclear.png"
         },
         {
           "alias": "plant_boiler",
-          "src": "assets/icons/plants/plant_boiler.png"
+          "src": "assets/city/buildings/thermal.png"
         },
         {
           "alias": "plant_renewables",
-          "src": "assets/icons/plants/plant_renewables.png"
+          "src": "assets/city/buildings/solar.png"
+        },
+        {
+          "alias": "plant_solar",
+          "src": "assets/city/buildings/solar.png"
+        },
+        {
+          "alias": "plant_wind_turbine",
+          "src": "assets/city/buildings/wind_turbine.png"
         },
         {
           "alias": "plant_water_dam",
-          "src": "assets/icons/plants/plant_water_dam.png"
+          "src": "assets/city/buildings/dam.png"
         }
       ]
     },
     {
-      "name": "events",
+      "name": "reference",
       "assets": [
         {
-          "alias": "event_football",
-          "src": "assets/icons/events/event_football.png"
+          "alias": "reference_house",
+          "src": "assets/city/buildings/house.png"
         },
         {
-          "alias": "event_cold_wave",
-          "src": "assets/icons/events/event_cold_wave.png"
+          "alias": "reference_business",
+          "src": "assets/city/buildings/business.png"
         },
         {
-          "alias": "event_data_burst",
-          "src": "assets/icons/events/event_data_burst.png"
+          "alias": "reference_data_center",
+          "src": "assets/city/buildings/data_center.png"
         },
         {
-          "alias": "event_cloud_front",
-          "src": "assets/icons/events/event_cloud_front.png"
+          "alias": "reference_nuclear",
+          "src": "assets/city/buildings/nuclear.png"
         },
         {
-          "alias": "event_business_expo",
-          "src": "assets/icons/events/event_business_expo.png"
+          "alias": "reference_thermal",
+          "src": "assets/city/buildings/thermal.png"
         },
         {
-          "alias": "event_rival_malus",
-          "src": "assets/icons/events/event_rival_malus.png"
-        }
-      ]
-    },
-    {
-      "name": "actions",
-      "assets": [
-        {
-          "alias": "action_demand_response",
-          "src": "assets/icons/actions/action_demand_response.png"
+          "alias": "reference_solar",
+          "src": "assets/city/buildings/solar.png"
         },
         {
-          "alias": "action_transformer_boost",
-          "src": "assets/icons/actions/action_transformer_boost.png"
+          "alias": "reference_wind_turbine",
+          "src": "assets/city/buildings/wind_turbine.png"
         },
         {
-          "alias": "action_emergency_crew",
-          "src": "assets/icons/actions/action_emergency_crew.png"
-        },
-        {
-          "alias": "action_load_shed",
-          "src": "assets/icons/actions/action_load_shed.png"
-        },
-        {
-          "alias": "contract_business",
-          "src": "assets/icons/actions/contract_business.png"
-        },
-        {
-          "alias": "contract_data_center",
-          "src": "assets/icons/actions/contract_data_center.png"
-        }
-      ]
-    },
-    {
-      "name": "weather",
-      "assets": [
-        {
-          "alias": "weather_sun",
-          "src": "assets/icons/weather/weather_sun.png"
-        },
-        {
-          "alias": "weather_cloud",
-          "src": "assets/icons/weather/weather_cloud.png"
-        },
-        {
-          "alias": "weather_rain",
-          "src": "assets/icons/weather/weather_rain.png"
-        },
-        {
-          "alias": "weather_snow",
-          "src": "assets/icons/weather/weather_snow.png"
-        },
-        {
-          "alias": "weather_wind",
-          "src": "assets/icons/weather/weather_wind.png"
+          "alias": "reference_dam",
+          "src": "assets/city/buildings/dam.png"
         }
       ]
     }
