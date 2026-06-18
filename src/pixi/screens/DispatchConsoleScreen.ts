@@ -517,26 +517,27 @@ class VuGridPressureMeter extends Container {
     this.g.rect(this.bounds.x + 42, this.bounds.y + 54, 260, 196).fill({ color: PIXEL.paperLight }).stroke({ color: PIXEL.black, width: 5 });
     this.g.rect(this.bounds.x + 348, this.bounds.y + 54, 260, 196).fill({ color: PIXEL.paperLight }).stroke({ color: PIXEL.black, width: 5 });
     this.drawMeterFace(this.bounds.x + 172, this.bounds.y + 214, 112, Math.min(1.25, state.capacityUtilization) / 1.25, 0.72, danger ? Math.sin(state.timeSeconds * 18) * 0.015 : 0);
-    this.drawMeterFace(
-      this.bounds.x + 478,
-      this.bounds.y + 214,
-      112,
-      Math.max(0, Math.min(1, 0.5 + state.supplyDemandMismatch / 0.32)),
-      0.82,
-      danger ? Math.sin(state.timeSeconds * 20) * 0.018 : 0,
-    );
+    this.drawSupplyDeltaGauge(state);
     addLabel(this.labelLayer, "CAPACITY", this.bounds.x + 108, this.bounds.y + 76, 15, PIXEL.black);
-    addLabel(this.labelLayer, "BALANCE", this.bounds.x + 418, this.bounds.y + 76, 15, PIXEL.black);
+    addLabel(this.labelLayer, "SUPPLY DELTA", this.bounds.x + 388, this.bounds.y + 76, 15, PIXEL.black);
     this.g.rect(this.bounds.x + 38, this.bounds.y + 28, 36, 22).fill({ color: state.balanceZone === "lock" ? this.tokens.colors.phosphorGreen : 0x3b1610 });
     this.g.rect(this.bounds.x + this.bounds.w - 74, this.bounds.y + 28, 36, 22).fill({ color: blink ? this.tokens.colors.overloadRed : 0x3b1610 });
-    this.readout.text = `CAP ${(state.capacityUtilization * 100).toFixed(0)}% ${state.capacityZone.toUpperCase()}   BAL ${(state.supplyDemandMismatch * 100).toFixed(1)}% ${state.balanceZone.toUpperCase()}`;
+    this.readout.text = `CAP ${(state.capacityUtilization * 100).toFixed(0)}% ${state.capacityZone.toUpperCase()}   SUPPLY-LOAD ${this.formatSignedMw(state.generationMW - state.currentDemandMW)} (${this.formatSignedPercent(state.supplyDemandMismatch)}) ${state.balanceZone.toUpperCase()}`;
     addLabel(
       this.labelLayer,
-      `${state.currentContractLoadMW.toFixed(0)}/${state.contractCapacityBasisMW.toFixed(0)}MW CONTRACT   ${state.generationMW.toFixed(0)}/${state.currentDemandMW.toFixed(0)}MW GEN/LOAD`,
+      `${state.currentContractLoadMW.toFixed(0)}/${state.contractCapacityBasisMW.toFixed(0)}MW CONTRACT   ${state.generationMW.toFixed(0)}MW SUPPLY / ${state.currentDemandMW.toFixed(0)}MW DEMAND`,
       this.bounds.x + 54,
       this.bounds.y + 258,
       13,
       PIXEL.cream,
+    );
+    addLabel(
+      this.labelLayer,
+      `${state.breakerStatusText}   SOURCE ${state.breakerRiskSource.toUpperCase()}`,
+      this.bounds.x + 54,
+      this.bounds.y + 24,
+      14,
+      state.breakerResetRequired ? this.tokens.colors.overloadRed : PIXEL.cream,
     );
   }
 
@@ -560,6 +561,60 @@ class VuGridPressureMeter extends Container {
     const needle = start + Math.max(0, Math.min(1, ratio)) * sweep + jitter;
     this.g.moveTo(cx, cy).lineTo(cx + Math.cos(needle) * (radius - 16), cy + Math.sin(needle) * (radius - 16)).stroke({ color: PIXEL.black, width: 7 });
     this.g.rect(cx - 12, cy - 12, 24, 24).fill({ color: PIXEL.black }).rect(cx - 5, cy - 5, 10, 10).fill({ color: PIXEL.cream });
+  }
+
+  private drawSupplyDeltaGauge(state: DispatchConsoleState): void {
+    const x = this.bounds.x + 374;
+    const y = this.bounds.y + 132;
+    const w = 208;
+    const h = 34;
+    const center = x + w / 2;
+    const severe = 0.15;
+    const safe = 0.05;
+    const displayMax = 0.3;
+    const markerX = center + Math.max(-1, Math.min(1, state.supplyDemandMismatch / displayMax)) * (w / 2);
+    const jitter = state.balanceZone.includes("severe") ? Math.sin(state.timeSeconds * 22) * 4 : 0;
+    const leftSafe = center - (safe / displayMax) * (w / 2);
+    const rightSafe = center + (safe / displayMax) * (w / 2);
+    const leftSevere = center - (severe / displayMax) * (w / 2);
+    const rightSevere = center + (severe / displayMax) * (w / 2);
+    const deltaMW = state.generationMW - state.currentDemandMW;
+
+    this.g
+      .rect(x, y, w, h)
+      .fill({ color: 0x261510 })
+      .stroke({ color: PIXEL.black, width: 4 })
+      .rect(x + 4, y + 4, leftSevere - x - 4, h - 8)
+      .fill({ color: this.tokens.colors.overloadRed })
+      .rect(leftSevere, y + 4, leftSafe - leftSevere, h - 8)
+      .fill({ color: this.tokens.colors.amberWarn })
+      .rect(leftSafe, y + 4, rightSafe - leftSafe, h - 8)
+      .fill({ color: this.tokens.colors.phosphorGreen })
+      .rect(rightSafe, y + 4, rightSevere - rightSafe, h - 8)
+      .fill({ color: this.tokens.colors.amberWarn })
+      .rect(rightSevere, y + 4, x + w - 4 - rightSevere, h - 8)
+      .fill({ color: this.tokens.colors.overloadRed })
+      .rect(center - 2, y - 8, 4, h + 16)
+      .fill({ color: PIXEL.black })
+      .rect(markerX - 6 + jitter, y - 10, 12, h + 20)
+      .fill({ color: PIXEL.black })
+      .rect(markerX - 3 + jitter, y - 4, 6, h + 8)
+      .fill({ color: PIXEL.cream });
+
+    addLabel(this.labelLayer, "UNDER", x + 2, y + h + 10, 11, PIXEL.black);
+    addLabel(this.labelLayer, "0%", center - 12, y + h + 10, 11, PIXEL.black);
+    addLabel(this.labelLayer, "OVER", x + w - 42, y + h + 10, 11, PIXEL.black);
+    addLabel(this.labelLayer, `SUPPLY - DEMAND ${this.formatSignedMw(deltaMW)}`, x + 4, y - 38, 13, PIXEL.black);
+    addLabel(this.labelLayer, this.formatSignedPercent(state.supplyDemandMismatch), center - 24, y - 18, 12, PIXEL.black);
+  }
+
+  private formatSignedMw(value: number): string {
+    return `${value >= 0 ? "+" : ""}${value.toFixed(0)}MW`;
+  }
+
+  private formatSignedPercent(value: number): string {
+    const percent = value * 100;
+    return `${percent >= 0 ? "+" : ""}${percent.toFixed(1)}%`;
   }
 }
 
@@ -643,10 +698,11 @@ class AlarmOverlay extends Container {
   }
 
   public update(state: DispatchConsoleState): void {
-    const danger = state.capacityZone === "tripRisk" || state.capacityZone === "trip" || state.balanceZone.includes("severe");
+    const danger = state.breakerResetRequired || state.capacityZone === "tripRisk" || state.capacityZone === "trip" || state.balanceZone.includes("severe");
     const alpha = danger ? 0.07 + (Math.sin(state.timeSeconds * 11) + 1) * 0.05 : 0;
     this.flash.clear().rect(0, 0, 1920, 1080).fill({ color: DESIGN_TOKENS.colors.overloadRed, alpha });
-    this.stamp.visible = state.capacityZone === "trip";
+    this.stamp.text = state.breakerResetRequired ? "RESET" : "TRIP";
+    this.stamp.visible = state.breakerResetRequired || state.capacityZone === "trip";
   }
 }
 

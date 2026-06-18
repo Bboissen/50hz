@@ -49,7 +49,7 @@ This is a **diagnostic and intervention screen**, not a passive dashboard.
 │ UPGRADE RACK          GRID PRESSURE METER             DISPATCH CARDS      │
 │ Reactor  [■■□] €85     IDLE | SAFE | STRAIN | TRIP     [Card][Card][Card]│
 │ Boiler   [■□□] €40            big analog needle         [Card][Card]      │
-│ Renew.   [■■□] €45       BALANCE LOCK / OVERLOAD LAMP                    │
+│ Renew.   [■■□] €45       SUPPLY DELTA / OVERLOAD LAMP                    │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -96,7 +96,7 @@ Design for this eye path:
 
 | Rank | Element | Visual treatment |
 |---:|---|---|
-| 1 | Grid Pressure Meter | Largest analog object; capacity needle plus balance gauge; danger zones |
+| 1 | Grid Pressure Meter | Largest analog object; capacity needle plus centered supply-delta gauge; danger zones |
 | 2 | City Load Window | Animated pixel diorama; sector lights and overload states |
 | 3 | Tariff Boards | Large mechanical digits; easy comparison |
 | 4 | Contract Split | Centered under city; directly links price to load share |
