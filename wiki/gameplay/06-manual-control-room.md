@@ -90,7 +90,9 @@ Controls:
 | Water dam control | Fill / neutral / drain |
 | Wind turbine routing | ON / OFF |
 | Load shedding | Emergency demand reduction with reputation and contract risk |
+| Breaker reset | Paid grid-down recovery action; unaffordable reset ends the match |
 
+When the breaker trips, every plant reports `gridDown` and contributes 0 MW to the grid. Supply, demand, and served contract load read as 0 until the player completes the reset hold and pays the reset cost. For 15 seconds after reset, served load follows actual supply so the operator has recovery headroom while ramping generation back up.
 
 ## Manual control principle
 

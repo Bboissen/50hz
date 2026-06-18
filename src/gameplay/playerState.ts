@@ -36,6 +36,13 @@ export function createInitialPlayerState(id: PlayerId): PlayerState {
     deliveredSupplyMW: GAME_CONFIG.assets.nuclear.initialOutputMW,
     thermalHeat: 0,
     storedWaterMWh: capacities.waterDamCapacityMWh * GAME_CONFIG.assets.waterDam.initialStoredRatio,
+    plantStates: {
+      nuclear: "online" as const,
+      thermal: "online" as const,
+      solar: "online" as const,
+      wind: "online" as const,
+      waterDam: "online" as const,
+    },
   };
 
   return {
@@ -60,6 +67,9 @@ export function createInitialPlayerState(id: PlayerId): PlayerState {
       balanceBreakerTimer: 0,
       breakerTrippedSeconds: 0,
       breakerResetHoldSeconds: 0,
+      breakerTripFlashSeconds: 0,
+      breakerRecoveredPulseSeconds: 0,
+      gridShutdownReliefSeconds: 0,
     },
     activeContracts: [],
     upgradesInProgress: [],

@@ -29,14 +29,16 @@ Interpretation:
 
 | Capacity utilization | State |
 |---:|---|
-| <70% | underused/overbuilt |
-| 70%-85% | safe |
+| <70% | underused/overbuilt; efficiency problem, not a breaker trip |
+| 70%-85% | safe but not yet efficient |
 | 85%-98% | efficient sweet spot |
 | 98%-100% | risk of overload rising |
 | 100%-105% | severe overload - short delay before breaker |
 | >105% | instant breaker |
 
 For normal customer load, `contractCapacityBasisMW` is deterministic max capacity. When fixed contracts are active, it can include current renewable and water dam capacity up to total max capacity.
+
+Low capacity utilization is intentionally not an underload breaker condition. A player at 70%-85%, or even below 70%, has overbuilt or under-contracted infrastructure; the punishment is lower efficiency, higher price, slower customer growth, and worse cash gain. Breaker underload is reserved for real-time supply being too low for current demand in the production console.
 
 ## Capacity overload breaker
 
@@ -128,6 +130,8 @@ or:
 supply/demand mismatch stays outside +/-5% long enough to fill the breaker timer
 ```
 
+Do not trigger a strike merely because capacity utilization is low. Underused capacity should be legible as an economy/strategy mistake, while underload should be legible as a manual production failure.
+
 ## Strike effect
 
 Recommended MVP strike:
@@ -137,6 +141,7 @@ strikes += 1;
 cash -= 25;
 subscribedLoadShare *= 0.90;
 breakerTripSeconds = 8;
+gridShutdownReliefSeconds = 15;
 ```
 
 Interpretation:
@@ -155,14 +160,40 @@ Example:
 ```txt
 Breaker tripped.
 Go to Production console screen and hold Reset for 2 seconds.
+Pay the reset cost or lose the match.
 ```
 
 While tripped:
 
 ```ts
-availableDeterministicCapacityMW *= 0.85;
-availableSupplyMW *= 0.85;
+plantStates = {
+  nuclear: 'gridDown',
+  thermal: 'gridDown',
+  solar: 'gridDown',
+  wind: 'gridDown',
+  waterDam: 'gridDown',
+};
+
+generationMW = 0;
+deliveredSupplyMW = 0;
+currentDemandMW = 0;
+currentContractLoadMW = 0;
 ```
+
+This is a derived grid state, not a forced market-share mutation. The underlying customer subscription can remain part of the economy model, but the served contract split displayed during grid-down is 0 because no plant is connected to the grid.
+
+Reset behavior:
+
+```ts
+if (cash < BREAKER_RESET_COST) {
+  gameOver('reset-bankrupt');
+} else {
+  cash -= BREAKER_RESET_COST;
+  breakerTrippedSeconds = 0;
+}
+```
+
+After a reset, the first 15 seconds are a recovery relief window. During that window, served contract load and demand match actual supply so the player has headroom to ramp plants without immediately retripping the breaker. This does not erase the economy state; it controls served load while the grid is coming back online.
 
 ## Reliability vs efficiency
 
@@ -174,4 +205,5 @@ This distinction is central:
 high contract utilization = good efficiency
 supply/demand mismatch outside +/-5% = breaker timer rises
 capacity utilization above 100% = capacity overload timer or instant breaker
+capacity utilization below target = lower efficiency and price disadvantage, not breaker risk
 ```

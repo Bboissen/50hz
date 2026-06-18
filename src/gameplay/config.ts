@@ -80,6 +80,8 @@ export const GAME_CONFIG = {
     capacityOverloadBreakerSeconds: 3,
     capacityOverloadRecoverySeconds: 1,
     breakerTripSeconds: 8,
+    gridShutdownReliefSeconds: 15,
+    resetCost: 35,
   },
   strike: {
     cashPenalty: 25,

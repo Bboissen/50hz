@@ -82,6 +82,23 @@ export function createDebugPanel(options: DebugPanelOptions): DebugPanel {
     button("Wind ON", () => options.onCommand({ type: "setWindEnabled", playerId: "player", enabled: true })),
     button("Wind OFF", () => options.onCommand({ type: "setWindEnabled", playerId: "player", enabled: false })),
     button("Load shed", () => options.onCommand({ type: "shedLoad", playerId: "player" })),
+    button("Underload scenario", () => {
+      options.onCommand({ type: "setNuclearTarget", playerId: "player", targetMW: 0 });
+      options.onCommand({ type: "setThermalThrottle", playerId: "player", throttle: 0 });
+      options.onCommand({ type: "setWindEnabled", playerId: "player", enabled: false });
+      options.onCommand({ type: "setWaterDamMode", playerId: "player", mode: "hold" });
+    }),
+    button("Overload scenario", () => {
+      options.onCommand({ type: "setNuclearTarget", playerId: "player", targetMW: 100 });
+      options.onCommand({ type: "setThermalThrottle", playerId: "player", throttle: 1 });
+      options.onCommand({ type: "setWindEnabled", playerId: "player", enabled: true });
+      options.onCommand({ type: "setWaterDamMode", playerId: "player", mode: "hold" });
+    }),
+    button("Capacity trip scenario", () => {
+      options.onCommand({ type: "acceptContract", playerId: "player", kind: "business" });
+      options.onCommand({ type: "acceptContract", playerId: "player", kind: "dataCenter" });
+    }),
+    button("Hold reset 2.1s", () => options.onCommand({ type: "holdBreakerReset", playerId: "player", seconds: 2.1 })),
     button("Demand response", () => options.onCommand({ type: "playCard", playerId: "player", kind: "demandResponse" })),
     button("Cloud front", () => options.onCommand({ type: "playCard", playerId: "player", kind: "cloudFront" })),
     button("Wind storm", () => options.onCommand({ type: "playCard", playerId: "player", kind: "windStorm" })),
@@ -109,12 +126,16 @@ export function createDebugPanel(options: DebugPanelOptions): DebugPanel {
         `eff=${(dispatch.playerEfficiency * 100).toFixed(0)}% rival=${(dispatch.rivalEfficiency * 100).toFixed(0)}%`,
         `price=${dispatch.playerTariffCents.toFixed(1)} rival=${dispatch.rivalTariffCents.toFixed(1)}`,
         `targetShare=${(dispatch.playerTargetMarketShare * 100).toFixed(1)}% subscribed=${(dispatch.playerSubscribedLoadShare * 100).toFixed(1)}%`,
-        `load=${dispatch.currentDemandMW.toFixed(1)} generation=${dispatch.generationMW.toFixed(1)}`,
+        `demand=${dispatch.currentDemandMW.toFixed(1)} supply=${dispatch.generationMW.toFixed(1)} deltaMW=${(dispatch.generationMW - dispatch.currentDemandMW).toFixed(1)} deltaPercent=${(dispatch.supplyDemandMismatch * 100).toFixed(1)}%`,
         `capacity=${(dispatch.capacityUtilization * 100).toFixed(1)}% basis=${dispatch.contractCapacityBasisMW.toFixed(1)} detMax=${dispatch.deterministicMaxCapacityMW.toFixed(1)} totalMax=${dispatch.totalMaxCapacityMW.toFixed(1)}`,
-        `mismatch=${(dispatch.supplyDemandMismatch * 100).toFixed(1)}%`,
-        `breaker=${dispatch.breakerTimer.toFixed(1)}s event=${dispatch.activeEventLabel}`,
-        `nuclear=${production.nuclearOutputMW.toFixed(1)}/${production.nuclearTargetMW.toFixed(1)} cap=${production.nuclearCapacityMW.toFixed(1)} thermal=${(production.thermalThrottle * 100).toFixed(0)}% cap=${production.thermalCapacityMW.toFixed(1)} heat=${(production.thermalHeat * 100).toFixed(0)}%`,
-        `dam=${production.waterDamMode} stored=${production.storedWaterMWh.toFixed(1)} out=${production.damOutputMW.toFixed(1)} fill=${production.damAbsorbMW.toFixed(1)} max=${production.waterDamMaxPowerMW.toFixed(1)} wind=${production.windEnabled ? "ON" : "OFF"}`,
+        `breaker=${dispatch.breakerTimer.toFixed(1)}s balanceTimer=${dispatch.balanceBreakerTimer.toFixed(1)}s capacityTimer=${dispatch.capacityOverloadTimer.toFixed(1)}s source=${dispatch.breakerRiskSource}`,
+        `breakerState=${dispatch.breakerLifecycle} gridDown=${dispatch.isGridDown} resetRequired=${dispatch.breakerResetRequired} resetProgress=${(dispatch.breakerResetProgress * 100).toFixed(0)}% reason=${dispatch.breakerTripReason ?? "none"}`,
+        `resetCost=${dispatch.breakerResetCost} canReset=${dispatch.canAffordBreakerReset} relief=${dispatch.gridShutdownReliefSeconds.toFixed(1)}s gameOver=${production.gameOverReason ?? "none"}`,
+        `breakerStatus=${dispatch.breakerStatusText}`,
+        `lastPenalty=cash-${dispatch.lastBreakerTripSummary?.cashPenalty ?? 0} score-${dispatch.lastBreakerTripSummary?.totalScorePenalty ?? 0} subscriberLoss=${((dispatch.lastBreakerTripSummary?.subscriberLossRatio ?? 0) * 100).toFixed(0)}% shedReady=${dispatch.canShedLoad}`,
+        `event=${dispatch.activeEventLabel}`,
+        `nuclear=${production.nuclearOutputMW.toFixed(1)}/${production.nuclearTargetMW.toFixed(1)} state=${production.plantStates.nuclear} cap=${production.nuclearCapacityMW.toFixed(1)} thermal=${(production.thermalThrottle * 100).toFixed(0)}% thermalState=${production.plantStates.thermal} cap=${production.thermalCapacityMW.toFixed(1)} heat=${(production.thermalHeat * 100).toFixed(0)}%`,
+        `dam=${production.waterDamMode} state=${production.plantStates.waterDam} stored=${production.storedWaterMWh.toFixed(1)} out=${production.damOutputMW.toFixed(1)} fill=${production.damAbsorbMW.toFixed(1)} max=${production.waterDamMaxPowerMW.toFixed(1)} wind=${production.windEnabled ? "ON" : "OFF"} windState=${production.plantStates.wind} solarState=${production.plantStates.solar}`,
       ].join("\n");
     },
   };

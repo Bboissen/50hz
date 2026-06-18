@@ -8,6 +8,19 @@ export type UpgradeKind = keyof typeof GAME_CONFIG.upgrades extends infer Key
 export type ContractKind = keyof typeof GAME_CONFIG.contracts;
 export type CardKind = keyof typeof GAME_CONFIG.cards;
 export type BreakerReason = "capacity-overload" | "underload" | "overload";
+export type BreakerLifecycleState = "safe" | "warning" | "tripped" | "awaiting-reset" | "reset-progress" | "recovered";
+export type BreakerRiskSource = "none" | "capacity" | "balance";
+export type PlantOutputState = "online" | "gridDown";
+export type GameOverReason = "time" | "player-reset-bankrupt" | "rival-reset-bankrupt";
+
+export type BreakerTripSummary = {
+  reason: BreakerReason;
+  cashPenalty: number;
+  subscriberLossRatio: number;
+  strikeScorePenalty: number;
+  contractScorePenalty: number;
+  totalScorePenalty: number;
+};
 
 export type GenerationControls = {
   nuclearTargetMW: number;
@@ -34,7 +47,11 @@ export type AssetRuntime = {
   balanceBreakerTimer: number;
   breakerTrippedSeconds: number;
   breakerResetHoldSeconds: number;
+  breakerTripFlashSeconds: number;
   lastBreakerReason?: BreakerReason;
+  breakerRecoveredPulseSeconds: number;
+  gridShutdownReliefSeconds: number;
+  lastBreakerTripSummary?: BreakerTripSummary;
 };
 
 export type AssetOutputs = {
@@ -48,6 +65,7 @@ export type AssetOutputs = {
   deliveredSupplyMW: number;
   thermalHeat: number;
   storedWaterMWh: number;
+  plantStates: Record<"nuclear" | "thermal" | "solar" | "wind" | "waterDam", PlantOutputState>;
 };
 
 export type ActiveContract = {
@@ -165,6 +183,7 @@ export type MatchState = {
   isPaused: boolean;
   players: Record<PlayerId, PlayerState>;
   activeEvents: TimelineToken[];
+  gameOverReason?: GameOverReason;
 };
 
 export type PlayerCommand =
@@ -219,6 +238,21 @@ export type DispatchConsoleState = {
   capacityZone: "idle" | "safe" | "efficient" | "strain" | "tripRisk" | "trip";
   balanceZone: "severeUnderload" | "underload" | "lock" | "overload" | "severeOverload";
   breakerTimer: number;
+  balanceBreakerTimer: number;
+  capacityOverloadTimer: number;
+  breakerRiskSource: BreakerRiskSource;
+  breakerLifecycle: BreakerLifecycleState;
+  breakerTripReason?: BreakerReason;
+  breakerResetRequired: boolean;
+  breakerResetProgress: number;
+  breakerResetCost: number;
+  canAffordBreakerReset: boolean;
+  gridShutdownReliefSeconds: number;
+  isGridDown: boolean;
+  breakerStatusText: string;
+  lastBreakerTripSummary?: BreakerTripSummary;
+  canShedLoad: boolean;
+  shedLoadCooldownRatio: number;
   activeEventLabel: string;
   plants: Record<PlantKey, PlantUpgradeState>;
   sectors: Record<SectorKey, SectorVisualState>;
@@ -248,10 +282,13 @@ export type ProductionConsoleState = DispatchConsoleState & {
   windEnabled: boolean;
   breakerTrippedSeconds: number;
   breakerResetProgress: number;
+  plantStates: AssetOutputs["plantStates"];
+  gameOverReason?: GameOverReason;
 };
 
 export type FinalResult = {
   winner: PlayerId | "tie";
+  reason: GameOverReason;
   playerFinalScore: number;
   rivalFinalScore: number;
   playerScore: number;

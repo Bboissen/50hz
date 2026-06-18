@@ -32,8 +32,15 @@ export class ResultScreen extends Container {
   }
 
   public update(result: FinalResult, state: MatchState): void {
+    const outcome =
+      result.reason === "player-reset-bankrupt"
+        ? "PLAYER COULD NOT PAY BREAKER RESET"
+        : result.reason === "rival-reset-bankrupt"
+          ? "RIVAL COULD NOT PAY BREAKER RESET"
+          : "MATCH CLOCK EXPIRED";
     this.body.text = [
       `WINNER: ${result.winner.toUpperCase()}`,
+      `OUTCOME: ${outcome}`,
       `FINAL SCORE: ${result.playerFinalScore.toFixed(0)} vs ${result.rivalFinalScore.toFixed(0)}`,
       `EFFICIENCY NOW: ${(state.players.player.lastEfficiency * 100).toFixed(0)}% vs ${(state.players.rival.lastEfficiency * 100).toFixed(0)}%`,
       `PRICE NOW: ${state.players.player.lastPrice.toFixed(1)} vs ${state.players.rival.lastPrice.toFixed(1)}`,

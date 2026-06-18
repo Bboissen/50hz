@@ -1,6 +1,6 @@
 import { GAME_CONFIG } from "./config";
 import { clamp, clamp01, moveTowards } from "./math";
-import type { AssetCapacities, AssetOutputs, AssetRuntime, GenerationControls, IncomingAttack } from "./types";
+import type { AssetCapacities, AssetOutputs, AssetRuntime, GenerationControls, IncomingAttack, PlantOutputState } from "./types";
 
 export function windFactor(speedKmh: number): number {
   const config = GAME_CONFIG.assets.renewable;
@@ -25,6 +25,7 @@ export function updateAssetOutputs(args: {
   incomingAttacks?: IncomingAttack[];
 }): { runtime: AssetRuntime; outputs: AssetOutputs } {
   const storageSecondsPerMWh = GAME_CONFIG.assets.waterDam.storageSecondsPerMWh;
+  const gridDown = args.runtime.breakerTrippedSeconds > 0;
   const dtStorageUnits = args.dt / storageSecondsPerMWh;
   const nuclearTargetMW = clamp(args.controls.nuclearTargetMW, 0, args.capacities.nuclearCapacityMW);
   const nuclearOutputMW = moveTowards(
@@ -55,31 +56,50 @@ export function updateAssetOutputs(args: {
     }
   }
 
-  const solarOutputMW = args.capacities.solarPeakMW * effectiveSolarFactor;
-  const windOutputMW = args.controls.windEnabled ? args.capacities.windPeakMW * windFactor(effectiveWindKmh) : 0;
-  const baseProductionMW = nuclearOutputMW + thermalOutputMW + solarOutputMW + windOutputMW;
+  let solarOutputMW = args.capacities.solarPeakMW * effectiveSolarFactor;
+  let windOutputMW = args.controls.windEnabled ? args.capacities.windPeakMW * windFactor(effectiveWindKmh) : 0;
+  let gridNuclearOutputMW = nuclearOutputMW;
+  let gridThermalOutputMW = thermalOutputMW;
+  const plantStates: AssetOutputs["plantStates"] = {
+    nuclear: "online",
+    thermal: "online",
+    solar: "online",
+    wind: "online",
+    waterDam: "online",
+  };
+  if (gridDown) {
+    for (const key of Object.keys(plantStates) as Array<keyof typeof plantStates>) {
+      plantStates[key] = "gridDown" satisfies PlantOutputState;
+    }
+    gridNuclearOutputMW = 0;
+    gridThermalOutputMW = 0;
+    solarOutputMW = 0;
+    windOutputMW = 0;
+  }
+  const baseProductionMW = gridNuclearOutputMW + gridThermalOutputMW + solarOutputMW + windOutputMW;
 
   let storedWaterMWh = args.runtime.storedWaterMWh;
   let damOutputMW = 0;
   let damAbsorbMW = 0;
 
-  if (args.rainActive) {
+  if (args.rainActive && !gridDown) {
     storedWaterMWh += GAME_CONFIG.assets.waterDam.rainFillMWhPerSecond * args.dt;
   }
 
   if (
+    !gridDown &&
     args.rainActive &&
     storedWaterMWh >= args.capacities.waterDamCapacityMWh * GAME_CONFIG.assets.waterDam.rainAutoDrainThreshold
   ) {
     damOutputMW = args.capacities.waterDamMaxPowerMW;
-  } else if (args.controls.waterDamMode === "fill") {
+  } else if (!gridDown && args.controls.waterDamMode === "fill") {
     const surplusMW = Math.max(0, baseProductionMW - args.currentDemandMW);
     const remainingStorageMWh = Math.max(0, args.capacities.waterDamCapacityMWh - storedWaterMWh);
     const storageLimitedAbsorbMW =
       dtStorageUnits > 0 ? remainingStorageMWh / GAME_CONFIG.assets.waterDam.fillEfficiency / dtStorageUnits : 0;
     damAbsorbMW = Math.min(surplusMW, args.capacities.waterDamMaxPowerMW, storageLimitedAbsorbMW);
     storedWaterMWh += damAbsorbMW * GAME_CONFIG.assets.waterDam.fillEfficiency * dtStorageUnits;
-  } else if (args.controls.waterDamMode === "drain" && dtStorageUnits > 0) {
+  } else if (!gridDown && args.controls.waterDamMode === "drain" && dtStorageUnits > 0) {
     const storedPowerLimitMW = storedWaterMWh / dtStorageUnits;
     const drainInputMW = Math.min(args.capacities.waterDamMaxPowerMW, storedPowerLimitMW);
     damOutputMW = drainInputMW * GAME_CONFIG.assets.waterDam.drainEfficiency;
@@ -91,9 +111,9 @@ export function updateAssetOutputs(args: {
 
   let rawProductionMW = baseProductionMW + damOutputMW - damAbsorbMW;
   let gridCapacityMW = args.capacities.gridCapacityMW;
-  if (args.runtime.breakerTrippedSeconds > 0) {
-    rawProductionMW *= 0.85;
-    gridCapacityMW *= 0.85;
+  if (gridDown) {
+    rawProductionMW = 0;
+    gridCapacityMW = 0;
   }
 
   const deliveredSupplyMW = Math.min(rawProductionMW, gridCapacityMW);
@@ -107,8 +127,8 @@ export function updateAssetOutputs(args: {
   return {
     runtime,
     outputs: {
-      nuclearOutputMW,
-      thermalOutputMW,
+      nuclearOutputMW: gridNuclearOutputMW,
+      thermalOutputMW: gridThermalOutputMW,
       solarOutputMW,
       windOutputMW,
       damOutputMW,
@@ -117,6 +137,7 @@ export function updateAssetOutputs(args: {
       deliveredSupplyMW,
       thermalHeat,
       storedWaterMWh,
+      plantStates,
     },
   };
 }

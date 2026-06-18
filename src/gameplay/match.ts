@@ -1,6 +1,6 @@
 import { updateAssetOutputs } from "./assets";
 import { updateBreakerRisk, computeSupplyDemandMismatch } from "./breaker";
-import { applyCardCostAndCooldown, applyDemandResponse, createIncomingAttack, opponentOf, tickCards } from "./cards";
+import { applyCardCostAndCooldown, applyDemandResponse, canPlayCard, createIncomingAttack, opponentOf, tickCards } from "./cards";
 import { GAME_CONFIG } from "./config";
 import { acceptContract, tickContracts } from "./contracts";
 import { computeDemand } from "./demand";
@@ -18,7 +18,10 @@ import { buildPlantUpgradeStates } from "./plants";
 import { computeRevenueTick } from "./revenue";
 import { buyUpgrade, tickUpgrades } from "./upgrades";
 import type {
+  BreakerLifecycleState,
   BreakerReason,
+  BreakerRiskSource,
+  BreakerTripSummary,
   CardKind,
   DerivedPlayerStats,
   DispatchCardState,
@@ -36,6 +39,7 @@ export function createInitialMatchState(): MatchState {
   return {
     timeSeconds: 0,
     isPaused: false,
+    gameOverReason: undefined,
     activeEvents: [],
     players: {
       player: createInitialPlayerState("player"),
@@ -119,12 +123,34 @@ export function applyPlayerCommand(state: MatchState, command: PlayerCommand): M
     }
 
     const breakerResetHoldSeconds = player.runtime.breakerResetHoldSeconds + command.seconds;
+    const resetComplete = breakerResetHoldSeconds >= BREAKER_RESET_HOLD_SECONDS;
+    if (resetComplete && player.cash < GAME_CONFIG.breaker.resetCost) {
+      return updatePlayer(
+        {
+          ...state,
+          gameOverReason: player.id === "player" ? "player-reset-bankrupt" : "rival-reset-bankrupt",
+        },
+        {
+          ...player,
+          runtime: {
+            ...player.runtime,
+            breakerResetHoldSeconds,
+          },
+        },
+      );
+    }
     return updatePlayer(state, {
       ...player,
+      cash: resetComplete ? player.cash - GAME_CONFIG.breaker.resetCost : player.cash,
       runtime: {
         ...player.runtime,
-        breakerResetHoldSeconds,
-        breakerTrippedSeconds: breakerResetHoldSeconds >= 2 ? 0 : player.runtime.breakerTrippedSeconds,
+        breakerResetHoldSeconds: resetComplete ? 0 : breakerResetHoldSeconds,
+        breakerTrippedSeconds: resetComplete ? 0 : player.runtime.breakerTrippedSeconds,
+        breakerTripFlashSeconds: 0,
+        breakerRecoveredPulseSeconds: resetComplete ? BREAKER_RECOVERED_PULSE_SECONDS : 0,
+        gridShutdownReliefSeconds: resetComplete
+          ? GAME_CONFIG.breaker.gridShutdownReliefSeconds
+          : player.runtime.gridShutdownReliefSeconds,
       },
     });
   }
@@ -161,8 +187,41 @@ export function applyPlayerCommand(state: MatchState, command: PlayerCommand): M
   };
 }
 
+const BREAKER_RESET_HOLD_SECONDS = 2;
+const BREAKER_TRIP_FLASH_SECONDS = 0.75;
+const BREAKER_RECOVERED_PULSE_SECONDS = 1.25;
+
+function gridDownOutputsFrom(player: PlayerState): PlayerState["lastOutputs"] {
+  return {
+    ...player.lastOutputs,
+    nuclearOutputMW: 0,
+    thermalOutputMW: 0,
+    solarOutputMW: 0,
+    windOutputMW: 0,
+    damOutputMW: 0,
+    damAbsorbMW: 0,
+    rawProductionMW: 0,
+    deliveredSupplyMW: 0,
+    plantStates: {
+      nuclear: "gridDown",
+      thermal: "gridDown",
+      solar: "gridDown",
+      wind: "gridDown",
+      waterDam: "gridDown",
+    },
+  };
+}
+
 function applyStrike(player: PlayerState, reason: BreakerReason): PlayerState {
   const contractPenalty = player.activeContracts.reduce((sum, contract) => sum + contract.strikeScorePenalty, 0);
+  const tripSummary: BreakerTripSummary = {
+    reason,
+    cashPenalty: GAME_CONFIG.strike.cashPenalty,
+    subscriberLossRatio: GAME_CONFIG.strike.subscriberLossRatio,
+    strikeScorePenalty: GAME_CONFIG.strike.scorePenalty,
+    contractScorePenalty: contractPenalty,
+    totalScorePenalty: GAME_CONFIG.strike.scorePenalty + contractPenalty,
+  };
   return {
     ...player,
     strikes: player.strikes + 1,
@@ -173,20 +232,33 @@ function applyStrike(player: PlayerState, reason: BreakerReason): PlayerState {
       ...player.runtime,
       breakerTrippedSeconds: GAME_CONFIG.breaker.breakerTripSeconds,
       breakerResetHoldSeconds: 0,
+      breakerTripFlashSeconds: BREAKER_TRIP_FLASH_SECONDS,
+      breakerRecoveredPulseSeconds: 0,
+      gridShutdownReliefSeconds: GAME_CONFIG.breaker.gridShutdownReliefSeconds,
       capacityOverloadTimer: 0,
       balanceBreakerTimer: 0,
       lastBreakerReason: reason,
+      lastBreakerTripSummary: tripSummary,
     },
   };
 }
 
 function tickOnePlayer(player: PlayerState, totalDemandMW: number, solarFactor: number, windKmh: number, dt: number): PlayerState {
-  let next = tickContracts(tickCards(tickUpgrades(player, dt), dt), dt);
+  const startedGridDown = player.runtime.breakerTrippedSeconds > 0;
+  let next = tickCards(tickUpgrades(player, dt), dt);
+  if (!startedGridDown) {
+    next = tickContracts(next, dt);
+  }
   next = {
     ...next,
     runtime: {
       ...next.runtime,
-      breakerTrippedSeconds: Math.max(0, next.runtime.breakerTrippedSeconds - dt),
+      breakerTripFlashSeconds: Math.max(0, next.runtime.breakerTripFlashSeconds - dt),
+      breakerRecoveredPulseSeconds: Math.max(0, next.runtime.breakerRecoveredPulseSeconds - dt),
+      gridShutdownReliefSeconds:
+        next.runtime.breakerTrippedSeconds > 0
+          ? next.runtime.gridShutdownReliefSeconds
+          : Math.max(0, next.runtime.gridShutdownReliefSeconds - dt),
       breakerResetHoldSeconds: next.runtime.breakerTrippedSeconds > 0 ? next.runtime.breakerResetHoldSeconds : 0,
     },
   };
@@ -194,12 +266,14 @@ function tickOnePlayer(player: PlayerState, totalDemandMW: number, solarFactor: 
   const customerDemandMW = totalDemandMW * next.subscribedLoadShare;
   const fixedLoadMW = next.activeContracts.reduce((sum, contract) => sum + contract.loadMW, 0);
   const demandResponseMultiplier = next.demandResponseSeconds > 0 ? GAME_CONFIG.cards.demandResponse.demandMultiplier : 1;
-  const currentDemandMW = customerDemandMW * demandResponseMultiplier + fixedLoadMW;
+  const nominalDemandMW = customerDemandMW * demandResponseMultiplier + fixedLoadMW;
+  const gridDown = next.runtime.breakerTrippedSeconds > 0;
+  const inShutdownRelief = next.runtime.gridShutdownReliefSeconds > 0;
   const assets = updateAssetOutputs({
     capacities: next.capacities,
     runtime: next.runtime,
     controls: next.controls,
-    currentDemandMW,
+    currentDemandMW: gridDown ? 0 : nominalDemandMW,
     dt,
     solarFactor,
     windKmh,
@@ -210,11 +284,11 @@ function tickOnePlayer(player: PlayerState, totalDemandMW: number, solarFactor: 
     ...next,
     runtime: assets.runtime,
     lastOutputs: assets.outputs,
-    lastCurrentDemandMW: currentDemandMW,
   };
 
   const renewableOutputMW = assets.outputs.solarOutputMW + assets.outputs.windOutputMW;
-  const contractLoadMW = currentContractLoadMW(totalDemandMW, next.subscribedLoadShare, next.activeContracts);
+  const currentDemandMW = inShutdownRelief ? assets.outputs.rawProductionMW : nominalDemandMW;
+  const contractLoadMW = inShutdownRelief ? currentDemandMW : currentContractLoadMW(totalDemandMW, next.subscribedLoadShare, next.activeContracts);
   const basisMW = contractCapacityBasisMW({
     capacities: next.capacities,
     activeContracts: next.activeContracts,
@@ -248,8 +322,24 @@ function tickOnePlayer(player: PlayerState, totalDemandMW: number, solarFactor: 
     }
   }
 
+  if (next.runtime.breakerTrippedSeconds > 0) {
+    const gridDownOutputs = gridDownOutputsFrom({ ...next, lastOutputs: assets.outputs });
+    return {
+      ...next,
+      lastOutputs: gridDownOutputs,
+      lastCurrentDemandMW: 0,
+      lastEfficiency: 0,
+      lastPrice: priceFromEfficiency(0),
+      lastContractLoadMW: 0,
+      lastContractCapacityBasisMW: basisMW,
+      lastCapacityUtilization: 0,
+      lastSupplyDemandMismatch: 0,
+    };
+  }
+
   return {
     ...next,
+    lastCurrentDemandMW: currentDemandMW,
     lastEfficiency: efficiency,
     lastPrice: priceFromEfficiency(efficiency),
     lastContractLoadMW: contractLoadMW,
@@ -278,27 +368,29 @@ export function tickMatch(state: MatchState, dt = 1 / GAME_CONFIG.match.tickRate
     totalDemandMW: demand.totalMW,
     dt,
   });
+  const playerCashGain = player.runtime.breakerTrippedSeconds > 0 ? 0 : revenue.cashGainA;
+  const rivalCashGain = rival.runtime.breakerTrippedSeconds > 0 ? 0 : revenue.cashGainB;
 
   const playerMaxShare = deterministicMaxCapacityMW(player.capacities) / Math.max(demand.totalMW, 1);
   const rivalMaxShare = deterministicMaxCapacityMW(rival.capacities) / Math.max(demand.totalMW, 1);
 
   player = {
     ...player,
-    cash: player.cash + revenue.cashGainA,
-    score: player.score + revenue.cashGainA,
+    cash: player.cash + playerCashGain,
+    score: player.score + playerCashGain,
     targetMarketShare: revenue.targetShareA,
     subscribedLoadShare: updateSubscribedLoadShare(player.subscribedLoadShare, revenue.targetShareA, dt, playerMaxShare),
-    lastCashGain: revenue.cashGainA,
+    lastCashGain: playerCashGain,
     lastPrice: revenue.priceA,
     lastMargin: revenue.marginA,
   };
   rival = {
     ...rival,
-    cash: rival.cash + revenue.cashGainB,
-    score: rival.score + revenue.cashGainB,
+    cash: rival.cash + rivalCashGain,
+    score: rival.score + rivalCashGain,
     targetMarketShare: revenue.targetShareB,
     subscribedLoadShare: updateSubscribedLoadShare(rival.subscribedLoadShare, revenue.targetShareB, dt, rivalMaxShare),
-    lastCashGain: revenue.cashGainB,
+    lastCashGain: rivalCashGain,
     lastPrice: revenue.priceB,
     lastMargin: revenue.marginB,
   };
@@ -306,6 +398,7 @@ export function tickMatch(state: MatchState, dt = 1 / GAME_CONFIG.match.tickRate
   return {
     timeSeconds: nextTime,
     isPaused: false,
+    gameOverReason: state.gameOverReason,
     activeEvents: publicEvents.tokens,
     players: {
       player,
@@ -377,6 +470,64 @@ function balanceZone(mismatch: number): DispatchConsoleState["balanceZone"] {
   return "lock";
 }
 
+function breakerRiskSource(player: PlayerState): BreakerRiskSource {
+  if (player.runtime.capacityOverloadTimer >= player.runtime.balanceBreakerTimer && player.runtime.capacityOverloadTimer > 0) {
+    return "capacity";
+  }
+  if (player.runtime.balanceBreakerTimer > 0) {
+    return "balance";
+  }
+  return "none";
+}
+
+function breakerLifecycle(player: PlayerState): BreakerLifecycleState {
+  if (player.runtime.breakerRecoveredPulseSeconds > 0) {
+    return "recovered";
+  }
+  if (player.runtime.breakerTrippedSeconds > 0 && player.runtime.breakerResetHoldSeconds > 0) {
+    return "reset-progress";
+  }
+  if (player.runtime.breakerTrippedSeconds > 0 && player.runtime.breakerTripFlashSeconds > 0) {
+    return "tripped";
+  }
+  if (player.runtime.breakerTrippedSeconds > 0) {
+    return "awaiting-reset";
+  }
+  if (player.runtime.capacityOverloadTimer > 0 || player.runtime.balanceBreakerTimer > 0) {
+    return "warning";
+  }
+  return "safe";
+}
+
+function breakerStatusText(player: PlayerState): string {
+  const lifecycle = breakerLifecycle(player);
+  const reason = player.runtime.lastBreakerReason?.replace("-", " ").toUpperCase() ?? "UNKNOWN";
+  if (lifecycle === "tripped") {
+    return `GRID DOWN: ${reason}`;
+  }
+  if (lifecycle === "awaiting-reset") {
+    return `RESET REQUIRED: ${reason} / COST ${GAME_CONFIG.breaker.resetCost}`;
+  }
+  if (lifecycle === "reset-progress") {
+    if (player.cash < GAME_CONFIG.breaker.resetCost) {
+      return `RESET BLOCKED: NEED ${GAME_CONFIG.breaker.resetCost}`;
+    }
+    return `RESET HOLD ${(player.runtime.breakerResetHoldSeconds / BREAKER_RESET_HOLD_SECONDS * 100).toFixed(0)}%`;
+  }
+  if (lifecycle === "recovered") {
+    return player.runtime.gridShutdownReliefSeconds > 0
+      ? `NETWORK RESET COMPLETE / RELIEF ${player.runtime.gridShutdownReliefSeconds.toFixed(0)}s`
+      : "NETWORK RESET COMPLETE";
+  }
+  if (player.runtime.capacityOverloadTimer > 0) {
+    return `CAPACITY RISK ${player.runtime.capacityOverloadTimer.toFixed(1)}s`;
+  }
+  if (player.runtime.balanceBreakerTimer > 0) {
+    return `BALANCE RISK ${player.runtime.balanceBreakerTimer.toFixed(1)}s`;
+  }
+  return "BREAKER SAFE";
+}
+
 export function selectDispatchConsoleState(state: MatchState): DispatchConsoleState {
   const player = state.players.player;
   const rival = state.players.rival;
@@ -384,6 +535,13 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
   const demand = computeDemand(events);
   const deterministicMaxMW = deterministicMaxCapacityMW(player.capacities);
   const totalMaxMW = totalMaxCapacityForPlayer(player);
+  const breakerLifecycleState = breakerLifecycle(player);
+  const canShedLoad = canPlayCard(player, "demandResponse");
+  const shedLoadCooldownRatio = Math.min(1, player.cardCooldowns.demandResponse / GAME_CONFIG.cards.demandResponse.cooldownSeconds);
+  const isGridDown = player.runtime.breakerTrippedSeconds > 0;
+  const inShutdownRelief = player.runtime.gridShutdownReliefSeconds > 0;
+  const effectiveLoadShare = inShutdownRelief ? player.lastContractLoadMW / Math.max(demand.totalMW, 1) : player.subscribedLoadShare;
+  const effectiveTargetShare = inShutdownRelief ? effectiveLoadShare : player.targetMarketShare;
   const sectorLevel = (ratio: number): 0 | 1 | 2 | 3 => {
     if (ratio > 1.25) {
       return 3;
@@ -449,8 +607,8 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
     rivalEfficiency: rival.lastEfficiency,
     playerTariffCents: player.lastPrice,
     rivalTariffCents: rival.lastPrice,
-    playerSubscribedLoadShare: player.subscribedLoadShare,
-    playerTargetMarketShare: player.targetMarketShare,
+    playerSubscribedLoadShare: effectiveLoadShare,
+    playerTargetMarketShare: effectiveTargetShare,
     cityDemandMW: demand.totalMW,
     currentContractLoadMW: player.lastContractLoadMW,
     contractCapacityBasisMW: player.lastContractCapacityBasisMW,
@@ -465,6 +623,21 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
     capacityZone: capacityZone(player.lastCapacityUtilization, player.runtime.breakerTrippedSeconds),
     balanceZone: balanceZone(player.lastSupplyDemandMismatch),
     breakerTimer: Math.max(player.runtime.balanceBreakerTimer, player.runtime.capacityOverloadTimer),
+    balanceBreakerTimer: player.runtime.balanceBreakerTimer,
+    capacityOverloadTimer: player.runtime.capacityOverloadTimer,
+    breakerRiskSource: breakerRiskSource(player),
+    breakerLifecycle: breakerLifecycleState,
+    breakerTripReason: player.runtime.lastBreakerReason,
+    breakerResetRequired: isGridDown,
+    breakerResetProgress: Math.min(1, player.runtime.breakerResetHoldSeconds / BREAKER_RESET_HOLD_SECONDS),
+    breakerResetCost: GAME_CONFIG.breaker.resetCost,
+    canAffordBreakerReset: player.cash >= GAME_CONFIG.breaker.resetCost,
+    gridShutdownReliefSeconds: player.runtime.gridShutdownReliefSeconds,
+    isGridDown,
+    breakerStatusText: breakerStatusText(player),
+    lastBreakerTripSummary: player.runtime.lastBreakerTripSummary,
+    canShedLoad,
+    shedLoadCooldownRatio,
     activeEventLabel: state.activeEvents[0]?.label ?? "BASELINE",
     plants: buildPlantUpgradeStates(player),
     sectors,
@@ -505,7 +678,7 @@ export function selectProductionConsoleState(state: MatchState): ProductionConso
   return {
     ...dispatch,
     nuclearTargetMW: player.controls.nuclearTargetMW,
-    nuclearOutputMW: player.runtime.nuclearOutputMW,
+    nuclearOutputMW: player.lastOutputs.nuclearOutputMW,
     thermalThrottle: player.controls.thermalThrottle,
     thermalHeat: player.runtime.thermalHeat,
     thermalOutputMW: player.lastOutputs.thermalOutputMW,
@@ -523,19 +696,32 @@ export function selectProductionConsoleState(state: MatchState): ProductionConso
     waterDamMode: player.controls.waterDamMode,
     windEnabled: player.controls.windEnabled,
     breakerTrippedSeconds: player.runtime.breakerTrippedSeconds,
-    breakerResetProgress: Math.min(1, player.runtime.breakerResetHoldSeconds / 2),
+    breakerResetProgress: Math.min(1, player.runtime.breakerResetHoldSeconds / BREAKER_RESET_HOLD_SECONDS),
+    plantStates: player.lastOutputs.plantStates,
+    gameOverReason: state.gameOverReason,
   };
 }
 
 export function isMatchOver(state: MatchState): boolean {
-  return state.timeSeconds >= GAME_CONFIG.match.durationSeconds;
+  return state.gameOverReason !== undefined || state.timeSeconds >= GAME_CONFIG.match.durationSeconds;
 }
 
 export function computeFinalResult(state: MatchState): FinalResult {
   const playerFinalScore = state.players.player.score - state.players.player.strikes * GAME_CONFIG.strike.scorePenalty;
   const rivalFinalScore = state.players.rival.score - state.players.rival.strikes * GAME_CONFIG.strike.scorePenalty;
+  const winner =
+    state.gameOverReason === "player-reset-bankrupt"
+      ? "rival"
+      : state.gameOverReason === "rival-reset-bankrupt"
+        ? "player"
+        : playerFinalScore === rivalFinalScore
+          ? "tie"
+          : playerFinalScore > rivalFinalScore
+            ? "player"
+            : "rival";
   return {
-    winner: playerFinalScore === rivalFinalScore ? "tie" : playerFinalScore > rivalFinalScore ? "player" : "rival",
+    winner,
+    reason: state.gameOverReason ?? "time",
     playerFinalScore,
     rivalFinalScore,
     playerScore: state.players.player.score,

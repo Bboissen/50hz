@@ -107,6 +107,8 @@ export const GAME_CONFIG = {
     capacityOverloadBreakerSeconds: 3,
     capacityOverloadRecoverySeconds: 1,
     breakerTripSeconds: 8,
+    gridShutdownReliefSeconds: 15,
+    resetCost: 35,
   },
 
   strike: {
@@ -187,6 +189,9 @@ A match meets the first tuning target when:
 | Fixed contract accepted near cap | high reward but immediate breaker pressure |
 | Supply/demand mismatch exceeds 5% | breaker timer starts |
 | Capacity utilization exceeds 105% | breaker trips immediately |
+| Breaker trips | all plant states become grid down; supply, demand, and served contract load read 0 |
+| Breaker reset unaffordable | match ends immediately |
+| First 15s after reset | served contract load follows supply to give ramping headroom |
 | One event hits | manageable with good manual reaction |
 | Two events overlap | creates panic and likely breaker if unprepared |
 | Early plant overbuild | short-term efficiency/price penalty |
