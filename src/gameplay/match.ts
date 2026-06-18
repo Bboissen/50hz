@@ -1,6 +1,6 @@
 import { updateAssetOutputs } from "./assets";
 import { updateBreakerRisk, computeSupplyDemandMismatch } from "./breaker";
-import { applyCardCostAndCooldown, applyDemandResponse, canPlayCard, createIncomingAttack, opponentOf, tickCards } from "./cards";
+import { applyCardCostAndCooldown, createIncomingAttack, opponentOf, tickCards } from "./cards";
 import { GAME_CONFIG } from "./config";
 import { acceptContract, tickContracts } from "./contracts";
 import { computeDemand, demandLevelsAtTime, generateDemandSchedule } from "./demand";
@@ -17,6 +17,7 @@ import { createInitialPlayerState } from "./playerState";
 import { buildPlantUpgradeStates } from "./plants";
 import { computeRevenueTick } from "./revenue";
 import { buyUpgrade, tickUpgrades } from "./upgrades";
+import { sampleWeather } from "./weather";
 import type {
   BreakerLifecycleState,
   BreakerReason,
@@ -111,10 +112,6 @@ export function applyPlayerCommand(state: MatchState, command: PlayerCommand): M
     });
   }
 
-  if (command.type === "shedLoad") {
-    return updatePlayer(state, applyDemandResponse(player));
-  }
-
   if (command.type === "holdBreakerReset") {
     if (player.runtime.breakerTrippedSeconds <= 0) {
       return updatePlayer(state, {
@@ -170,10 +167,6 @@ export function applyPlayerCommand(state: MatchState, command: PlayerCommand): M
   const withCost = applyCardCostAndCooldown(player, command.kind);
   if (withCost === player) {
     return state;
-  }
-
-  if (command.kind === "demandResponse") {
-    return updatePlayer(state, applyDemandResponse(player));
   }
 
   const opponentId = opponentOf(command.playerId);
@@ -269,8 +262,7 @@ function tickOnePlayer(player: PlayerState, totalDemandMW: number, solarFactor: 
 
   const customerDemandMW = totalDemandMW * next.subscribedLoadShare;
   const fixedLoadMW = next.activeContracts.reduce((sum, contract) => sum + contract.loadMW, 0);
-  const demandResponseMultiplier = next.demandResponseSeconds > 0 ? GAME_CONFIG.cards.demandResponse.demandMultiplier : 1;
-  const nominalDemandMW = customerDemandMW * demandResponseMultiplier + fixedLoadMW;
+  const nominalDemandMW = customerDemandMW + fixedLoadMW;
   const gridDown = next.runtime.breakerTrippedSeconds > 0;
   const inShutdownRelief = next.runtime.gridShutdownReliefSeconds > 0;
   const assets = updateAssetOutputs({
@@ -361,8 +353,9 @@ export function tickMatch(state: MatchState, dt = 1 / GAME_CONFIG.match.tickRate
   const nextTime = state.timeSeconds + dt;
   const publicEvents = getPublicEventState(nextTime);
   const demand = computeDemand(publicEvents, demandLevelsAtTime(state.demandSchedule, nextTime));
-  const solarFactor = GAME_CONFIG.assets.renewable.solarDefaultFactor * publicEvents.solarFactorMultiplier;
-  const windKmh = publicEvents.windKmhOverride ?? GAME_CONFIG.assets.renewable.windDefaultKmh;
+  const weather = sampleWeather(state.seed, nextTime);
+  const solarFactor = weather.solarFactor * publicEvents.solarFactorMultiplier;
+  const windKmh = publicEvents.windKmhOverride ?? weather.windKmh;
 
   let player = tickOnePlayer(state.players.player, demand.totalMW, solarFactor, windKmh, dt);
   let rival = tickOnePlayer(state.players.rival, demand.totalMW, solarFactor, windKmh, dt);
@@ -542,8 +535,6 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
   const deterministicMaxMW = deterministicMaxCapacityMW(player.capacities);
   const totalMaxMW = totalMaxCapacityForPlayer(player);
   const breakerLifecycleState = breakerLifecycle(player);
-  const canShedLoad = canPlayCard(player, "demandResponse");
-  const shedLoadCooldownRatio = Math.min(1, player.cardCooldowns.demandResponse / GAME_CONFIG.cards.demandResponse.cooldownSeconds);
   const isGridDown = player.runtime.breakerTrippedSeconds > 0;
   const inShutdownRelief = player.runtime.gridShutdownReliefSeconds > 0;
   const effectiveLoadShare = inShutdownRelief ? player.lastContractLoadMW / Math.max(demand.totalMW, 1) : player.subscribedLoadShare;
@@ -573,7 +564,7 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
     },
   };
   const cardState = (
-    id: "demandResponse" | "cloudFront" | "windStorm",
+    id: "cloudFront" | "windStorm",
     title: string,
     type: "defense" | "offense",
     effectText: string,
@@ -630,8 +621,6 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
     isGridDown,
     breakerStatusText: breakerStatusText(player),
     lastBreakerTripSummary: player.runtime.lastBreakerTripSummary,
-    canShedLoad,
-    shedLoadCooldownRatio,
     activeEventLabel: state.activeEvents[0]?.label ?? "BASELINE",
     plants: buildPlantUpgradeStates(player),
     sectors,
@@ -643,7 +632,6 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
     ],
     incidents: state.activeEvents,
     cards: [
-      cardState("demandResponse", "DEMAND RESPONSE", "defense", "-15% LOAD / -TRUST"),
       cardState("cloudFront", "CLOUD FRONT", "offense", "RIVAL SOLAR DOWN"),
       cardState("windStorm", "WIND STORM", "offense", "RIVAL WIND CUTOUT"),
       {

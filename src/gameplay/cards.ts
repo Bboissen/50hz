@@ -1,5 +1,4 @@
 import { GAME_CONFIG } from "./config";
-import { clamp01 } from "./math";
 import type { CardKind, IncomingAttack, PlayerId, PlayerState } from "./types";
 
 export function opponentOf(playerId: PlayerId): PlayerId {
@@ -22,19 +21,6 @@ export function applyCardCostAndCooldown(player: PlayerState, kind: CardKind): P
       ...player.cardCooldowns,
       [kind]: GAME_CONFIG.cards[kind].cooldownSeconds,
     },
-  };
-}
-
-export function applyDemandResponse(player: PlayerState): PlayerState {
-  const next = applyCardCostAndCooldown(player, "demandResponse");
-  if (next === player) {
-    return player;
-  }
-
-  return {
-    ...next,
-    demandResponseSeconds: GAME_CONFIG.cards.demandResponse.durationSeconds,
-    subscribedLoadShare: clamp01(next.subscribedLoadShare - GAME_CONFIG.cards.demandResponse.sharePenalty),
   };
 }
 
@@ -72,6 +58,5 @@ export function tickCards(player: PlayerState, dt: number): PlayerState {
     ...player,
     cardCooldowns,
     incomingAttacks,
-    demandResponseSeconds: Math.max(0, player.demandResponseSeconds - dt),
   };
 }

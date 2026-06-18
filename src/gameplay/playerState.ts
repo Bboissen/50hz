@@ -9,7 +9,6 @@ const emptyUpgradePurchases = (): Record<UpgradeKind, number> => ({
 });
 
 const emptyCardCooldowns = (): Record<CardKind, number> => ({
-  demandResponse: 0,
   cloudFront: 0,
   windStorm: 0,
 });
@@ -76,7 +75,6 @@ export function createInitialPlayerState(id: PlayerId): PlayerState {
     upgradePurchases: emptyUpgradePurchases(),
     cardCooldowns: emptyCardCooldowns(),
     incomingAttacks: [],
-    demandResponseSeconds: 0,
     lastCashGain: 0,
     lastEfficiency: 1,
     lastPrice: GAME_CONFIG.market.minPrice,

@@ -95,15 +95,6 @@ describe("match", () => {
     expect(state.players.player.lastOutputs.windOutputMW).toBe(0);
   });
 
-  it("load shedding reduces current demand with a downside", () => {
-    const baseline = tickMatch(createInitialMatchState(), 1);
-    let shed = applyPlayerCommand(createInitialMatchState(), { type: "shedLoad", playerId: "player" });
-    shed = tickMatch(shed, 1);
-
-    expect(shed.players.player.lastCurrentDemandMW).toBeLessThan(baseline.players.player.lastCurrentDemandMW);
-    expect(shed.players.player.subscribedLoadShare).toBeLessThan(baseline.players.player.subscribedLoadShare);
-  });
-
   it("hold breaker reset only clears after two seconds", () => {
     const base = createInitialMatchState();
     const tripped = {
@@ -269,11 +260,7 @@ describe("match", () => {
     expect(selectDispatchConsoleState(state).balanceBreakerTimer).toBeGreaterThan(0);
 
     state = applyPlayerCommand(state, { type: "setNuclearTarget", playerId: "player", targetMW: 35 });
-    state = applyPlayerCommand(state, {
-      type: "setThermalThrottle",
-      playerId: "player",
-      throttle: GAME_CONFIG.assets.thermal.initialThrottle,
-    });
+    state = applyPlayerCommand(state, { type: "setThermalThrottle", playerId: "player", throttle: 0.5 });
     state = applyPlayerCommand(state, { type: "setWindEnabled", playerId: "player", enabled: true });
     state = applyPlayerCommand(state, { type: "setWaterDamMode", playerId: "player", mode: "hold" });
     state = tickMatch(state, 2);

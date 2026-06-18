@@ -224,6 +224,16 @@ Recommended weather factors:
 
 Solar surplus can be used to manually fill the water dam if the dam is not full. Otherwise it can create overload risk unless curtailed.
 
+Prototype weather should make time of day visible within the short match. The solar factor follows a deterministic day curve:
+
+```txt
+match start = dim morning
+match middle = strongest sun
+match end = dim evening
+```
+
+This keeps solar readable as a changing supply source without adding real-world time or live weather dependencies.
+
 ## Renewable wind
 
 Role:
@@ -262,6 +272,16 @@ wind turbine ON / OFF
 ```
 
 If wind is outside the valid range, ON still produces `0 MW`. If wind is strong enough to create surplus, switching OFF can prevent overload.
+
+Wind should fluctuate every match from a seeded deterministic weather sampler. It should not stay at a flat default speed except in tests that explicitly pass a constant wind value.
+
+Design target:
+
+```txt
+base wind speed + smooth seeded variation + short gust interpolation
+```
+
+The fluctuation should be strong enough to move turbine output during normal play, but not so chaotic that the player cannot read and react to the renewable panel.
 
 ## Water dam
 

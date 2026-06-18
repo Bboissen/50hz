@@ -60,7 +60,6 @@ Controls:
 - upgrade
 - play DISPATCH CARDS
 - accept fixed contracts
-- load shedding
 
 This screen is mainly diagnostic.
 
@@ -89,7 +88,6 @@ Controls:
 | Thermal throttle | Fast expensive emergency power |
 | Water dam control | Fill / neutral / drain |
 | Wind turbine routing | ON / OFF |
-| Load shedding | Emergency demand reduction with reputation and contract risk |
 | Breaker reset | Paid grid-down recovery action; unaffordable reset ends the match |
 
 When the breaker trips, every plant reports `gridDown` and contributes 0 MW to the grid. Supply, demand, and served contract load read as 0 until the player completes the reset hold and pays the reset cost. For 15 seconds after reset, served load follows actual supply so the operator has recovery headroom while ramping generation back up.
@@ -104,7 +102,7 @@ Each control should have a different response profile.
 | Thermal | Fast but costly | Crisis response |
 | Water dam | Immediate if filled, unavailable if empty | Timing |
 | Wind turbine | Produces only inside valid wind-speed range | Weather reading |
-| Load shedding | Immediate but damaging | Last-resort breaker prevention |
+| Breaker reset | Hold action after trip, paid from cash reserve | Recovery discipline |
 
 ## Anti-patterns
 

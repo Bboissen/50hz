@@ -44,7 +44,6 @@ This visual screen must expose the canonical controls from gameplay:
 | Thermal throttle | Lever or rotary throttle | Heat gauge and amber/red overheat lamp |
 | Water dam control | Three-position switch: `FILL / HOLD / DRAIN` | Stored-water gauge and available MW lamp |
 | Wind turbine routing | Protected toggle: `ON / OFF` | Wind-valid lamp and current wind output |
-| Load shedding | Guarded emergency switch | Trust/reputation warning and load reduction |
 | Breaker reset | Hold-to-reset button | Progress ring or charging lamp for reset hold |
 
 ## Screen composition
@@ -60,7 +59,7 @@ Recommended MVP layout:
 │ current vs target    │ output MW            │ reservoir gauge             │
 ├──────────────────────┴──────────────────────┼─────────────────────────────┤
 │ RENEWABLE ROUTING                            │ EMERGENCY PANEL             │
-│ wind ON/OFF, solar available, weather lamp   │ LOAD SHED, BREAKER RESET    │
+│ wind ON/OFF, solar available, weather lamp   │ BREAKER RESET               │
 └──────────────────────────────────────────────┴─────────────────────────────┘
 ```
 

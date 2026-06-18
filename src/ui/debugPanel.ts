@@ -81,7 +81,6 @@ export function createDebugPanel(options: DebugPanelOptions): DebugPanel {
   controls.append(
     button("Wind ON", () => options.onCommand({ type: "setWindEnabled", playerId: "player", enabled: true })),
     button("Wind OFF", () => options.onCommand({ type: "setWindEnabled", playerId: "player", enabled: false })),
-    button("Load shed", () => options.onCommand({ type: "shedLoad", playerId: "player" })),
     button("Underload scenario", () => {
       options.onCommand({ type: "setNuclearTarget", playerId: "player", targetMW: 0 });
       options.onCommand({ type: "setThermalThrottle", playerId: "player", throttle: 0 });
@@ -99,7 +98,6 @@ export function createDebugPanel(options: DebugPanelOptions): DebugPanel {
       options.onCommand({ type: "acceptContract", playerId: "player", kind: "dataCenter" });
     }),
     button("Hold reset 2.1s", () => options.onCommand({ type: "holdBreakerReset", playerId: "player", seconds: 2.1 })),
-    button("Demand response", () => options.onCommand({ type: "playCard", playerId: "player", kind: "demandResponse" })),
     button("Cloud front", () => options.onCommand({ type: "playCard", playerId: "player", kind: "cloudFront" })),
     button("Wind storm", () => options.onCommand({ type: "playCard", playerId: "player", kind: "windStorm" })),
     button("Business contract", () => options.onCommand({ type: "acceptContract", playerId: "player", kind: "business" })),
@@ -132,7 +130,7 @@ export function createDebugPanel(options: DebugPanelOptions): DebugPanel {
         `breakerState=${dispatch.breakerLifecycle} gridDown=${dispatch.isGridDown} resetRequired=${dispatch.breakerResetRequired} resetProgress=${(dispatch.breakerResetProgress * 100).toFixed(0)}% reason=${dispatch.breakerTripReason ?? "none"}`,
         `resetCost=${dispatch.breakerResetCost} canReset=${dispatch.canAffordBreakerReset} relief=${dispatch.gridShutdownReliefSeconds.toFixed(1)}s gameOver=${production.gameOverReason ?? "none"}`,
         `breakerStatus=${dispatch.breakerStatusText}`,
-        `lastPenalty=cash-${dispatch.lastBreakerTripSummary?.cashPenalty ?? 0} score-${dispatch.lastBreakerTripSummary?.totalScorePenalty ?? 0} subscriberLoss=${((dispatch.lastBreakerTripSummary?.subscriberLossRatio ?? 0) * 100).toFixed(0)}% shedReady=${dispatch.canShedLoad}`,
+        `lastPenalty=cash-${dispatch.lastBreakerTripSummary?.cashPenalty ?? 0} score-${dispatch.lastBreakerTripSummary?.totalScorePenalty ?? 0} subscriberLoss=${((dispatch.lastBreakerTripSummary?.subscriberLossRatio ?? 0) * 100).toFixed(0)}%`,
         `event=${dispatch.activeEventLabel}`,
         `nuclear=${production.nuclearOutputMW.toFixed(1)}/${production.nuclearTargetMW.toFixed(1)} state=${production.plantStates.nuclear} cap=${production.nuclearCapacityMW.toFixed(1)} thermal=${(production.thermalThrottle * 100).toFixed(0)}% thermalState=${production.plantStates.thermal} cap=${production.thermalCapacityMW.toFixed(1)} heat=${(production.thermalHeat * 100).toFixed(0)}%`,
         `dam=${production.waterDamMode} state=${production.plantStates.waterDam} stored=${production.storedWaterMWh.toFixed(1)} out=${production.damOutputMW.toFixed(1)} fill=${production.damAbsorbMW.toFixed(1)} max=${production.waterDamMaxPowerMW.toFixed(1)} wind=${production.windEnabled ? "ON" : "OFF"} windState=${production.plantStates.wind} solarState=${production.plantStates.solar}`,

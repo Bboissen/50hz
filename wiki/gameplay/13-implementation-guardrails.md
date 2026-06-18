@@ -159,7 +159,7 @@ Not allowed:
 
 - hidden optimal dispatch,
 - hidden emergency thermal activation,
-- automatic load shedding without player action.
+- hidden demand reduction that masks overload or underload.
 
 ## Use synthetic data for core balance
 

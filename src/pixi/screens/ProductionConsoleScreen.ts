@@ -53,7 +53,6 @@ export class ProductionConsoleScreen extends Container {
   private readonly g = new Graphics();
   private readonly labels = new Container();
   private resetHeld = false;
-  private shedPressedUntil = 0;
   private draggingControl: "nuclear" | "thermal" | undefined;
   private lastTimeSeconds = 0;
   private latestState: ProductionConsoleState | undefined;
@@ -83,15 +82,8 @@ export class ProductionConsoleScreen extends Container {
     this.addHitZone({ x: 1342, y: 338, w: 126, h: 86 }, () => this.dam("drain"));
     this.addHitZone({ x: 182, y: 762, w: 164, h: 90 }, () => this.wind(true));
     this.addHitZone({ x: 374, y: 762, w: 164, h: 90 }, () => this.wind(false));
-    this.addHitZone({ x: 908, y: 762, w: 230, h: 86 }, () => {
-      if (!this.latestState?.canShedLoad) {
-        return;
-      }
-      this.shedPressedUntil = this.lastTimeSeconds + 0.28;
-      this.sink({ type: "shedLoad", playerId: "player" });
-    });
 
-    const reset = this.addHitZone({ x: 1192, y: 762, w: 210, h: 86 }, () => undefined);
+    const reset = this.addHitZone({ x: 1042, y: 762, w: 260, h: 86 }, () => undefined);
     reset.on("pointerdown", () => {
       this.resetHeld = this.latestState?.breakerResetRequired === true;
     });
@@ -343,10 +335,8 @@ export class ProductionConsoleScreen extends Container {
   }
 
   private drawEmergency(state: ProductionConsoleState): void {
-    this.drawGuardedButton(908, 762, 230, 86, "LOAD SHED", this.shedPressedUntil > state.timeSeconds, state.canShedLoad ? PX.red : DESIGN_TOKENS.colors.smokeGrey);
-    this.drawGuardedButton(1192, 762, 210, 86, "RESET HOLD", this.resetHeld, state.breakerResetRequired ? PX.green : DESIGN_TOKENS.colors.smokeGrey);
+    this.drawGuardedButton(1042, 762, 260, 86, "RESET HOLD", this.resetHeld, state.breakerResetRequired ? PX.green : DESIGN_TOKENS.colors.smokeGrey);
     this.drawBar(910, 882, 490, state.breakerResetProgress, PX.green);
-    addLabel(this.labels, state.canShedLoad ? "LOAD SHED READY" : `SHED COOLDOWN ${(state.shedLoadCooldownRatio * 100).toFixed(0)}%`, 924, 862, 15, state.canShedLoad ? PX.red : PX.black);
     const resetLabel = state.breakerResetRequired
       ? state.canAffordBreakerReset
         ? `RESET COST ${state.breakerResetCost}`
@@ -354,7 +344,7 @@ export class ProductionConsoleScreen extends Container {
       : state.gridShutdownReliefSeconds > 0
         ? `RELIEF ${state.gridShutdownReliefSeconds.toFixed(0)}s`
         : "RESET NOT NEEDED";
-    addLabel(this.labels, resetLabel, 1210, 862, 15, state.breakerResetRequired ? PX.green : PX.black);
+    addLabel(this.labels, resetLabel, 1058, 862, 15, state.breakerResetRequired ? PX.green : PX.black);
     addLabel(this.labels, state.breakerStatusText, 910, 918, 16, state.breakerResetRequired ? PX.red : PX.black);
   }
 

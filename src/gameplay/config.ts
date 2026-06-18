@@ -137,13 +137,6 @@ export const GAME_CONFIG = {
     },
   },
   cards: {
-    demandResponse: {
-      cost: 20,
-      cooldownSeconds: 20,
-      durationSeconds: 8,
-      demandMultiplier: 0.85,
-      sharePenalty: 0.02,
-    },
     cloudFront: {
       cost: 30,
       cooldownSeconds: 25,

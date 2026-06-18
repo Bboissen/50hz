@@ -647,7 +647,7 @@ class DispatchCardsPanel extends Container {
       if (card.id === "business" || card.id === "dataCenter") {
         this.sink({ type: "acceptContract", playerId: "player", kind: card.id });
       } else {
-        this.sink({ type: "playCard", playerId: "player", kind: card.id as "demandResponse" | "cloudFront" | "windStorm" });
+        this.sink({ type: "playCard", playerId: "player", kind: card.id as "cloudFront" | "windStorm" });
       }
     });
 

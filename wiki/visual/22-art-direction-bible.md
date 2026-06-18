@@ -158,7 +158,6 @@ Use warning text sparingly:
 STRAIN
 TRIP
 STRIKE
-LOAD SHED
 BREAKER
 ```
 

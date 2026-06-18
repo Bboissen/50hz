@@ -95,10 +95,8 @@ These are the highest-return human/art-generator tasks.
 | `event_cloud_front` | `assets/icons/events/event_cloud_front.png` | 32×32 | Human | Nice | Cloud |
 | `event_business_expo` | `assets/icons/events/event_business_expo.png` | 32×32 | Human | Nice | Briefcase/building |
 | `event_rival_malus` | `assets/icons/events/event_rival_malus.png` | 32×32 | Human | Nice | Red stamp |
-| `action_demand_response` | `assets/icons/actions/action_demand_response.png` | 32×32 | Human | Should | Down arrow + city |
 | `action_transformer_boost` | `assets/icons/actions/action_transformer_boost.png` | 32×32 | Human | Should | Transformer + bolt |
 | `action_emergency_crew` | `assets/icons/actions/action_emergency_crew.png` | 32×32 | Human | Nice | Helmet/wrench |
-| `action_load_shed` | `assets/icons/actions/action_load_shed.png` | 32×32 | Human | Nice | Switch off |
 | `contract_business` | `assets/icons/actions/contract_business.png` | 32×32 | Human optional | Nice | Briefcase + stamped form |
 | `contract_data_center` | `assets/icons/actions/contract_data_center.png` | 32×32 | Human optional | Nice | Server + stamped form |
 

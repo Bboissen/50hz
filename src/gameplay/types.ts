@@ -106,7 +106,6 @@ export type PlayerState = {
   upgradePurchases: Record<UpgradeKind, number>;
   cardCooldowns: Record<CardKind, number>;
   incomingAttacks: IncomingAttack[];
-  demandResponseSeconds: number;
   lastCashGain: number;
   lastEfficiency: number;
   lastPrice: number;
@@ -203,7 +202,6 @@ export type PlayerCommand =
   | { type: "setThermalThrottle"; playerId: PlayerId; throttle: number }
   | { type: "setWaterDamMode"; playerId: PlayerId; mode: WaterDamMode }
   | { type: "setWindEnabled"; playerId: PlayerId; enabled: boolean }
-  | { type: "shedLoad"; playerId: PlayerId }
   | { type: "holdBreakerReset"; playerId: PlayerId; seconds: number }
   | { type: "buyUpgrade"; playerId: PlayerId; kind: UpgradeKind }
   | { type: "playCard"; playerId: PlayerId; kind: CardKind }
@@ -263,8 +261,6 @@ export type DispatchConsoleState = {
   isGridDown: boolean;
   breakerStatusText: string;
   lastBreakerTripSummary?: BreakerTripSummary;
-  canShedLoad: boolean;
-  shedLoadCooldownRatio: number;
   activeEventLabel: string;
   plants: Record<PlantKey, PlantUpgradeState>;
   sectors: Record<SectorKey, SectorVisualState>;
