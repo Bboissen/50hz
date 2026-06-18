@@ -2,6 +2,7 @@ export const GAME_CONFIG = {
   match: {
     durationSeconds: 240,
     tickRateHz: 30,
+    simulationSpeed: 0.6,
   },
   demand: {
     baseTotalMW: 140,
@@ -58,6 +59,7 @@ export const GAME_CONFIG = {
       initialStoredRatio: 0.5,
       fillEfficiency: 0.75,
       drainEfficiency: 0.9,
+      storageSecondsPerMWh: 20,
       rainFillMWhPerSecond: 0.5,
       rainAutoDrainThreshold: 0.95,
     },

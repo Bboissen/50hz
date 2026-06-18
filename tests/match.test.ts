@@ -7,6 +7,7 @@ import {
   selectProductionConsoleState,
   tickMatch,
 } from "../src/gameplay/match";
+import { GAME_CONFIG } from "../src/gameplay/config";
 
 function tickFor(seconds: number) {
   let state = createInitialMatchState();
@@ -123,5 +124,87 @@ describe("match", () => {
     expect(production.thermalOutputMW).toBeGreaterThanOrEqual(0);
     expect(production.waterDamCapacityMWh).toBeGreaterThan(0);
     expect(production.breakerResetProgress).toBeGreaterThanOrEqual(0);
+  });
+
+  it("production commands update one shared supply state across panels", () => {
+    const baseline = tickMatch(createInitialMatchState(), 1);
+    let state = applyPlayerCommand(baseline, { type: "setNuclearTarget", playerId: "player", targetMW: 0 });
+    state = applyPlayerCommand(state, { type: "setThermalThrottle", playerId: "player", throttle: 0 });
+    state = applyPlayerCommand(state, { type: "setWindEnabled", playerId: "player", enabled: false });
+    state = tickMatch(state, 2);
+
+    const production = selectProductionConsoleState(state);
+    const dispatch = selectDispatchConsoleState(state);
+
+    expect(production.generationMW).toBe(state.players.player.lastOutputs.rawProductionMW);
+    expect(dispatch.generationMW).toBe(production.generationMW);
+    expect(dispatch.supplyDemandMismatch).toBe(production.supplyDemandMismatch);
+    expect(production.generationMW).toBeLessThan(selectProductionConsoleState(baseline).generationMW);
+  });
+
+  it("computes balance from controllable generation, not grid-limited delivery", () => {
+    let state = createInitialMatchState();
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        player: {
+          ...state.players.player,
+          capacities: {
+            ...state.players.player.capacities,
+            gridCapacityMW: 10,
+          },
+        },
+      },
+    };
+    state = applyPlayerCommand(state, { type: "setThermalThrottle", playerId: "player", throttle: 1 });
+    state = tickMatch(state, 1);
+
+    const production = selectProductionConsoleState(state);
+    const expectedMismatch = (production.generationMW - production.currentDemandMW) / production.currentDemandMW;
+
+    expect(production.generationMW).toBeGreaterThan(production.deliveredSupplyMW);
+    expect(production.supplyDemandMismatch).toBeCloseTo(expectedMismatch);
+  });
+
+  it("completed upgrades change capacity basis and are visible in selectors", () => {
+    let state = tickMatch(createInitialMatchState(), 1);
+    const before = selectProductionConsoleState(state);
+
+    state = applyPlayerCommand(state, { type: "buyUpgrade", playerId: "player", kind: "thermal" });
+    const building = selectDispatchConsoleState(state).plants.boiler;
+
+    expect(building.isBuilding).toBe(true);
+    expect(building.level).toBe(1);
+    expect(building.purchasedLevel).toBe(2);
+
+    state = tickMatch(state, GAME_CONFIG.upgrades.thermal.buildSeconds + 0.1);
+    const afterProduction = selectProductionConsoleState(state);
+    const afterDispatch = selectDispatchConsoleState(state);
+
+    expect(afterProduction.thermalCapacityMW).toBe(before.thermalCapacityMW + GAME_CONFIG.upgrades.thermal.capacityMW);
+    expect(afterDispatch.plants.boiler.level).toBe(2);
+    expect(afterDispatch.deterministicMaxCapacityMW).toBeGreaterThan(before.deterministicMaxCapacityMW);
+    expect(afterDispatch.contractCapacityBasisMW).toBeGreaterThan(before.contractCapacityBasisMW);
+  });
+
+  it("water dam mode affects both storage gauge data and generation output", () => {
+    let fill = createInitialMatchState();
+    fill = applyPlayerCommand(fill, { type: "setThermalThrottle", playerId: "player", throttle: 1 });
+    fill = applyPlayerCommand(fill, { type: "setWaterDamMode", playerId: "player", mode: "fill" });
+    fill = tickMatch(fill, 1);
+
+    let drain = createInitialMatchState();
+    drain = applyPlayerCommand(drain, { type: "setWaterDamMode", playerId: "player", mode: "drain" });
+    drain = applyPlayerCommand(drain, { type: "setWindEnabled", playerId: "player", enabled: false });
+    drain = tickMatch(drain, 1);
+
+    const fillProduction = selectProductionConsoleState(fill);
+    const drainProduction = selectProductionConsoleState(drain);
+
+    expect(fillProduction.damAbsorbMW).toBeGreaterThan(0);
+    expect(fillProduction.storedWaterMWh).toBeGreaterThan(createInitialMatchState().players.player.runtime.storedWaterMWh);
+    expect(drainProduction.damOutputMW).toBeGreaterThan(0);
+    expect(drainProduction.storedWaterMWh).toBeLessThan(createInitialMatchState().players.player.runtime.storedWaterMWh);
   });
 });

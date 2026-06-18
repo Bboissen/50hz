@@ -8,6 +8,7 @@ import {
   isMatchOver,
   tickMatch,
 } from "./gameplay/match";
+import { GAME_CONFIG } from "./gameplay/config";
 import type { MatchState, PlayerCommand } from "./gameplay/types";
 import { createAssetResolver } from "./pixi/assets";
 import { createPixiApp } from "./pixi/createPixiApp";
@@ -44,10 +45,10 @@ async function bootstrap(): Promise<void> {
   window.addEventListener("keydown", (event) => screenManager.handleKey(event));
 
   let accumulator = 0;
-  const fixedDt = 1 / 30;
+  const fixedDt = 1 / GAME_CONFIG.match.tickRateHz;
 
   app.ticker.add((ticker) => {
-    accumulator += Math.min(ticker.deltaMS / 1000, 0.1);
+    accumulator += Math.min(ticker.deltaMS / 1000, 0.1) * GAME_CONFIG.match.simulationSpeed;
     while (accumulator >= fixedDt) {
       for (const command of chooseBotCommands(state.players.rival)) {
         state = applyPlayerCommand(state, command);

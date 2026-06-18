@@ -2,9 +2,9 @@
 title: "Generation Assets and Dispatch"
 type: "system"
 status: "draft"
-updated: "2026-06-17"
+updated: "2026-06-18"
 tags: ["50hz", "generation", "dispatch", "nuclear", "thermal", "renewable", "water-dam"]
-summary: "Starter generation asset rules, deterministic capacity, renewable output, water dam behavior, control response, and delivered power."
+summary: "Starter generation asset rules, deterministic capacity, renewable output, water dam behavior, control response, and controllable generation."
 related: []
 ---
 
@@ -258,6 +258,7 @@ const WATER_DAM_MAX_POWER_MW = 15;
 const WATER_DAM_INITIAL_RATIO = 0.50;
 const WATER_DAM_FILL_EFFICIENCY = 0.75;
 const WATER_DAM_DRAIN_EFFICIENCY = 0.90;
+const WATER_DAM_STORAGE_SECONDS_PER_MWH = 20;
 const RAIN_FILL_MWH_PER_SECOND = 0.50;
 const RAIN_AUTODRAIN_THRESHOLD = 0.95;
 ```
@@ -266,16 +267,24 @@ Manual fill during overload / surplus:
 
 ```ts
 const fillMW = Math.min(surplusMW, WATER_DAM_MAX_POWER_MW);
-storedWaterMWh += fillMW * WATER_DAM_FILL_EFFICIENCY * dtHours;
+storedWaterMWh +=
+  fillMW *
+  WATER_DAM_FILL_EFFICIENCY *
+  (dtSeconds / WATER_DAM_STORAGE_SECONDS_PER_MWH);
 ```
 
 Manual drain during underload:
 
 ```ts
-const drainMW = Math.min(WATER_DAM_MAX_POWER_MW, storedWaterMWh / dtHours);
+const drainMW = Math.min(
+  WATER_DAM_MAX_POWER_MW,
+  storedWaterMWh / (dtSeconds / WATER_DAM_STORAGE_SECONDS_PER_MWH)
+);
 damOutputMW = drainMW * WATER_DAM_DRAIN_EFFICIENCY;
-storedWaterMWh -= drainMW * dtHours;
+storedWaterMWh -= drainMW * (dtSeconds / WATER_DAM_STORAGE_SECONDS_PER_MWH);
 ```
+
+For the prototype, dam storage uses a deliberately compressed arcade timebase instead of real-world MWh hours. This keeps the reservoir gauge readable during a short match while preserving the tactical rule: filling absorbs surplus and draining adds immediate power.
 
 Rain fill:
 
@@ -299,22 +308,28 @@ Interpretation:
 - empty dam: cannot generate, but can absorb overload/surplus or rain,
 - neutral dam: both fill and drain are actionable.
 
-## Total delivered power
+## Controllable generation output
 
 Simplified MVP calculation:
 
 ```ts
-const rawProductionMW =
+const generationMW =
   nuclearOutputMW +
   thermalOutputMW +
   solarOutputMW +
   windOutputMW +
   damOutputMW;
-
-const deliveredSupplyMW = Math.min(rawProductionMW, gridCapacityMW);
 ```
 
-Do not silently correct mismatch. If delivered supply is more than 5% away from current demand, breaker risk should rise in [`08-grid-overload-and-reliability.md`](./08-grid-overload-and-reliability.md).
+The production console compares `generationMW` to current demand. This is the value the player adjusts in real time.
+
+Grid-limited delivered power can still be computed separately for delivery/cap diagnostics:
+
+```ts
+const deliveredSupplyMW = Math.min(generationMW, gridCapacityMW);
+```
+
+Do not silently correct mismatch. If controllable generation is more than 5% away from current demand, breaker risk should rise in [`08-grid-overload-and-reliability.md`](./08-grid-overload-and-reliability.md).
 
 ## Dispatch rules
 

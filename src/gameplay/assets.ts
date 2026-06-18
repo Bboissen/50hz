@@ -24,7 +24,8 @@ export function updateAssetOutputs(args: {
   rainActive?: boolean;
   incomingAttacks?: IncomingAttack[];
 }): { runtime: AssetRuntime; outputs: AssetOutputs } {
-  const dtHours = args.dt / 3600;
+  const storageSecondsPerMWh = GAME_CONFIG.assets.waterDam.storageSecondsPerMWh;
+  const dtStorageUnits = args.dt / storageSecondsPerMWh;
   const nuclearTargetMW = clamp(args.controls.nuclearTargetMW, 0, args.capacities.nuclearCapacityMW);
   const nuclearOutputMW = moveTowards(
     args.runtime.nuclearOutputMW,
@@ -73,13 +74,16 @@ export function updateAssetOutputs(args: {
     damOutputMW = args.capacities.waterDamMaxPowerMW;
   } else if (args.controls.waterDamMode === "fill") {
     const surplusMW = Math.max(0, baseProductionMW - args.currentDemandMW);
-    damAbsorbMW = Math.min(surplusMW, args.capacities.waterDamMaxPowerMW);
-    storedWaterMWh += damAbsorbMW * GAME_CONFIG.assets.waterDam.fillEfficiency * dtHours;
-  } else if (args.controls.waterDamMode === "drain" && dtHours > 0) {
-    const storedPowerLimitMW = storedWaterMWh / dtHours;
+    const remainingStorageMWh = Math.max(0, args.capacities.waterDamCapacityMWh - storedWaterMWh);
+    const storageLimitedAbsorbMW =
+      dtStorageUnits > 0 ? remainingStorageMWh / GAME_CONFIG.assets.waterDam.fillEfficiency / dtStorageUnits : 0;
+    damAbsorbMW = Math.min(surplusMW, args.capacities.waterDamMaxPowerMW, storageLimitedAbsorbMW);
+    storedWaterMWh += damAbsorbMW * GAME_CONFIG.assets.waterDam.fillEfficiency * dtStorageUnits;
+  } else if (args.controls.waterDamMode === "drain" && dtStorageUnits > 0) {
+    const storedPowerLimitMW = storedWaterMWh / dtStorageUnits;
     const drainInputMW = Math.min(args.capacities.waterDamMaxPowerMW, storedPowerLimitMW);
     damOutputMW = drainInputMW * GAME_CONFIG.assets.waterDam.drainEfficiency;
-    storedWaterMWh -= drainInputMW * dtHours;
+    storedWaterMWh -= drainInputMW * dtStorageUnits;
   }
 
   storedWaterMWh = clamp(storedWaterMWh, 0, args.capacities.waterDamCapacityMWh);

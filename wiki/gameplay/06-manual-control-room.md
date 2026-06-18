@@ -2,7 +2,7 @@
 title: "Manual Control Gameplay"
 type: "system"
 status: "draft"
-updated: "2026-06-17"
+updated: "2026-06-18"
 tags: ["50hz", "controls", "screens", "manual-control", "alarms"]
 summary: "Screen model, manual interaction principles, alarms, pressure pattern, anti-patterns, and shortcuts."
 related: []
@@ -72,10 +72,10 @@ Purpose:
 Manually match supply to customer load.
 ```
 
-The player must keep delivered supply within 5% of current demand.
+The player must keep controllable generation output within 5% of current demand.
 
 ```ts
-const supplyDemandMismatch = (deliveredSupplyMW - currentDemandMW) / Math.max(currentDemandMW, 1);
+const supplyDemandMismatch = (generationMW - currentDemandMW) / Math.max(currentDemandMW, 1);
 const supplyDemandSafe = Math.abs(supplyDemandMismatch) <= 0.05;
 ```
 

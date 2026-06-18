@@ -2,7 +2,7 @@
 title: "MVP Balance Config"
 type: "config"
 status: "draft"
-updated: "2026-06-17"
+updated: "2026-06-18"
 tags: ["50hz", "balance", "config", "mvp", "tuning", "playtest"]
 summary: "TypeScript-style MVP balance constants, first tuning targets, sanity checks, and playtest questions."
 related: []
@@ -19,6 +19,7 @@ export const GAME_CONFIG = {
   match: {
     durationSeconds: 240,
     tickRateHz: 30,
+    simulationSpeed: 0.60,
   },
 
   demand: {
@@ -83,6 +84,7 @@ export const GAME_CONFIG = {
       initialStoredRatio: 0.50,
       fillEfficiency: 0.75,
       drainEfficiency: 0.90,
+      storageSecondsPerMWh: 20,
       rainFillMWhPerSecond: 0.50,
       rainAutoDrainThreshold: 0.95,
     },

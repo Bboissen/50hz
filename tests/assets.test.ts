@@ -64,6 +64,58 @@ describe("assets", () => {
     expect(drained.outputs.storedWaterMWh).toBe(0);
   });
 
+  it("makes dam fill visibly store surplus and reduce delivered supply", () => {
+    const player = createInitialPlayerState("player");
+    const hold = updateAssetOutputs({
+      capacities: player.capacities,
+      runtime: player.runtime,
+      controls: { ...player.controls, waterDamMode: "hold" },
+      currentDemandMW: 1,
+      dt: 1,
+      solarFactor: 1,
+      windKmh: 35,
+    });
+    const fill = updateAssetOutputs({
+      capacities: player.capacities,
+      runtime: player.runtime,
+      controls: { ...player.controls, waterDamMode: "fill" },
+      currentDemandMW: 1,
+      dt: 1,
+      solarFactor: 1,
+      windKmh: 35,
+    });
+
+    expect(fill.outputs.storedWaterMWh).toBeGreaterThan(player.runtime.storedWaterMWh + 0.1);
+    expect(fill.outputs.damAbsorbMW).toBeGreaterThan(0);
+    expect(fill.outputs.deliveredSupplyMW).toBeLessThan(hold.outputs.deliveredSupplyMW);
+  });
+
+  it("makes dam drain visibly spend storage and add production", () => {
+    const player = createInitialPlayerState("player");
+    const hold = updateAssetOutputs({
+      capacities: player.capacities,
+      runtime: player.runtime,
+      controls: { ...player.controls, waterDamMode: "hold", windEnabled: false },
+      currentDemandMW: 100,
+      dt: 1,
+      solarFactor: 0,
+      windKmh: 0,
+    });
+    const drain = updateAssetOutputs({
+      capacities: player.capacities,
+      runtime: player.runtime,
+      controls: { ...player.controls, waterDamMode: "drain", windEnabled: false },
+      currentDemandMW: 100,
+      dt: 1,
+      solarFactor: 0,
+      windKmh: 0,
+    });
+
+    expect(drain.outputs.storedWaterMWh).toBeLessThan(player.runtime.storedWaterMWh - 0.1);
+    expect(drain.outputs.damOutputMW).toBeGreaterThan(0);
+    expect(drain.outputs.deliveredSupplyMW).toBeGreaterThan(hold.outputs.deliveredSupplyMW);
+  });
+
   it("caps delivered supply by grid capacity", () => {
     const player = createInitialPlayerState("player");
     const result = updateAssetOutputs({

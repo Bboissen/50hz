@@ -14,8 +14,9 @@ import { getPublicEventState } from "./events";
 import { clamp, clamp01 } from "./math";
 import { priceFromEfficiency, updateSubscribedLoadShare } from "./market";
 import { createInitialPlayerState } from "./playerState";
+import { buildPlantUpgradeStates } from "./plants";
 import { computeRevenueTick } from "./revenue";
-import { buyUpgrade, tickUpgrades, upgradeCost } from "./upgrades";
+import { buyUpgrade, tickUpgrades } from "./upgrades";
 import type {
   BreakerReason,
   CardKind,
@@ -224,7 +225,7 @@ function tickOnePlayer(player: PlayerState, totalDemandMW: number, solarFactor: 
     contractCapacityBasisMW: basisMW,
   });
   const capacityUtilization = contractLoadMW / Math.max(basisMW, 1);
-  const supplyDemandMismatch = computeSupplyDemandMismatch(assets.outputs.deliveredSupplyMW, currentDemandMW);
+  const supplyDemandMismatch = computeSupplyDemandMismatch(assets.outputs.rawProductionMW, currentDemandMW);
 
   if (next.runtime.breakerTrippedSeconds <= 0) {
     const breaker = updateBreakerRisk({
@@ -330,6 +331,17 @@ export function selectPlayerDerivedStats(state: MatchState, playerId: PlayerId):
   };
 }
 
+function totalMaxCapacityForPlayer(player: PlayerState): number {
+  return Math.min(
+    player.capacities.gridCapacityMW,
+    player.capacities.nuclearCapacityMW +
+      player.capacities.thermalCapacityMW +
+      player.lastOutputs.solarOutputMW +
+      player.lastOutputs.windOutputMW +
+      player.capacities.waterDamMaxPowerMW,
+  );
+}
+
 function capacityZone(utilization: number, breakerSeconds: number): DispatchConsoleState["capacityZone"] {
   if (breakerSeconds > 0) {
     return "trip";
@@ -370,32 +382,8 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
   const rival = state.players.rival;
   const events = getPublicEventState(state.timeSeconds);
   const demand = computeDemand(events);
-  const plantState = {
-    reactor: {
-      level: Math.min(3, 1 + player.upgradePurchases.nuclear) as 0 | 1 | 2 | 3,
-      upgradeCost: upgradeCost("nuclear", player.upgradePurchases.nuclear),
-      canAfford: player.cash >= upgradeCost("nuclear", player.upgradePurchases.nuclear),
-      isMaxed: player.upgradePurchases.nuclear >= 2,
-    },
-    boiler: {
-      level: Math.min(3, 1 + player.upgradePurchases.thermal) as 0 | 1 | 2 | 3,
-      upgradeCost: upgradeCost("thermal", player.upgradePurchases.thermal),
-      canAfford: player.cash >= upgradeCost("thermal", player.upgradePurchases.thermal),
-      isMaxed: player.upgradePurchases.thermal >= 2,
-    },
-    renewables: {
-      level: Math.min(3, 1 + player.upgradePurchases.renewable) as 0 | 1 | 2 | 3,
-      upgradeCost: upgradeCost("renewable", player.upgradePurchases.renewable),
-      canAfford: player.cash >= upgradeCost("renewable", player.upgradePurchases.renewable),
-      isMaxed: player.upgradePurchases.renewable >= 2,
-    },
-    waterDam: {
-      level: Math.min(3, 1 + player.upgradePurchases.waterDam) as 0 | 1 | 2 | 3,
-      upgradeCost: upgradeCost("waterDam", player.upgradePurchases.waterDam),
-      canAfford: player.cash >= upgradeCost("waterDam", player.upgradePurchases.waterDam),
-      isMaxed: player.upgradePurchases.waterDam >= 2,
-    },
-  };
+  const deterministicMaxMW = deterministicMaxCapacityMW(player.capacities);
+  const totalMaxMW = totalMaxCapacityForPlayer(player);
   const sectorLevel = (ratio: number): 0 | 1 | 2 | 3 => {
     if (ratio > 1.25) {
       return 3;
@@ -466,6 +454,10 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
     cityDemandMW: demand.totalMW,
     currentContractLoadMW: player.lastContractLoadMW,
     contractCapacityBasisMW: player.lastContractCapacityBasisMW,
+    deterministicMaxCapacityMW: deterministicMaxMW,
+    totalMaxCapacityMW: totalMaxMW,
+    gridCapacityMW: player.capacities.gridCapacityMW,
+    generationMW: player.lastOutputs.rawProductionMW,
     deliveredSupplyMW: player.lastOutputs.deliveredSupplyMW,
     currentDemandMW: player.lastCurrentDemandMW,
     capacityUtilization: player.lastCapacityUtilization,
@@ -474,7 +466,7 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
     balanceZone: balanceZone(player.lastSupplyDemandMismatch),
     breakerTimer: Math.max(player.runtime.balanceBreakerTimer, player.runtime.capacityOverloadTimer),
     activeEventLabel: state.activeEvents[0]?.label ?? "BASELINE",
-    plants: plantState,
+    plants: buildPlantUpgradeStates(player),
     sectors,
     forecast: [
       { id: "sun", label: "SUN", phase: "impact", remainingSeconds: 0 },
@@ -520,8 +512,14 @@ export function selectProductionConsoleState(state: MatchState): ProductionConso
     solarOutputMW: player.lastOutputs.solarOutputMW,
     windOutputMW: player.lastOutputs.windOutputMW,
     damOutputMW: player.lastOutputs.damOutputMW,
+    damAbsorbMW: player.lastOutputs.damAbsorbMW,
     storedWaterMWh: player.runtime.storedWaterMWh,
     waterDamCapacityMWh: player.capacities.waterDamCapacityMWh,
+    waterDamMaxPowerMW: player.capacities.waterDamMaxPowerMW,
+    nuclearCapacityMW: player.capacities.nuclearCapacityMW,
+    thermalCapacityMW: player.capacities.thermalCapacityMW,
+    solarPeakMW: player.capacities.solarPeakMW,
+    windPeakMW: player.capacities.windPeakMW,
     waterDamMode: player.controls.waterDamMode,
     windEnabled: player.controls.windEnabled,
     breakerTrippedSeconds: player.runtime.breakerTrippedSeconds,

@@ -2,7 +2,7 @@
 title: "Grid Overload, Underload, and Reliability"
 type: "system"
 status: "draft"
-updated: "2026-06-17"
+updated: "2026-06-18"
 tags: ["50hz", "overload", "reliability", "strikes", "breaker"]
 summary: "Capacity overload, real-time overload/underload, breaker thresholds, strikes, and reliability tradeoffs."
 related: []
@@ -64,11 +64,11 @@ const CAPACITY_OVERLOAD_RECOVERY_SECONDS = 1;
 
 ## Supply/demand balance
 
-The production console is about keeping delivered supply close to current demand.
+The production console is about keeping controllable generation close to current demand.
 
 ```ts
 const supplyDemandMismatch =
-  (deliveredSupplyMW - currentDemandMW) / Math.max(currentDemandMW, 1);
+  (generationMW - currentDemandMW) / Math.max(currentDemandMW, 1);
 ```
 
 Interpretation:

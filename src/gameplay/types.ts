@@ -116,10 +116,21 @@ export type PlantKey = "reactor" | "boiler" | "renewables" | "waterDam";
 export type SectorKey = "homes" | "services" | "dataCenters";
 
 export type PlantUpgradeState = {
+  key: PlantKey;
+  kind: UpgradeKind;
+  label: string;
+  shortLabel: string;
   level: 0 | 1 | 2 | 3;
+  purchasedLevel: 0 | 1 | 2 | 3;
+  maxLevel: 3;
   upgradeCost: number;
   canAfford: boolean;
-  isMaxed?: boolean;
+  isMaxed: boolean;
+  isBuilding: boolean;
+  buildProgressRatio: number;
+  remainingBuildSeconds: number;
+  statusText: string;
+  capacityLabel: string;
 };
 
 export type SectorVisualState = {
@@ -197,6 +208,10 @@ export type DispatchConsoleState = {
   cityDemandMW: number;
   currentContractLoadMW: number;
   contractCapacityBasisMW: number;
+  deterministicMaxCapacityMW: number;
+  totalMaxCapacityMW: number;
+  gridCapacityMW: number;
+  generationMW: number;
   deliveredSupplyMW: number;
   currentDemandMW: number;
   capacityUtilization: number;
@@ -221,8 +236,14 @@ export type ProductionConsoleState = DispatchConsoleState & {
   solarOutputMW: number;
   windOutputMW: number;
   damOutputMW: number;
+  damAbsorbMW: number;
   storedWaterMWh: number;
   waterDamCapacityMWh: number;
+  waterDamMaxPowerMW: number;
+  nuclearCapacityMW: number;
+  thermalCapacityMW: number;
+  solarPeakMW: number;
+  windPeakMW: number;
   waterDamMode: WaterDamMode;
   windEnabled: boolean;
   breakerTrippedSeconds: number;
