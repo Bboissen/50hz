@@ -1,0 +1,31 @@
+min_version = { soft = "2025.1.0" }
+
+[tools]
+node = { version = "24.16.0", postinstall = "corepack enable pnpm" }
+
+[env]
+NODE_ENV = "development"
+
+[tasks.install]
+description = "Install dependencies with the pinned package manager"
+run = "pnpm install --frozen-lockfile"
+
+[tasks.dev]
+description = "Run the Vite dev server"
+run = "pnpm dev"
+
+[tasks.test]
+description = "Run unit tests"
+run = "pnpm test"
+
+[tasks.build]
+description = "Build the production bundle"
+run = "pnpm build"
+
+[tasks.check]
+description = "Run tests and production build"
+run = "pnpm test && pnpm build"
+
+[tasks.typecheck]
+description = "Run TypeScript type checking"
+run = "pnpm typecheck"
