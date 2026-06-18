@@ -8,6 +8,7 @@ import {
   isMatchOver,
   tickMatch,
 } from "./gameplay/match";
+import { GAME_CONFIG } from "./gameplay/config";
 import type { MatchState, PlayerCommand } from "./gameplay/types";
 import { createAssetResolver } from "./pixi/assets";
 import { createPixiApp } from "./pixi/createPixiApp";
@@ -24,7 +25,8 @@ if (!appRoot) {
 const root = appRoot;
 
 async function bootstrap(): Promise<void> {
-  let state: MatchState = createInitialMatchState();
+  const matchSeed = new URLSearchParams(window.location.search).get("seed") ?? undefined;
+  let state: MatchState = createInitialMatchState({ seed: matchSeed });
   const app = await createPixiApp(root);
   const assets = await createAssetResolver();
 
@@ -35,7 +37,7 @@ async function bootstrap(): Promise<void> {
   const debugPanel = createDebugPanel({
     onCommand: dispatch,
     onReset: () => {
-      state = createInitialMatchState();
+      state = createInitialMatchState({ seed: matchSeed });
     },
   });
   root.appendChild(debugPanel.element);
@@ -44,10 +46,10 @@ async function bootstrap(): Promise<void> {
   window.addEventListener("keydown", (event) => screenManager.handleKey(event));
 
   let accumulator = 0;
-  const fixedDt = 1 / 30;
+  const fixedDt = 1 / GAME_CONFIG.match.tickRateHz;
 
   app.ticker.add((ticker) => {
-    accumulator += Math.min(ticker.deltaMS / 1000, 0.1);
+    accumulator += Math.min(ticker.deltaMS / 1000, 0.1) * GAME_CONFIG.match.simulationSpeed;
     while (accumulator >= fixedDt) {
       for (const command of chooseBotCommands(state.players.rival)) {
         state = applyPlayerCommand(state, command);

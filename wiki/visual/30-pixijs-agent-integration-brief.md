@@ -49,7 +49,7 @@ Relevant PixiJS guide areas for this task:
 5. `CityLoadWindow` with three sector placeholders and Contract Split bar showing current subscribed share plus target market share.
 6. `YourTariffBoard` and `RivalTariffBoard`.
 7. `UpgradeRack` with three upgrade rows and level lamps.
-8. `ForecastTape`, `IncidentQueue`, and `DispatchCardsPanel`.
+8. `ForecastTape`, `IncidentQueue`, and `ContractOfferModal`.
 9. State-driven animation for core loop feedback.
 10. Asset loader that uses `asset-manifest.prototype.json` but tolerates missing files.
 
@@ -88,8 +88,8 @@ DispatchConsoleRoot
 │  └─ RivalGridStack
 ├─ OperatorConsoleLayer
 │  ├─ UpgradeRack
-│  ├─ GridPressureMeter
-│  └─ DispatchCardsPanel
+│  └─ GridPressureMeter
+├─ ContractOfferModal
 └─ AlarmOverlayLayer
 ```
 
@@ -135,7 +135,8 @@ export type DispatchConsoleState = {
   }>;
   forecast: TimelineToken[];
   incidents: TimelineToken[];
-  cards: DispatchCardState[];
+  contractOffer?: ContractOfferState;
+  activeContracts: ActiveContractState[];
 };
 
 export type TimelineToken = {
@@ -147,15 +148,24 @@ export type TimelineToken = {
   targetSector?: SectorKey;
 };
 
-export type DispatchCardState = {
+export type ContractOfferState = {
   id: string;
   title: string;
-  iconKey: string;
-  type: 'defense' | 'market' | 'emergency' | 'offense' | 'fixedContract';
-  target?: SectorKey | 'grid' | 'rival' | 'sharedOffer';
-  effectText: string;
-  state: 'available' | 'active' | 'cooldown' | 'disabled';
-  cooldownRatio: number; // 0..1
+  kind: 'business' | 'dataCenter';
+  loadMW: number;
+  durationSeconds: number;
+  completionCashReward: number;
+  strikeScorePenalty: number;
+  remainingSeconds: number;
+  countdownRatio: number;
+};
+
+export type ActiveContractState = {
+  id: string;
+  title: string;
+  kind: 'business' | 'dataCenter';
+  loadMW: number;
+  remainingSeconds: number;
 };
 ```
 
@@ -192,7 +202,8 @@ const mockState: DispatchConsoleState = {
   },
   forecast: [],
   incidents: [],
-  cards: []
+  contractOffer: undefined,
+  activeContracts: []
 };
 ```
 
@@ -208,13 +219,13 @@ const mockState: DispatchConsoleState = {
 ### Phase 2 — State-driven visuals
 
 - Add `update(state)` methods to each component.
-- Bind meter, tariff digits, current and target Contract Split markers, sector states, lamps, cards.
+- Bind meter, tariff digits, current and target Contract Split markers, sector states, lamps, contract modal, and active-contract tickets.
 - Create a simple mock loop that changes state every few seconds.
 
 ### Phase 3 — Interaction
 
 - Make Upgrade Rack buttons clickable.
-- Make Dispatch Cards clickable.
+- Make the fixed-contract modal accept/decline buttons clickable.
 - Emit events to a parent controller.
 - Do not implement deep economy unless requested.
 
@@ -260,7 +271,7 @@ The generated screen is acceptable when:
 
 1. it clearly reads as an old dispatch console,
 2. the player can identify tariff display, current share, target share, city demand, capacity pressure, and load balance,
-3. clickable areas are limited to upgrades and dispatch cards,
+3. clickable areas are limited to upgrades, contract modal actions, breaker reset, and production controls,
 4. rival side is readable but not interactive,
 5. overload is visually impossible to miss,
 6. no clean SaaS dashboard styling appears.

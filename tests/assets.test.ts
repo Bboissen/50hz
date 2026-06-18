@@ -64,6 +64,58 @@ describe("assets", () => {
     expect(drained.outputs.storedWaterMWh).toBe(0);
   });
 
+  it("makes dam fill visibly store surplus and reduce delivered supply", () => {
+    const player = createInitialPlayerState("player");
+    const hold = updateAssetOutputs({
+      capacities: player.capacities,
+      runtime: player.runtime,
+      controls: { ...player.controls, waterDamMode: "hold" },
+      currentDemandMW: 1,
+      dt: 1,
+      solarFactor: 1,
+      windKmh: 35,
+    });
+    const fill = updateAssetOutputs({
+      capacities: player.capacities,
+      runtime: player.runtime,
+      controls: { ...player.controls, waterDamMode: "fill" },
+      currentDemandMW: 1,
+      dt: 1,
+      solarFactor: 1,
+      windKmh: 35,
+    });
+
+    expect(fill.outputs.storedWaterMWh).toBeGreaterThan(player.runtime.storedWaterMWh + 0.1);
+    expect(fill.outputs.damAbsorbMW).toBeGreaterThan(0);
+    expect(fill.outputs.deliveredSupplyMW).toBeLessThan(hold.outputs.deliveredSupplyMW);
+  });
+
+  it("makes dam drain visibly spend storage and add production", () => {
+    const player = createInitialPlayerState("player");
+    const hold = updateAssetOutputs({
+      capacities: player.capacities,
+      runtime: player.runtime,
+      controls: { ...player.controls, waterDamMode: "hold", windEnabled: false },
+      currentDemandMW: 100,
+      dt: 1,
+      solarFactor: 0,
+      windKmh: 0,
+    });
+    const drain = updateAssetOutputs({
+      capacities: player.capacities,
+      runtime: player.runtime,
+      controls: { ...player.controls, waterDamMode: "drain", windEnabled: false },
+      currentDemandMW: 100,
+      dt: 1,
+      solarFactor: 0,
+      windKmh: 0,
+    });
+
+    expect(drain.outputs.storedWaterMWh).toBeLessThan(player.runtime.storedWaterMWh - 0.1);
+    expect(drain.outputs.damOutputMW).toBeGreaterThan(0);
+    expect(drain.outputs.deliveredSupplyMW).toBeGreaterThan(hold.outputs.deliveredSupplyMW);
+  });
+
   it("caps delivered supply by grid capacity", () => {
     const player = createInitialPlayerState("player");
     const result = updateAssetOutputs({
@@ -77,5 +129,24 @@ describe("assets", () => {
     });
 
     expect(result.outputs.deliveredSupplyMW).toBe(10);
+  });
+
+  it("rain fills the dam and only auto-drains a small amount when full", () => {
+    const player = createInitialPlayerState("player");
+    const rainy = updateAssetOutputs({
+      capacities: player.capacities,
+      runtime: { ...player.runtime, storedWaterMWh: player.capacities.waterDamCapacityMWh },
+      controls: { ...player.controls, waterDamMode: "hold" },
+      currentDemandMW: 100,
+      dt: 1,
+      solarFactor: 0,
+      windKmh: 0,
+      rainActive: true,
+    });
+
+    expect(rainy.outputs.damOutputMW).toBeCloseTo(
+      player.capacities.waterDamMaxPowerMW * GAME_CONFIG.assets.waterDam.rainAutoDrainPowerRatio,
+    );
+    expect(rainy.outputs.damOutputMW).toBeLessThan(player.capacities.waterDamMaxPowerMW);
   });
 });

@@ -16,7 +16,7 @@ A reliability failure caused by capacity overload or sustained supply/demand mis
 
 ## Cash
 
-Spendable money used to buy upgrades and play cards.
+Spendable money used to buy upgrades and reset breakers.
 
 ## Customer price
 

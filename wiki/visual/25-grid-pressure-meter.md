@@ -33,7 +33,7 @@ GRID PRESSURE
 Optional sublabel:
 
 ```txt
-CAPACITY + LOAD BALANCE
+CAPACITY + SUPPLY DELTA
 ```
 
 ## What it measures
@@ -43,7 +43,7 @@ The meter shows two related but distinct gameplay risks:
 | Indicator | Gameplay value | Meaning |
 |---|---|---|
 | Capacity gauge | `capacityUtilization = currentContractLoadMW / contractCapacityBasisMW` | Contracted load pressure against safe capacity basis |
-| Balance gauge | `supplyDemandMismatch = (deliveredSupplyMW - currentDemandMW) / currentDemandMW` | Real-time underload/overload matching problem |
+| Supply delta gauge | `supplyDemandMismatch = (generationMW - currentDemandMW) / currentDemandMW` | Real-time supply minus demand matching problem |
 
 Capacity pressure rises when:
 
@@ -60,7 +60,7 @@ Capacity pressure falls when:
 - the player increases dependable capacity,
 - emergency tools reduce committed load.
 
-Balance pressure moves left or right when delivered supply is below or above current demand.
+Supply delta moves left or right when controllable supply is below or above current demand.
 
 ## Relationship to other concepts
 
@@ -68,9 +68,9 @@ Balance pressure moves left or right when delivered supply is below or above cur
 |---|---|---|
 | Tariff | Tariff Board | Market price; lower attracts customers |
 | Contract Split | Contract Split bar | Current subscribed share plus target market share |
-| Grid Pressure | Grid Pressure Meter | Capacity utilization and real-time load balance |
+| Grid Pressure | Grid Pressure Meter | Capacity utilization and real-time supply-demand delta |
 | Efficiency | Economic calculation | Determines how cheap/profitable the player can be |
-| Supply/demand balance | Production console | Manual production matching problem |
+| Supply/demand delta | Production console | Manual production matching problem |
 
 ## Capacity gauge zones
 
@@ -83,15 +83,17 @@ Balance pressure moves left or right when delivered supply is below or above cur
 | 100–105% | TRIP RISK | Red | Capacity overload timer running |
 | 105%+ | TRIP | Red flash | Instant breaker trip |
 
-## Balance gauge zones
+## Supply delta gauge zones
 
 | Mismatch | Zone label | Color | Meaning |
 |---:|---|---|---|
-| below -15% | SEVERE UNDERLOAD | Red | Delivered supply far below current demand |
+| below -15% | SEVERE UNDERLOAD | Red | Controllable supply far below current demand |
 | -15% to -5% | UNDERLOAD | Amber | Shortage risk, breaker timer rises |
 | -5% to +5% | LOCK | Phosphor green | Manual production is matched |
 | +5% to +15% | OVERLOAD | Amber | Surplus risk, breaker timer rises |
 | above +15% | SEVERE OVERLOAD | Red | Severe surplus mismatch |
+
+The supply delta gauge must be centered at `0%`, where supply equals demand. It needs two red zones: one on the left for severe under-supply and one on the right for severe over-supply. Do not render it as a one-ended VU meter where only the right side is dangerous.
 
 ## Visual construction
 
@@ -104,8 +106,8 @@ Use a large semicircular analog meter.
 │       ╭────────────────╮    │
 │       │   cap needle    │    │
 │       ╰────────────────╯    │
-│ BALANCE: UNDER | LOCK | OVER │
-│       ◄───────●───────►      │
+│ SUPPLY-LOAD: UNDER | 0% | OVER│
+│       RED ◄───●───► RED      │
 │              [TRIP LAMP]     │
 └─────────────────────────────┘
 ```
@@ -114,7 +116,7 @@ Required parts:
 
 - printed arc with zone labels,
 - physical needle,
-- second balance gauge or stacked balance strip,
+- centered supply delta gauge or stacked delta strip,
 - red `TRIP` lamp,
 - small `50Hz` brand plaque away from numeric readouts,
 - glass highlight or dark bevel,
@@ -136,8 +138,8 @@ Do not show a numeric Hz gameplay readout unless a future mechanic explicitly mo
 
 | State | Animation |
 |---|---|
-| Normal | Capacity needle gently vibrates ±1°; balance marker rests near center |
-| Strain | Capacity needle jitter ±2–3° or balance marker enters amber |
+| Normal | Capacity needle gently vibrates ±1°; supply delta marker rests at 0% center |
+| Strain | Capacity needle jitter ±2–3° or supply delta marker enters amber |
 | Danger | Red lamp blink, panel border flashes |
 | Trip | Capacity needle slams right or balance marker pegs to edge; `TRIP` stamp appears |
 | Recovery | Needles ease back with mechanical lag |
@@ -149,7 +151,7 @@ The meter can be code-generated.
 | Part | Recommended PixiJS object |
 |---|---|
 | Capacity arc and zones | `Graphics` |
-| Balance strip or second gauge | `Graphics` |
+| Centered supply delta strip or second gauge | `Graphics` |
 | Tick marks | `Graphics` lines or small sprites |
 | Needles/markers | `Graphics` polygon in rotating/sliding `Container` |
 | Text labels | `Text` initially, `BitmapText` later |

@@ -52,10 +52,8 @@ function clamp01(value: number): number {
 export class ProductionConsoleScreen extends Container {
   private readonly g = new Graphics();
   private readonly labels = new Container();
-  private resetHeld = false;
-  private shedPressedUntil = 0;
   private draggingControl: "nuclear" | "thermal" | undefined;
-  private lastTimeSeconds = 0;
+  private latestState: ProductionConsoleState | undefined;
 
   public constructor(private readonly sink: CommandSink, _assets: AssetResolver) {
     super();
@@ -64,13 +62,12 @@ export class ProductionConsoleScreen extends Container {
   }
 
   public update(state: ProductionConsoleState): void {
-    const dt = Math.max(0, state.timeSeconds - this.lastTimeSeconds);
-    this.lastTimeSeconds = state.timeSeconds;
-    if (this.resetHeld && state.breakerTrippedSeconds > 0 && dt > 0) {
-      this.sink({ type: "holdBreakerReset", playerId: "player", seconds: dt });
-    }
-
+    this.latestState = state;
     this.draw(state);
+  }
+
+  public deactivate(): void {
+    this.draggingControl = undefined;
   }
 
   private addControls(): void {
@@ -81,21 +78,6 @@ export class ProductionConsoleScreen extends Container {
     this.addHitZone({ x: 1342, y: 338, w: 126, h: 86 }, () => this.dam("drain"));
     this.addHitZone({ x: 182, y: 762, w: 164, h: 90 }, () => this.wind(true));
     this.addHitZone({ x: 374, y: 762, w: 164, h: 90 }, () => this.wind(false));
-    this.addHitZone({ x: 908, y: 762, w: 230, h: 86 }, () => {
-      this.shedPressedUntil = this.lastTimeSeconds + 0.28;
-      this.sink({ type: "shedLoad", playerId: "player" });
-    });
-
-    const reset = this.addHitZone({ x: 1192, y: 762, w: 210, h: 86 }, () => undefined);
-    reset.on("pointerdown", () => {
-      this.resetHeld = true;
-    });
-    reset.on("pointerup", () => {
-      this.resetHeld = false;
-    });
-    reset.on("pointerupoutside", () => {
-      this.resetHeld = false;
-    });
   }
 
   private addHitZone(bounds: Rect, onTap: () => void): Container {
@@ -139,7 +121,8 @@ export class ProductionConsoleScreen extends Container {
     const angle = Math.atan2(event.global.y - cy, event.global.x - cx);
     const ratio = clamp01((angle + 2.35) / 4.7);
     if (control === "nuclear") {
-      this.sink({ type: "setNuclearTarget", playerId: "player", targetMW: Math.round((ratio * 70) / 5) * 5 });
+      const capacityMW = this.latestState?.nuclearCapacityMW ?? 70;
+      this.sink({ type: "setNuclearTarget", playerId: "player", targetMW: Math.round((ratio * capacityMW) / 5) * 5 });
       return;
     }
     this.sink({ type: "setThermalThrottle", playerId: "player", throttle: Math.round(ratio * 20) / 20 });
@@ -164,18 +147,40 @@ export class ProductionConsoleScreen extends Container {
     this.drawPanel({ x: 1542, y: 166, w: 300, h: 392 }, "GRID STATUS");
     this.drawPanel({ x: 58, y: 610, w: 608, h: 338 }, "RENEWABLE ROUTING");
     this.drawPanel({ x: 704, y: 610, w: 808, h: 338 }, "EMERGENCY PANEL");
-    this.drawPanel({ x: 1542, y: 610, w: 300, h: 338 }, "BALANCE LOCK");
+    this.drawPanel({ x: 1542, y: 610, w: 300, h: 338 }, "SUPPLY DELTA");
 
-    this.drawRotary(280, 382, 108, state.nuclearTargetMW / 70, PX.green);
-    this.drawValuePlate(130, 506, 300, `${state.nuclearTargetMW.toFixed(0)}MW TARGET`, `${state.nuclearOutputMW.toFixed(0)}MW ACTUAL`, PX.green);
+    this.drawRotary(280, 382, 108, state.nuclearTargetMW / Math.max(state.nuclearCapacityMW, 1), PX.green);
+    this.drawValuePlate(
+      130,
+      506,
+      300,
+      `${state.nuclearTargetMW.toFixed(0)}/${state.nuclearCapacityMW.toFixed(0)}MW TARGET`,
+      `${state.nuclearOutputMW.toFixed(0)}MW OUT / ${this.plantStateLabel(state.plantStates.nuclear)}`,
+      state.plantStates.nuclear === "gridDown" ? PX.red : PX.green,
+    );
 
     this.drawRotary(728, 382, 96, state.thermalThrottle, PX.amber);
     this.drawLever(842, 260, 210, state.thermalThrottle, state.thermalHeat);
-    this.drawValuePlate(592, 506, 230, `${(state.thermalThrottle * 100).toFixed(0)}% THROTTLE`, `${state.thermalOutputMW.toFixed(0)}MW OUT`, PX.amber);
+    this.drawValuePlate(
+      592,
+      506,
+      230,
+      `${(state.thermalThrottle * 100).toFixed(0)}% / ${state.thermalCapacityMW.toFixed(0)}MW`,
+      `${state.thermalOutputMW.toFixed(0)}MW OUT / ${this.plantStateLabel(state.plantStates.thermal)}`,
+      state.plantStates.thermal === "gridDown" ? PX.red : PX.amber,
+    );
 
     this.drawDamSwitches(1046, 338, state.waterDamMode);
     this.drawBar(1060, 474, 384, state.storedWaterMWh / Math.max(state.waterDamCapacityMWh, 1), PX.cyan);
     addLabel(this.labels, `STORE ${state.storedWaterMWh.toFixed(0)}/${state.waterDamCapacityMWh.toFixed(0)}MWh`, 1060, 502, 16, PX.black);
+    addLabel(
+      this.labels,
+      `DAM ${state.damOutputMW.toFixed(0)}MW OUT / ${state.damAbsorbMW.toFixed(0)}MW FILL  ${this.plantStateLabel(state.plantStates.waterDam)}`,
+      1042,
+      536,
+      13,
+      PX.black,
+    );
 
     this.drawRenewables(state);
     this.drawEmergency(state);
@@ -205,7 +210,7 @@ export class ProductionConsoleScreen extends Container {
     addLabel(this.labels, "PRODUCTION CONSOLE", 48, 34, 34, PX.green);
     addLabel(
       this.labels,
-      `REACTOR ${state.nuclearOutputMW.toFixed(1)}MW -> ${state.nuclearTargetMW.toFixed(1)}MW   BOILER ${(state.thermalThrottle * 100).toFixed(0)}%   DAM ${state.waterDamMode.toUpperCase()}   WIND ${state.windEnabled ? "ON" : "OFF"}`,
+      `REACTOR ${state.nuclearOutputMW.toFixed(1)}MW -> ${state.nuclearTargetMW.toFixed(1)}MW   BOILER ${(state.thermalThrottle * 100).toFixed(0)}%   DAM ${state.waterDamMode.toUpperCase()}   WIND ${state.windEnabled ? "ON" : "OFF"}   GRID ${state.isGridDown ? "DOWN" : "LIVE"}`,
       62,
       82,
       20,
@@ -213,12 +218,13 @@ export class ProductionConsoleScreen extends Container {
     );
     addLabel(
       this.labels,
-      `LOAD ${state.currentDemandMW.toFixed(1)}MW / SUPPLY ${state.deliveredSupplyMW.toFixed(1)}MW   BALANCE ${(state.supplyDemandMismatch * 100).toFixed(1)}%   BREAKER ${state.breakerTimer.toFixed(1)}s`,
+      `SUPPLY ${state.generationMW.toFixed(1)}MW / DEMAND ${state.currentDemandMW.toFixed(1)}MW   SUPPLY-LOAD ${this.formatSignedMw(state.generationMW - state.currentDemandMW)} (${this.formatSignedPercent(state.supplyDemandMismatch)})   RISK ${state.balanceBreakerTimer.toFixed(1)}s`,
       62,
       114,
       19,
-      state.balanceZone.includes("severe") ? PX.red : PX.cream,
+      state.breakerResetRequired || state.balanceZone.includes("severe") ? PX.red : PX.cream,
     );
+    addLabel(this.labels, state.breakerStatusText, 1126, 114, 17, state.breakerResetRequired ? PX.red : PX.green);
   }
 
   private drawPanel(bounds: Rect, title: string): void {
@@ -307,36 +313,50 @@ export class ProductionConsoleScreen extends Container {
       .stroke({ color: PX.black, width: 4 });
     addLabel(this.labels, "WIND ON", 224, 772, 15, PX.black);
     addLabel(this.labels, "CUT OFF", 404, 772, 15, PX.black);
-    this.drawBar(176, 854, 390, state.solarOutputMW / 25, PX.amber);
-    this.drawBar(176, 900, 390, state.windOutputMW / 25, state.windEnabled ? PX.green : DESIGN_TOKENS.colors.smokeGrey);
-    addLabel(this.labels, `SOLAR ${state.solarOutputMW.toFixed(0)}MW`, 176, 832, 16, PX.black);
-    addLabel(this.labels, `WIND ${state.windOutputMW.toFixed(0)}MW`, 176, 878, 16, PX.black);
+    this.drawBar(176, 854, 390, state.solarOutputMW / Math.max(state.solarPeakMW, 1), PX.amber);
+    this.drawBar(176, 900, 390, state.windOutputMW / Math.max(state.windPeakMW, 1), state.windEnabled ? PX.green : DESIGN_TOKENS.colors.smokeGrey);
+    addLabel(this.labels, `SOLAR ${state.solarOutputMW.toFixed(0)}/${state.solarPeakMW.toFixed(0)}MW ${this.plantStateLabel(state.plantStates.solar)}`, 176, 832, 16, PX.black);
+    addLabel(this.labels, `WIND ${state.windOutputMW.toFixed(0)}/${state.windPeakMW.toFixed(0)}MW ${this.plantStateLabel(state.plantStates.wind)}`, 176, 878, 16, PX.black);
   }
 
   private drawEmergency(state: ProductionConsoleState): void {
-    this.drawGuardedButton(908, 762, 230, 86, "LOAD SHED", this.shedPressedUntil > state.timeSeconds, PX.red);
-    this.drawGuardedButton(1192, 762, 210, 86, "RESET HOLD", this.resetHeld, PX.green);
     this.drawBar(910, 882, 490, state.breakerResetProgress, PX.green);
-    addLabel(this.labels, "LOAD SHED", 958, 862, 15, PX.red);
-    addLabel(this.labels, "RESET HOLD", 1232, 862, 15, PX.green);
-  }
-
-  private drawGuardedButton(x: number, y: number, w: number, h: number, text: string, active: boolean, color: number): void {
+    const resetLabel = state.breakerResetRequired
+      ? state.canAffordBreakerReset
+        ? `RESET ON DISPATCH / COST ${state.breakerResetCost}`
+        : `CASH SHORT ${state.breakerResetCost}`
+      : state.gridShutdownReliefSeconds > 0
+        ? `RELIEF ${state.gridShutdownReliefSeconds.toFixed(0)}s`
+        : "RESET NOT NEEDED";
     this.g
-      .rect(x, y, w, h)
-      .fill({ color: PX.screen })
-      .stroke({ color: PX.black, width: 5 })
-      .rect(x + 26, y + 28 + (active ? 8 : 0), w - 52, h - 46)
-      .fill({ color })
-      .stroke({ color: PX.black, width: 4 });
-    addLabel(this.labels, text, x + 34, y + 14, 15, PX.cream);
+      .rect(910, 746, 490, 112)
+      .fill({ color: state.breakerResetRequired ? 0x3b1510 : PX.screen })
+      .stroke({ color: state.breakerResetRequired ? PX.red : PX.black, width: 5 });
+    addLabel(this.labels, state.breakerResetRequired ? "MAIN RESET MODAL ACTIVE" : "EMERGENCY RESET STANDBY", 946, 782, 18, state.breakerResetRequired ? PX.red : PX.green);
+    addLabel(this.labels, resetLabel, 928, 862, 15, state.breakerResetRequired ? PX.green : PX.black);
+    addLabel(this.labels, state.breakerStatusText, 910, 918, 16, state.breakerResetRequired ? PX.red : PX.black);
   }
 
   private drawStatus(state: ProductionConsoleState): void {
     const statusColor = state.balanceZone === "lock" ? PX.green : state.balanceZone.includes("severe") ? PX.red : PX.amber;
     this.g.circle(1692, 764, 70).fill({ color: statusColor }).stroke({ color: PX.black, width: 8 }).circle(1692, 764, 30).fill({ color: 0xffffff, alpha: 0.18 });
-    addLabel(this.labels, state.balanceZone.toUpperCase(), 1602, 868, 16, PX.black);
+    addLabel(this.labels, state.isGridDown ? "GRID DOWN" : state.balanceZone === "lock" ? "0% MATCH" : state.balanceZone.toUpperCase(), 1602, 868, 16, PX.black);
+    addLabel(this.labels, state.breakerLifecycle.toUpperCase(), 1596, 838, 14, state.breakerResetRequired ? PX.red : PX.black);
     addLabel(this.labels, `CAP ${(state.capacityUtilization * 100).toFixed(0)}%`, 1624, 902, 16, PX.black);
+    addLabel(this.labels, `${state.currentContractLoadMW.toFixed(0)}/${state.contractCapacityBasisMW.toFixed(0)}MW`, 1604, 930, 14, PX.black);
+  }
+
+  private formatSignedMw(value: number): string {
+    return `${value >= 0 ? "+" : ""}${value.toFixed(1)}MW`;
+  }
+
+  private formatSignedPercent(value: number): string {
+    const percent = value * 100;
+    return `${percent >= 0 ? "+" : ""}${percent.toFixed(1)}%`;
+  }
+
+  private plantStateLabel(state: ProductionConsoleState["plantStates"][keyof ProductionConsoleState["plantStates"]]): string {
+    return state === "gridDown" ? "GRID DOWN" : "ONLINE";
   }
 
   private drawValuePlate(x: number, y: number, w: number, title: string, sub: string, color: number): void {

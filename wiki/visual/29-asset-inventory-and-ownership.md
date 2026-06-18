@@ -43,7 +43,7 @@ If small icons are needed, create separate simplified icon assets or procedural 
 |---|---|---|
 | Code-generated | Drawn with Pixi `Graphics`, `Text`, simple shapes | Panels, lamps, bars, meter, placeholders |
 | Authored asset | PNG/SVG/font made by human or image tool | Final buildings, plant icons, event icons |
-| Hybrid | Code-generated base with optional texture overlay | Cards, stamps, CRT frames, meter face |
+| Hybrid | Code-generated base with optional texture overlay | Contract modal, stamps, CRT frames, meter face |
 
 ## Directory structure
 
@@ -51,7 +51,7 @@ If small icons are needed, create separate simplified icon assets or procedural 
 assets/
   ui/
     panels/
-    cards/
+    contracts/
     meters/
     lamps/
   icons/
@@ -82,7 +82,7 @@ These are the highest-return human/art-generator tasks.
 | `plant_boiler` | `assets/icons/plants/plant_boiler.png` | 48×48 | Human | Should | Smokestack placeholder |
 | `plant_renewables` | `assets/icons/plants/plant_renewables.png` | 48×48 | Human | Should | Wind/solar placeholder |
 | `plant_water_dam` | `assets/icons/plants/plant_water_dam.png` | 48×48 | Human | Should | Dam wall placeholder |
-| `card_paper_base` | `assets/ui/cards/card_paper_base.png` | 112×152 | Human | Nice | Procedural card rectangle |
+| `contract_notice_base` | `assets/ui/contracts/contract_notice_base.png` | 420×300 | Human | Nice | Procedural modal rectangle |
 | `meter_glass_overlay` | `assets/ui/meters/meter_glass_overlay.png` | 448×248 | Human | Nice | Transparent highlight shape |
 
 ## Event and action icons
@@ -95,10 +95,8 @@ These are the highest-return human/art-generator tasks.
 | `event_cloud_front` | `assets/icons/events/event_cloud_front.png` | 32×32 | Human | Nice | Cloud |
 | `event_business_expo` | `assets/icons/events/event_business_expo.png` | 32×32 | Human | Nice | Briefcase/building |
 | `event_rival_malus` | `assets/icons/events/event_rival_malus.png` | 32×32 | Human | Nice | Red stamp |
-| `action_demand_response` | `assets/icons/actions/action_demand_response.png` | 32×32 | Human | Should | Down arrow + city |
 | `action_transformer_boost` | `assets/icons/actions/action_transformer_boost.png` | 32×32 | Human | Should | Transformer + bolt |
 | `action_emergency_crew` | `assets/icons/actions/action_emergency_crew.png` | 32×32 | Human | Nice | Helmet/wrench |
-| `action_load_shed` | `assets/icons/actions/action_load_shed.png` | 32×32 | Human | Nice | Switch off |
 | `contract_business` | `assets/icons/actions/contract_business.png` | 32×32 | Human optional | Nice | Briefcase + stamped form |
 | `contract_data_center` | `assets/icons/actions/contract_data_center.png` | 32×32 | Human optional | Nice | Server + stamped form |
 

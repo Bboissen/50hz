@@ -1,14 +1,15 @@
 import { GAME_CONFIG } from "./config";
 import type { AssetCapacities, PlayerState, UpgradeInProgress, UpgradeKind } from "./types";
+import { plantForUpgrade } from "./plants";
 
 export function upgradeCost(kind: UpgradeKind, timesPurchased: number): number {
-  const config = GAME_CONFIG.upgrades[kind];
-  return config.baseCost * Math.pow(GAME_CONFIG.upgrades.repeatCostMultiplier, timesPurchased);
+  return plantForUpgrade(kind).cost(timesPurchased);
 }
 
 export function buyUpgrade(player: PlayerState, kind: UpgradeKind): PlayerState {
+  const plant = plantForUpgrade(kind);
   const cost = upgradeCost(kind, player.upgradePurchases[kind]);
-  if (player.cash < cost) {
+  if (!plant.canPurchase(player)) {
     return player;
   }
 
@@ -25,33 +26,7 @@ export function buyUpgrade(player: PlayerState, kind: UpgradeKind): PlayerState 
 }
 
 function applyCompletedUpgrade(capacities: AssetCapacities, kind: UpgradeKind): AssetCapacities {
-  if (kind === "renewable") {
-    return {
-      ...capacities,
-      solarPeakMW: capacities.solarPeakMW + GAME_CONFIG.upgrades.renewable.solarPeakMW,
-      windPeakMW: capacities.windPeakMW + GAME_CONFIG.upgrades.renewable.windPeakMW,
-    };
-  }
-
-  if (kind === "thermal") {
-    return {
-      ...capacities,
-      thermalCapacityMW: capacities.thermalCapacityMW + GAME_CONFIG.upgrades.thermal.capacityMW,
-    };
-  }
-
-  if (kind === "nuclear") {
-    return {
-      ...capacities,
-      nuclearCapacityMW: capacities.nuclearCapacityMW + GAME_CONFIG.upgrades.nuclear.capacityMW,
-    };
-  }
-
-  return {
-    ...capacities,
-    waterDamCapacityMWh: capacities.waterDamCapacityMWh + GAME_CONFIG.upgrades.waterDam.capacityMWh,
-    waterDamMaxPowerMW: capacities.waterDamMaxPowerMW + GAME_CONFIG.upgrades.waterDam.maxPowerMW,
-  };
+  return plantForUpgrade(kind).apply(capacities);
 }
 
 export function tickUpgrades(player: PlayerState, dt: number): PlayerState {

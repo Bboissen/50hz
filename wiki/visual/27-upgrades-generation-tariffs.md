@@ -2,7 +2,7 @@
 title: "Upgrades, Generation, and Tariffs"
 type: "system_ui"
 status: "draft"
-updated: "2026-06-17"
+updated: "2026-06-18"
 tags: ["50hz", "upgrades", "generation", "tariff", "market", "ui"]
 summary: "Visual and implementation spec for Generation Stack, Tariff Boards, Upgrade Rack, rival readability, and price/customer-share feedback."
 related: ["21-dispatch-console-layout.md", "23-ui-naming-and-taxonomy.md", "25-grid-pressure-meter.md"]
@@ -43,6 +43,19 @@ The Generation Stack shows current plant category levels.
 | Player side | Brighter, more clickable-adjacent |
 | Rival side | Smaller, desaturated, surveillance style |
 | Detail | No long stat blocks |
+
+## Physical level display
+
+The UI must display the gameplay level tables directly:
+
+| Track | Level 1 | Level 2 | Level 3 |
+|---|---:|---:|---:|
+| Reactor | 35 MW | 70 MW | 105 MW |
+| Boiler | 45 MW | 70 MW | 95 MW |
+| Renewables | 25 MW peak | 40 MW peak | 55 MW peak |
+| Water Dam | 20 MWh / 15 MW | 35 MWh / 25 MW | 50 MWh / 35 MW |
+
+Do not infer levels from temporary output, event multipliers, weather, or tariff examples. Completed plant capacity determines the displayed level.
 
 ## Upgrade Rack
 
@@ -145,10 +158,18 @@ type UpgradeKey = 'reactor' | 'boiler' | 'renewables' | 'waterDam';
 
 type PlantUpgradeState = {
   key: UpgradeKey;
-  level: 0 | 1 | 2 | 3;
+  level: 0 | 1 | 2 | 3; // 0 only for unavailable/offline display states
   upgradeCost: number;
   canAfford: boolean;
   isMaxed: boolean;
+};
+
+type SectorVisualState = {
+  demandLevel: 0 | 1 | 2 | 3; // 1-3 come from canonical demand levels; 0 is grid-down/browned-out display only
+  isSpiking: boolean;
+  isDemandCritical: boolean;
+  isBrownedOut?: boolean;
+  activeEventId?: string;
 };
 
 type TariffBoardState = {

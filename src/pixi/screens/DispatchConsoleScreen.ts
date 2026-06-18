@@ -1,6 +1,14 @@
 import { Container, Graphics, Text } from "pixi.js";
 
-import type { DispatchCardState, DispatchConsoleState, PlantKey, PlayerCommand, SectorKey, SectorVisualState } from "../../gameplay/types";
+import type {
+  DispatchConsoleState,
+  EventTracePoint,
+  PlantKey,
+  PlantUpgradeState,
+  PlayerCommand,
+  SectorKey,
+  SectorVisualState,
+} from "../../gameplay/types";
 import type { AssetResolver } from "../assets";
 import { DESIGN_TOKENS, type DesignTokens } from "../tokens";
 
@@ -12,7 +20,6 @@ const BOUNDS = {
   diorama: { x: 64, y: 196, w: 1792, h: 488 },
   upgrades: { x: 54, y: 726, w: 500, h: 318 },
   meter: { x: 590, y: 710, w: 650, h: 334 },
-  cards: { x: 1276, y: 726, w: 592, h: 318 },
 } satisfies Record<string, Rect>;
 
 const PIXEL = {
@@ -170,16 +177,8 @@ class ForecastTape extends Container {
 
   public update(state: DispatchConsoleState): void {
     const y = this.bounds.y;
-    const cellW = 128;
-    const roll = -((state.timeSeconds * 24) % cellW);
     const tokens = state.forecast.length > 0 ? state.forecast : [{ id: "sun", label: "SUN", phase: "impact" as const, remainingSeconds: 0 }];
-    const phases = [
-      { label: "00:00", bg: 0x172042 },
-      { label: "06:00", bg: 0xbc7460 },
-      { label: "12:00", bg: 0x8dcde3 },
-      { label: "18:00", bg: 0x657ea1 },
-      { label: "24:00", bg: 0x151b3b },
-    ];
+    const cellW = (this.bounds.w - 28) / 4;
 
     this.dynamic.removeChildren();
     this.frame
@@ -195,24 +194,29 @@ class ForecastTape extends Container {
       .rect(this.bounds.x + 22, y + this.bounds.h - 26, this.bounds.w - 44, 4)
       .fill({ color: PIXEL.copperLight });
 
-    for (let i = -1; i < Math.ceil(this.bounds.w / cellW) + 2; i += 1) {
-      const x = this.bounds.x + 14 + roll + i * cellW;
-      const phase = phases[((i % phases.length) + phases.length) % phases.length];
-      const token = tokens[((i % tokens.length) + tokens.length) % tokens.length];
-      const visibleX = Math.max(x, this.bounds.x + 14);
-      const visibleW = Math.min(x + cellW, this.bounds.x + this.bounds.w - 14) - visibleX;
-      if (visibleW <= 0) {
-        continue;
-      }
-      this.frame.rect(visibleX, y + 16, visibleW, this.bounds.h - 46).fill({ color: phase.bg });
+    for (let index = 0; index < 4; index += 1) {
+      const x = this.bounds.x + 14 + index * cellW;
+      const token = tokens[index] ?? tokens[tokens.length - 1];
+      const isNow = index === 0;
+      const bg = weatherBackground(token.id);
+      this.frame.rect(x, y + 16, cellW, this.bounds.h - 46).fill({ color: bg });
       this.frame.rect(x, y + 16, 2, this.bounds.h - 46).fill({ color: 0xffffff, alpha: 0.18 });
-      drawWeatherIcon(this.frame, token.id || token.label, x + 42, y + 30, 3.7);
-      const label = makeLabel(phase.label, 15, PIXEL.cream);
-      label.position.set(x + 30, y + this.bounds.h - 31);
-      this.dynamic.addChild(label);
+      drawWeatherIcon(this.frame, token.id || token.label, x + cellW * 0.5 - 28, y + 30, 3.7);
+
+      const bucketLabel = makeLabel(isNow ? "NOW" : `+${Math.round(token.remainingSeconds)}s`, 14, PIXEL.cream, "center");
+      bucketLabel.position.set(x + 16, y + this.bounds.h - 31);
+      bucketLabel.style.wordWrap = true;
+      bucketLabel.style.wordWrapWidth = cellW - 32;
+      this.dynamic.addChild(bucketLabel);
+
+      const weatherLabel = makeLabel(token.label, 14, PIXEL.cream, "center");
+      weatherLabel.position.set(x + 8, y + 88);
+      weatherLabel.style.wordWrap = true;
+      weatherLabel.style.wordWrapWidth = cellW - 16;
+      this.dynamic.addChild(weatherLabel);
     }
 
-    const arrowX = this.bounds.x + this.bounds.w * 0.5;
+    const arrowX = this.bounds.x + 14 + cellW * 0.5;
     this.frame
       .moveTo(arrowX - 24, y - 2)
       .lineTo(arrowX + 24, y - 2)
@@ -225,6 +229,23 @@ class ForecastTape extends Container {
       .fill({ color: this.tokens.colors.amberWarn })
       .stroke({ color: PIXEL.black, width: 4 });
   }
+}
+
+function weatherBackground(id: string): number {
+  const key = id.toLowerCase();
+  if (key.includes("rain")) {
+    return 0x465d67;
+  }
+  if (key.includes("snow") || key.includes("cold")) {
+    return 0x607a8e;
+  }
+  if (key.includes("wind")) {
+    return 0x657ea1;
+  }
+  if (key.includes("cloud")) {
+    return 0x566375;
+  }
+  return 0x8dcde3;
 }
 
 class TopStatusStrip extends Container {
@@ -258,6 +279,115 @@ class TopStatusStrip extends Container {
         : "INCIDENTS\nCLEAR";
     this.incidents.style.fill = state.incidents.length > 0 ? this.tokens.colors.overloadRed : PIXEL.cream;
     this.tape.update(state);
+  }
+}
+
+class EventScopePanel extends Container {
+  private readonly g = new Graphics();
+  private readonly labelLayer = new Container();
+
+  public constructor(private readonly bounds: Rect, private readonly tokens: DesignTokens) {
+    super();
+    this.addChild(this.g, this.labelLayer);
+  }
+
+  public update(state: DispatchConsoleState): void {
+    this.labelLayer.removeChildren();
+    const trace = state.eventTrace.length > 0 ? state.eventTrace : this.fallbackTrace(state);
+    const plot = {
+      x: this.bounds.x + 22,
+      y: this.bounds.y + 62,
+      w: this.bounds.w - 44,
+      h: this.bounds.h - 126,
+    };
+    const maxDemand = Math.max(1, ...trace.map((point) => point.demandMW));
+    const maxSupply = Math.max(1, ...trace.map((point) => point.renewableSupplyMW));
+    const demandScaleMax = Math.max(260, maxDemand * 1.08);
+    const supplyScaleMax = Math.max(35, maxSupply * 1.2);
+    const activeIncident = state.incidents[0];
+
+    this.g
+      .clear()
+      .rect(this.bounds.x, this.bounds.y, this.bounds.w, this.bounds.h)
+      .fill({ color: 0x101a13 })
+      .stroke({ color: PIXEL.black, width: 5 })
+      .rect(plot.x, plot.y, plot.w, plot.h)
+      .fill({ color: 0x071108 })
+      .stroke({ color: 0x4a694b, width: 2 });
+
+    for (let index = 1; index < 4; index += 1) {
+      const x = plot.x + (plot.w / 4) * index;
+      this.g.moveTo(x, plot.y).lineTo(x, plot.y + plot.h).stroke({ color: 0x32553a, width: 1, alpha: 0.55 });
+    }
+    for (let index = 1; index < 3; index += 1) {
+      const y = plot.y + (plot.h / 3) * index;
+      this.g.moveTo(plot.x, y).lineTo(plot.x + plot.w, y).stroke({ color: 0x32553a, width: 1, alpha: 0.45 });
+    }
+
+    this.drawTraceLine(trace, plot, demandScaleMax, (point) => point.demandMW, this.tokens.colors.amberWarn);
+    this.drawTraceLine(trace, plot, supplyScaleMax, (point) => point.renewableSupplyMW, this.tokens.colors.dataCyan);
+    this.drawIntensity(trace, plot);
+
+    this.g.rect(plot.x - 4, plot.y - 4, 8, plot.h + 8).fill({ color: PIXEL.cream });
+    addLabel(this.labelLayer, "FORECAST SCOPE", this.bounds.x + 20, this.bounds.y + 18, 18, PIXEL.cream);
+    addLabel(this.labelLayer, "DEMAND", this.bounds.x + 22, this.bounds.y + this.bounds.h - 48, 13, this.tokens.colors.amberWarn);
+    addLabel(this.labelLayer, "SUPPLY", this.bounds.x + 114, this.bounds.y + this.bounds.h - 48, 13, this.tokens.colors.dataCyan);
+    addLabel(
+      this.labelLayer,
+      activeIncident ? activeIncident.label : "INCIDENTS CLEAR",
+      this.bounds.x + 22,
+      this.bounds.y + this.bounds.h - 27,
+      12,
+      activeIncident ? this.tokens.colors.overloadRed : PIXEL.cream,
+    );
+
+    const current = trace[0];
+    addLabel(
+      this.labelLayer,
+      `${current.demandMW.toFixed(0)}MW / ${current.renewableSupplyMW.toFixed(0)}MW`,
+      this.bounds.x + this.bounds.w - 142,
+      this.bounds.y + 20,
+      13,
+      PIXEL.cream,
+    );
+  }
+
+  private fallbackTrace(state: DispatchConsoleState): EventTracePoint[] {
+    return [{ timeOffsetSeconds: 0, demandMW: state.cityDemandMW, renewableSupplyMW: state.generationMW, eventIntensity: 0 }];
+  }
+
+  private drawTraceLine(
+    trace: EventTracePoint[],
+    plot: Rect,
+    scaleMax: number,
+    valueForPoint: (point: EventTracePoint) => number,
+    color: number,
+  ): void {
+    trace.forEach((point, index) => {
+      const x = plot.x + (point.timeOffsetSeconds / 30) * plot.w;
+      const y = plot.y + plot.h - Math.min(1, valueForPoint(point) / scaleMax) * plot.h;
+      if (index === 0) {
+        this.g.moveTo(x, y);
+      } else {
+        this.g.lineTo(x, y);
+      }
+    });
+    this.g.stroke({ color, width: 3 });
+  }
+
+  private drawIntensity(trace: EventTracePoint[], plot: Rect): void {
+    if (!trace.some((point) => point.eventIntensity > 0)) {
+      return;
+    }
+    trace.forEach((point, index) => {
+      const x = plot.x + (point.timeOffsetSeconds / 30) * plot.w;
+      const height = point.eventIntensity * plot.h;
+      const y = plot.y + plot.h - height;
+      this.g.rect(x - 5, y, 10, height).fill({ color: this.tokens.colors.overloadRed, alpha: 0.14 });
+      if (index === 0 && point.eventIntensity > 0) {
+        this.g.rect(plot.x, plot.y, 8, plot.h).fill({ color: this.tokens.colors.overloadRed, alpha: 0.28 });
+      }
+    });
   }
 }
 
@@ -297,11 +427,16 @@ class DioramaViewport extends Container {
   private readonly g = new Graphics();
   private readonly labelLayer = new Container();
   private readonly split: ContractSplitInstrument;
+  private readonly forecastScope: EventScopePanel;
 
   public constructor(private readonly bounds: Rect, private readonly tokens: DesignTokens) {
     super();
     this.split = new ContractSplitInstrument(bounds, tokens);
-    this.addChild(this.g, this.labelLayer, this.split);
+    this.forecastScope = new EventScopePanel(
+      { x: this.bounds.x + this.bounds.w - 382, y: this.bounds.y + 48, w: 330, h: 286 },
+      tokens,
+    );
+    this.addChild(this.g, this.labelLayer, this.split, this.forecastScope);
   }
 
   public update(state: DispatchConsoleState): void {
@@ -309,8 +444,8 @@ class DioramaViewport extends Container {
     this.labelLayer.removeChildren();
     this.drawBackdrop(state.timeSeconds);
     this.drawCitySectors(state.sectors, pulse);
-    this.drawPlantSide("YOU", this.bounds.x + 34, this.bounds.y + 66, state.capacityUtilization, false);
-    this.drawPlantSide("RIVAL", this.bounds.x + this.bounds.w - 332, this.bounds.y + 66, state.rivalEfficiency, true);
+    this.drawPlayerPlantSide(this.bounds.x + 34, this.bounds.y + 66, state.plants);
+    this.forecastScope.update(state);
     this.split.update(state);
   }
 
@@ -380,27 +515,40 @@ class DioramaViewport extends Container {
     this.labelLayer.addChild(text);
   }
 
-  private drawPlantSide(label: string, x: number, y: number, ratio: number, rival: boolean): void {
-    this.g.rect(x, y, 286, 244).fill({ color: rival ? 0x202923 : PIXEL.screenDark }).stroke({ color: PIXEL.black, width: 5 });
-    const title = makeLabel(label, 18, PIXEL.cream);
+  private drawPlayerPlantSide(x: number, y: number, plants: Record<PlantKey, PlantUpgradeState>): void {
+    this.g.rect(x, y, 286, 244).fill({ color: PIXEL.screenDark }).stroke({ color: PIXEL.black, width: 5 });
+    const title = makeLabel("YOU", 18, PIXEL.cream);
     title.position.set(x + 18, y + 16);
     this.labelLayer.addChild(title);
-    const keys: PlantKey[] = rival ? ["reactor", "boiler", "renewables"] : ["reactor", "boiler", "renewables", "waterDam"];
+    const keys: PlantKey[] = ["reactor", "boiler", "renewables", "waterDam"];
     keys.forEach((key, index) => {
+      const plant = plants[key];
       const rowY = y + 48 + index * 46;
       this.g.rect(x + 18, rowY, 250, 34).fill({ color: 0x2f382f }).stroke({ color: PIXEL.black, width: 2 });
       drawTinyPlant(this.g, key, x + 26, rowY - 8, 1.8);
-      this.g.rect(x + 94, rowY + 11, Math.round(138 * Math.min(1, ratio + index * 0.08)), 8).fill({
-        color: rival ? 0xb66b4d : DESIGN_TOKENS.colors.phosphorGreen,
-        alpha: rival ? 0.65 : 0.95,
+      this.g.rect(x + 94, rowY + 11, 138, 8).fill({ color: 0x1a241d });
+      this.g.rect(x + 94, rowY + 11, Math.round(138 * (plant.level / plant.maxLevel)), 8).fill({
+        color: DESIGN_TOKENS.colors.phosphorGreen,
+        alpha: 0.95,
       });
+      if (plant.isBuilding) {
+        this.g.rect(x + 94, rowY + 24, Math.round(138 * plant.buildProgressRatio), 4).fill({
+          color: DESIGN_TOKENS.colors.amberWarn,
+          alpha: 0.95,
+        });
+      }
+      const label = makeLabel(`${plant.shortLabel} ${plant.capacityLabel}`, 10, PIXEL.cream);
+      label.position.set(x + 94, rowY - 1);
+      this.labelLayer.addChild(label);
     });
   }
+
 }
 
 class PlantRack extends Container {
   private readonly rows = new Map<PlantKey, Text>();
   private readonly g = new Graphics();
+  private latestPlants: Record<PlantKey, PlantUpgradeState> | undefined;
 
   public constructor(private readonly bounds: Rect, private readonly sink: CommandSink, private readonly tokens: DesignTokens) {
     super();
@@ -410,6 +558,7 @@ class PlantRack extends Container {
   }
 
   public update(state: DispatchConsoleState): void {
+    this.latestPlants = state.plants;
     this.g.clear();
     pixelPanel(this.g, this.bounds, PIXEL.paper);
     const entries: PlantKey[] = ["reactor", "boiler", "renewables", "waterDam"];
@@ -426,9 +575,10 @@ class PlantRack extends Container {
     });
     for (const [key, text] of this.rows) {
       const plant = state.plants[key];
-      const lamps = "■".repeat(plant.level).padEnd(3, "□");
-      text.text = `${key === "waterDam" ? "DAM" : key.toUpperCase()}  ${lamps}  ${plant.isMaxed ? "MAX" : `€${plant.upgradeCost.toFixed(0)}`}`;
-      text.style.fill = plant.canAfford || plant.isMaxed ? PIXEL.black : this.tokens.colors.smokeGrey;
+      const lamps = "■".repeat(plant.level).padEnd(plant.maxLevel, "□");
+      const pending = plant.purchasedLevel > plant.level ? " +" : "  ";
+      text.text = `${plant.shortLabel} ${lamps}${pending} ${plant.statusText}  ${plant.capacityLabel}`;
+      text.style.fill = plant.canAfford || plant.isMaxed || plant.isBuilding ? PIXEL.black : this.tokens.colors.smokeGrey;
     }
   }
 
@@ -445,8 +595,10 @@ class PlantRack extends Container {
       row.eventMode = "static";
       row.cursor = "pointer";
       row.on("pointertap", () => {
-        const kind = key === "reactor" ? "nuclear" : key === "boiler" ? "thermal" : key === "renewables" ? "renewable" : "waterDam";
-        this.sink({ type: "buyUpgrade", playerId: "player", kind });
+        const plant = this.latestPlants?.[key];
+        if (plant?.canAfford) {
+          this.sink({ type: "buyUpgrade", playerId: "player", kind: plant.kind });
+        }
       });
       row.addChild(new Graphics().rect(this.bounds.x + 24, y, this.bounds.w - 48, 48).fill({ color: 0xffffff, alpha: 0.001 }));
       const text = makeLabel("", 17, PIXEL.black);
@@ -476,19 +628,56 @@ class VuGridPressureMeter extends Container {
     this.g.rect(this.bounds.x + 42, this.bounds.y + 54, 260, 196).fill({ color: PIXEL.paperLight }).stroke({ color: PIXEL.black, width: 5 });
     this.g.rect(this.bounds.x + 348, this.bounds.y + 54, 260, 196).fill({ color: PIXEL.paperLight }).stroke({ color: PIXEL.black, width: 5 });
     this.drawMeterFace(this.bounds.x + 172, this.bounds.y + 214, 112, Math.min(1.25, state.capacityUtilization) / 1.25, 0.72, danger ? Math.sin(state.timeSeconds * 18) * 0.015 : 0);
-    this.drawMeterFace(
-      this.bounds.x + 478,
-      this.bounds.y + 214,
-      112,
-      Math.max(0, Math.min(1, 0.5 + state.supplyDemandMismatch / 0.32)),
-      0.82,
-      danger ? Math.sin(state.timeSeconds * 20) * 0.018 : 0,
-    );
+    this.drawSupplyDeltaGauge(state);
     addLabel(this.labelLayer, "CAPACITY", this.bounds.x + 108, this.bounds.y + 76, 15, PIXEL.black);
-    addLabel(this.labelLayer, "BALANCE", this.bounds.x + 418, this.bounds.y + 76, 15, PIXEL.black);
+    addLabel(this.labelLayer, "SUPPLY DELTA", this.bounds.x + 388, this.bounds.y + 76, 15, PIXEL.black);
     this.g.rect(this.bounds.x + 38, this.bounds.y + 28, 36, 22).fill({ color: state.balanceZone === "lock" ? this.tokens.colors.phosphorGreen : 0x3b1610 });
     this.g.rect(this.bounds.x + this.bounds.w - 74, this.bounds.y + 28, 36, 22).fill({ color: blink ? this.tokens.colors.overloadRed : 0x3b1610 });
-    this.readout.text = `CAP ${(state.capacityUtilization * 100).toFixed(0)}% ${state.capacityZone.toUpperCase()}   BAL ${(state.supplyDemandMismatch * 100).toFixed(1)}% ${state.balanceZone.toUpperCase()}`;
+    this.readout.text = `CAP ${(state.capacityUtilization * 100).toFixed(0)}% ${state.capacityZone.toUpperCase()}   SUPPLY-LOAD ${this.formatSignedMw(state.generationMW - state.currentDemandMW)} (${this.formatSignedPercent(state.supplyDemandMismatch)}) ${state.balanceZone.toUpperCase()}`;
+    addLabel(
+      this.labelLayer,
+      `${state.currentContractLoadMW.toFixed(0)}/${state.contractCapacityBasisMW.toFixed(0)}MW CONTRACT   ${state.generationMW.toFixed(0)}MW SUPPLY / ${state.currentDemandMW.toFixed(0)}MW DEMAND`,
+      this.bounds.x + 54,
+      this.bounds.y + 258,
+      13,
+      PIXEL.cream,
+    );
+    addLabel(
+      this.labelLayer,
+      `${state.breakerStatusText}   SOURCE ${state.breakerRiskSource.toUpperCase()}`,
+      this.bounds.x + 54,
+      this.bounds.y + 24,
+      14,
+      state.breakerResetRequired ? this.tokens.colors.overloadRed : PIXEL.cream,
+    );
+    this.drawActiveContractTickets(state);
+  }
+
+  private drawActiveContractTickets(state: DispatchConsoleState): void {
+    const x = this.bounds.x + 366;
+    const y = this.bounds.y + 190;
+    const w = 226;
+    const h = 48;
+    const contracts = state.activeContracts.slice(0, 2);
+
+    if (contracts.length === 0) {
+      this.g.rect(x, y, w, h).fill({ color: 0x263026 }).stroke({ color: PIXEL.black, width: 3 });
+      addLabel(this.labelLayer, "NO FIXED CONTRACT", x + 18, y + 16, 13, PIXEL.cream);
+      return;
+    }
+
+    contracts.forEach((contract, index) => {
+      const rowY = y + index * (h + 6);
+      this.g
+        .rect(x, rowY, w, h)
+        .fill({ color: 0x17231c })
+        .stroke({ color: this.tokens.colors.amberWarn, width: 3 })
+        .rect(x + 8, rowY + 8, 42, h - 16)
+        .fill({ color: this.tokens.colors.dataCyan });
+      addLabel(this.labelLayer, `${contract.loadMW.toFixed(0)}MW`, x + 12, rowY + 18, 12, PIXEL.black);
+      addLabel(this.labelLayer, contract.title.replace(" CONTRACT", ""), x + 62, rowY + 8, 12, PIXEL.cream);
+      addLabel(this.labelLayer, `${Math.ceil(contract.remainingSeconds)}s REMAIN`, x + 62, rowY + 26, 12, this.tokens.colors.amberWarn);
+    });
   }
 
   private drawMeterFace(cx: number, cy: number, radius: number, ratio: number, redStart: number, jitter: number): void {
@@ -512,74 +701,60 @@ class VuGridPressureMeter extends Container {
     this.g.moveTo(cx, cy).lineTo(cx + Math.cos(needle) * (radius - 16), cy + Math.sin(needle) * (radius - 16)).stroke({ color: PIXEL.black, width: 7 });
     this.g.rect(cx - 12, cy - 12, 24, 24).fill({ color: PIXEL.black }).rect(cx - 5, cy - 5, 10, 10).fill({ color: PIXEL.cream });
   }
-}
 
-class DispatchCardsPanel extends Container {
-  private readonly g = new Graphics();
+  private drawSupplyDeltaGauge(state: DispatchConsoleState): void {
+    const x = this.bounds.x + 374;
+    const y = this.bounds.y + 132;
+    const w = 208;
+    const h = 34;
+    const center = x + w / 2;
+    const severe = 0.15;
+    const safe = 0.05;
+    const displayMax = 0.3;
+    const markerX = center + Math.max(-1, Math.min(1, state.supplyDemandMismatch / displayMax)) * (w / 2);
+    const jitter = state.balanceZone.includes("severe") ? Math.sin(state.timeSeconds * 22) * 4 : 0;
+    const leftSafe = center - (safe / displayMax) * (w / 2);
+    const rightSafe = center + (safe / displayMax) * (w / 2);
+    const leftSevere = center - (severe / displayMax) * (w / 2);
+    const rightSevere = center + (severe / displayMax) * (w / 2);
+    const deltaMW = state.generationMW - state.currentDemandMW;
 
-  public constructor(private readonly bounds: Rect, private readonly sink: CommandSink, private readonly tokens: DesignTokens) {
-    super();
-    this.addChild(this.g);
-  }
-
-  public update(state: DispatchConsoleState): void {
-    this.removeChildren();
-    this.addChild(this.g);
-    pixelPanel(this.g.clear(), this.bounds, PIXEL.paper);
-    addLabel(this, "DISPATCH CARDS", this.bounds.x + 38, this.bounds.y + 28, 18, PIXEL.black);
-    state.cards.slice(0, 4).forEach((card, index) => this.addCard(card, index, state.timeSeconds));
-  }
-
-  private addCard(card: DispatchCardState, index: number, timeSeconds: number): void {
-    const cardW = 126;
-    const cardH = 218;
-    const gap = 14;
-    const x = this.bounds.x + 28 + index * (cardW + gap);
-    const y = this.bounds.y + 72 + (card.state === "available" ? Math.sin(timeSeconds * 5 + index) * 2 : 8);
-    const root = new Container();
-    root.eventMode = card.state === "available" ? "static" : "passive";
-    root.cursor = card.state === "available" ? "pointer" : "default";
-    root.on("pointertap", () => {
-      if (card.id === "business" || card.id === "dataCenter") {
-        this.sink({ type: "acceptContract", playerId: "player", kind: card.id });
-      } else {
-        this.sink({ type: "playCard", playerId: "player", kind: card.id as "demandResponse" | "cloudFront" | "windStorm" });
-      }
-    });
-
-    const shell = new Graphics()
-      .rect(x, y, cardW, cardH)
-      .fill({ color: card.state === "disabled" ? 0x948a70 : 0xe2d19f })
-      .stroke({ color: card.type === "offense" ? this.tokens.colors.overloadRed : PIXEL.black, width: 4 })
-      .rect(x + 16, y + 54, cardW - 32, 50)
-      .fill({ color: card.type === "offense" ? 0x351412 : 0x2f3b2b })
-      .rect(x + 16, y + 184, cardW - 32, 12)
+    this.g
+      .rect(x, y, w, h)
+      .fill({ color: 0x261510 })
+      .stroke({ color: PIXEL.black, width: 4 })
+      .rect(x + 4, y + 4, leftSevere - x - 4, h - 8)
+      .fill({ color: this.tokens.colors.overloadRed })
+      .rect(leftSevere, y + 4, leftSafe - leftSevere, h - 8)
+      .fill({ color: this.tokens.colors.amberWarn })
+      .rect(leftSafe, y + 4, rightSafe - leftSafe, h - 8)
+      .fill({ color: this.tokens.colors.phosphorGreen })
+      .rect(rightSafe, y + 4, rightSevere - rightSafe, h - 8)
+      .fill({ color: this.tokens.colors.amberWarn })
+      .rect(rightSevere, y + 4, x + w - 4 - rightSevere, h - 8)
+      .fill({ color: this.tokens.colors.overloadRed })
+      .rect(center - 2, y - 8, 4, h + 16)
       .fill({ color: PIXEL.black })
-      .rect(x + 16, y + 184, (cardW - 32) * (1 - card.cooldownRatio), 12)
-      .fill({ color: this.tokens.colors.phosphorGreen });
-    drawWeatherIcon(shell, card.id, x + 42, y + 66, 3);
+      .rect(markerX - 6 + jitter, y - 10, 12, h + 20)
+      .fill({ color: PIXEL.black })
+      .rect(markerX - 3 + jitter, y - 4, 6, h + 8)
+      .fill({ color: PIXEL.cream });
 
-    const title = makeLabel(shortTitle(card.title), 13, PIXEL.black, "center");
-    title.style.wordWrap = true;
-    title.style.wordWrapWidth = cardW - 20;
-    title.position.set(x + 10, y + 14);
-    const effect = makeLabel(shortEffect(card.effectText), 12, PIXEL.black, "center");
-    effect.style.wordWrap = true;
-    effect.style.wordWrapWidth = cardW - 20;
-    effect.position.set(x + 10, y + 118);
-    const stateLabel = makeLabel(card.state.toUpperCase(), 10, card.state === "available" ? PIXEL.black : this.tokens.colors.smokeGrey, "center");
-    stateLabel.position.set(x + 12, y + 166);
-    root.addChild(shell, title, effect, stateLabel);
-    this.addChild(root);
+    addLabel(this.labelLayer, "UNDER", x + 2, y + h + 10, 11, PIXEL.black);
+    addLabel(this.labelLayer, "0%", center - 12, y + h + 10, 11, PIXEL.black);
+    addLabel(this.labelLayer, "OVER", x + w - 42, y + h + 10, 11, PIXEL.black);
+    addLabel(this.labelLayer, `SUPPLY - DEMAND ${this.formatSignedMw(deltaMW)}`, x + 4, y - 38, 13, PIXEL.black);
+    addLabel(this.labelLayer, this.formatSignedPercent(state.supplyDemandMismatch), center - 24, y - 18, 12, PIXEL.black);
   }
-}
 
-function shortTitle(title: string): string {
-  return title.replace("DEMAND RESPONSE", "DEMAND\nRESPONSE").replace("BUSINESS CONTRACT", "BUSINESS\nCONTRACT").replace("DATA CONTRACT", "DATA\nCONTRACT").replace("WIND STORM", "WIND\nSTORM").replace("CLOUD FRONT", "CLOUD\nFRONT");
-}
+  private formatSignedMw(value: number): string {
+    return `${value >= 0 ? "+" : ""}${value.toFixed(0)}MW`;
+  }
 
-function shortEffect(effect: string): string {
-  return effect.replace("RIVAL SOLAR DOWN", "RIVAL\nSOLAR DOWN").replace("RIVAL WIND CUTOUT", "RIVAL\nWIND CUT").replace("-15% LOAD / -TRUST", "-15% LOAD\n-TRUST").replace(" / ", "\n");
+  private formatSignedPercent(value: number): string {
+    const percent = value * 100;
+    return `${percent >= 0 ? "+" : ""}${percent.toFixed(1)}%`;
+  }
 }
 
 class AlarmOverlay extends Container {
@@ -594,10 +769,11 @@ class AlarmOverlay extends Container {
   }
 
   public update(state: DispatchConsoleState): void {
-    const danger = state.capacityZone === "tripRisk" || state.capacityZone === "trip" || state.balanceZone.includes("severe");
+    const danger = state.breakerResetRequired || state.capacityZone === "tripRisk" || state.capacityZone === "trip" || state.balanceZone.includes("severe");
     const alpha = danger ? 0.07 + (Math.sin(state.timeSeconds * 11) + 1) * 0.05 : 0;
     this.flash.clear().rect(0, 0, 1920, 1080).fill({ color: DESIGN_TOKENS.colors.overloadRed, alpha });
-    this.stamp.visible = state.capacityZone === "trip";
+    this.stamp.text = state.breakerResetRequired ? "RESET" : "TRIP";
+    this.stamp.visible = state.breakerResetRequired || state.capacityZone === "trip";
   }
 }
 
@@ -608,14 +784,12 @@ export class DispatchConsoleScreen extends Container {
   private readonly topStrip = new TopStatusStrip(this.tokens);
   private readonly upgrades: PlantRack;
   private readonly meter = new VuGridPressureMeter(BOUNDS.meter, this.tokens);
-  private readonly cards: DispatchCardsPanel;
   private readonly alarmOverlayLayer = new AlarmOverlay();
 
   public constructor(_assets: AssetResolver, sink: CommandSink) {
     super();
     this.upgrades = new PlantRack(BOUNDS.upgrades, sink, this.tokens);
-    this.cards = new DispatchCardsPanel(BOUNDS.cards, sink, this.tokens);
-    this.addChild(this.backgroundLayer, this.diorama, this.topStrip, this.upgrades, this.meter, this.cards, this.alarmOverlayLayer);
+    this.addChild(this.backgroundLayer, this.diorama, this.topStrip, this.upgrades, this.meter, this.alarmOverlayLayer);
     this.drawBackground();
   }
 
@@ -624,7 +798,6 @@ export class DispatchConsoleScreen extends Container {
     this.diorama.update(state);
     this.upgrades.update(state);
     this.meter.update(state);
-    this.cards.update(state);
     this.alarmOverlayLayer.update(state);
   }
 

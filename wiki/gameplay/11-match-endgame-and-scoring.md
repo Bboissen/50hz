@@ -34,8 +34,8 @@ Use separate values.
 
 | Value | Meaning |
 |---|---|
-| `cash` | Spendable money for upgrades/cards |
-| `score` | Cumulative profit generated during the match |
+| `cash` | Spendable money for upgrades and breaker resets |
+| `score` | Cumulative profit generated during the match, minus strike penalties already applied when failures happen |
 
 Every tick:
 
@@ -60,10 +60,7 @@ players should not be punished in final score for investing
 ## Final score
 
 ```ts
-finalScore =
-  score -
-  strikes * STRIKE_SCORE_PENALTY -
-  activeContractStrikePenalties;
+finalScore = score;
 ```
 
 Recommended:
@@ -72,7 +69,7 @@ Recommended:
 const STRIKE_SCORE_PENALTY = 80;
 ```
 
-Fixed contracts add their own strike penalties if a breaker trip happens while the contract is active.
+Breaker strike penalties are applied immediately to `score` when the trip happens. Fixed contracts add their own strike penalties immediately if a breaker trip happens while the contract is active. Do not subtract those penalties again in final scoring.
 
 ## MVP match arc
 

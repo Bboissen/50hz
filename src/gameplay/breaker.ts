@@ -1,8 +1,8 @@
 import { GAME_CONFIG } from "./config";
 import type { BreakerReason } from "./types";
 
-export function computeSupplyDemandMismatch(deliveredSupplyMW: number, currentDemandMW: number): number {
-  return (deliveredSupplyMW - currentDemandMW) / Math.max(currentDemandMW, 1);
+export function computeSupplyDemandMismatch(generationMW: number, currentDemandMW: number): number {
+  return (generationMW - currentDemandMW) / Math.max(currentDemandMW, 1);
 }
 
 export function updateBreakerRisk(args: {

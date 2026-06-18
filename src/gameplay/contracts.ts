@@ -2,7 +2,7 @@ import { GAME_CONFIG } from "./config";
 import type { ActiveContract, ContractKind, PlayerState } from "./types";
 
 export function createContract(kind: ContractKind, sequence: number): ActiveContract {
-  const config = GAME_CONFIG.contracts[kind];
+  const config = GAME_CONFIG.contracts.types[kind];
   return {
     id: `${kind}-${sequence}`,
     kind,

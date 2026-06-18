@@ -31,7 +31,7 @@ Use industrial control-room language, but do not hide the mechanic.
 | Opponent assets | Rival Grid Stack | `RivalGridStack` | Less interactive |
 | Upgrades | Upgrade Rack | `UpgradeRack` | Clickable plant upgrades |
 | VU meter | Grid Pressure Meter | `GridPressureMeter` | Central danger widget |
-| Event/action cards | Dispatch Cards | `DispatchCardsPanel` | Player tools/actions |
+| Contract offers | Contract Offer Modal | `ContractOfferModal` | Fixed-load accept/decline |
 
 ## Final plant categories
 
@@ -72,13 +72,13 @@ Event names should be concrete and slightly absurd.
 | Data Centers | Data Center Burst, Cloud Backup, AI Training Run, Streaming Surge |
 | Weather | Cloud Front, Cold Snap, Snowfall, Heatwave, High Wind |
 | Rival | Rival Audit, Cable Theft, PR Smear, Grid Poach |
-| Player tools | Demand Response, Transformer Boost, Emergency Crew, Load Shed |
+| Player tools | Transformer Boost, Emergency Crew, PR Campaign |
 
 ## Copy rules
 
 - Use all caps for UI labels.
-- Keep card titles to 1–3 words.
-- Use one effect line on cards whenever possible.
+- Keep modal titles to 1-3 words after the contract type.
+- Use short contract terms: load, duration, reward, strike risk.
 - Prefer `+Load`, `-Pressure`, `+Revenue`, `+Capacity` over sentences.
 - Do not use real regulatory terminology if it slows comprehension.
 - Do not invent more currencies.
@@ -101,7 +101,7 @@ Event names should be concrete and slightly absurd.
 | Tertiary | Too technical in fast demo | Services |
 | VU Meter | Audio metaphor, not in-world | Grid Pressure Meter |
 | Price | Too generic | Tariff |
-| Events | Too broad | Incident Queue or Dispatch Cards |
+| Events | Too broad | Incident Queue or Contract Offer Modal |
 | Assets | Abstract | Generation Stack |
 | Renewable Energy Stack | Too long | Renewables |
 

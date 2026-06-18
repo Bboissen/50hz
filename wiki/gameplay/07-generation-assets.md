@@ -2,9 +2,9 @@
 title: "Generation Assets and Dispatch"
 type: "system"
 status: "draft"
-updated: "2026-06-17"
+updated: "2026-06-18"
 tags: ["50hz", "generation", "dispatch", "nuclear", "thermal", "renewable", "water-dam"]
-summary: "Starter generation asset rules, deterministic capacity, renewable output, water dam behavior, control response, and delivered power."
+summary: "Starter generation asset rules, deterministic capacity, renewable output, water dam behavior, control response, and controllable generation."
 related: []
 ---
 
@@ -41,13 +41,15 @@ grid = delivery cap for all supply
 
 | System | Starting value |
 |---|---:|
-| Grid delivery capacity | 90 MW |
+| Grid delivery capacity | 210 MW |
 | Nuclear capacity | 35 MW |
 | Thermal capacity | 45 MW |
-| Solar peak | 25 MW |
-| Wind peak | 25 MW |
+| Renewable peak | 25 MW |
+| Solar peak | 10 MW |
+| Wind peak | 15 MW |
 | Water dam capacity | 20 MWh |
 | Water dam max power | 15 MW |
+| Starting boiler throttle | 38% |
 | Starting cash | 80 |
 
 Initial demand:
@@ -56,11 +58,38 @@ Initial demand:
 total demand = 140 MW
 player share = 50%
 player customer load = 70 MW
-deterministic max capacity = min(90, 35 + 45) = 80 MW
+deterministic max capacity = min(210, 35 + 45) = 80 MW
 starting contract utilization = 70 / 80 = 87.5%
 ```
 
 This means the player starts in the efficient contract-utilization zone but still must manually match real-time supply to demand.
+
+## Physical level tables
+
+Plant upgrades set the next explicit physical level. Do not derive new levels by adding capacity deltas.
+
+| Track | Level 1 | Level 2 | Level 3 | Meaning |
+|---|---:|---:|---:|---|
+| Reactor | 35 MW | 70 MW | 105 MW | Slow deterministic baseload |
+| Boiler | 45 MW | 70 MW | 95 MW | Fast deterministic peaker |
+| Renewable peak | 25 MW | 40 MW | 55 MW | Non-deterministic renewable peak |
+| Water dam storage | 20 MWh | 35 MWh | 50 MWh | Compressed arcade storage |
+| Water dam power | 15 MW | 25 MW | 35 MW | Instant buffer power |
+
+Renewable peak is split as:
+
+```txt
+wind = 60%
+solar = 40%
+```
+
+Examples:
+
+| Renewable level | Solar peak | Wind peak | Total peak |
+|---:|---:|---:|---:|
+| 1 | 10 MW | 15 MW | 25 MW |
+| 2 | 16 MW | 24 MW | 40 MW |
+| 3 | 22 MW | 33 MW | 55 MW |
 
 ## Deterministic max capacity
 
@@ -188,12 +217,26 @@ Recommended weather factors:
 
 | Weather | Factor |
 |---|---:|
-| Clear | 1.00 |
-| Normal | 0.75 |
-| Cloud front | 0.30 |
-| Night/dim period, if used | 0.10 |
+| Sun | 1.00 |
+| Cloud | 0.55 |
+| Rain | 0.35 |
+| Snow | 0.25 |
+| Windy | 0.85 |
+| Night | 0.00 |
 
 Solar surplus can be used to manually fill the water dam if the dam is not full. Otherwise it can create overload risk unless curtailed.
+
+Prototype weather should make time of day visible within the short match. The time-of-day clock advances linearly and repeats every 36 simulation seconds. With the current `0.6x` simulation speed, that is one complete day/night cycle per real-world minute.
+
+```txt
+0% cycle = dawn
+25% cycle = noon
+50% cycle = dusk
+75% cycle = night
+100% cycle = next dawn
+```
+
+Solar output is exactly `0 MW` during night. Weather conditions then multiply only the daylight solar factor, so cloud/rain/snow cannot create nighttime trickle output.
 
 ## Renewable wind
 
@@ -234,6 +277,16 @@ wind turbine ON / OFF
 
 If wind is outside the valid range, ON still produces `0 MW`. If wind is strong enough to create surplus, switching OFF can prevent overload.
 
+Wind should fluctuate every match from a seeded deterministic weather sampler. It should not stay at a flat default speed except in tests that explicitly pass a constant wind value.
+
+Design target:
+
+```txt
+base wind speed + smooth seeded variation + short gust interpolation
+```
+
+The fluctuation should be strong enough to move turbine output during normal play, but not so chaotic that the player cannot read and react to the renewable panel.
+
 ## Water dam
 
 Role:
@@ -258,24 +311,34 @@ const WATER_DAM_MAX_POWER_MW = 15;
 const WATER_DAM_INITIAL_RATIO = 0.50;
 const WATER_DAM_FILL_EFFICIENCY = 0.75;
 const WATER_DAM_DRAIN_EFFICIENCY = 0.90;
+const WATER_DAM_STORAGE_SECONDS_PER_MWH = 20;
 const RAIN_FILL_MWH_PER_SECOND = 0.50;
 const RAIN_AUTODRAIN_THRESHOLD = 0.95;
+const RAIN_AUTODRAIN_POWER_RATIO = 0.25;
 ```
 
 Manual fill during overload / surplus:
 
 ```ts
 const fillMW = Math.min(surplusMW, WATER_DAM_MAX_POWER_MW);
-storedWaterMWh += fillMW * WATER_DAM_FILL_EFFICIENCY * dtHours;
+storedWaterMWh +=
+  fillMW *
+  WATER_DAM_FILL_EFFICIENCY *
+  (dtSeconds / WATER_DAM_STORAGE_SECONDS_PER_MWH);
 ```
 
 Manual drain during underload:
 
 ```ts
-const drainMW = Math.min(WATER_DAM_MAX_POWER_MW, storedWaterMWh / dtHours);
+const drainMW = Math.min(
+  WATER_DAM_MAX_POWER_MW,
+  storedWaterMWh / (dtSeconds / WATER_DAM_STORAGE_SECONDS_PER_MWH)
+);
 damOutputMW = drainMW * WATER_DAM_DRAIN_EFFICIENCY;
-storedWaterMWh -= drainMW * dtHours;
+storedWaterMWh -= drainMW * (dtSeconds / WATER_DAM_STORAGE_SECONDS_PER_MWH);
 ```
+
+For the prototype, dam storage uses a deliberately compressed arcade timebase instead of real-world MWh hours. This keeps the reservoir gauge readable during a short match while preserving the tactical rule: filling absorbs surplus and draining adds immediate power.
 
 Rain fill:
 
@@ -289,9 +352,11 @@ If rain would overfill the dam, the dam auto-drains into energy production:
 
 ```ts
 if (rainActive && storedWaterMWh >= WATER_DAM_CAPACITY_MWH * RAIN_AUTODRAIN_THRESHOLD) {
-  damOutputMW = WATER_DAM_MAX_POWER_MW;
+  damOutputMW = WATER_DAM_MAX_POWER_MW * RAIN_AUTODRAIN_POWER_RATIO;
 }
 ```
+
+This auto-drain is intentionally small. Full-rain overflow should be visible as a pressure relief effect without replacing the player's manual drain control.
 
 Interpretation:
 
@@ -299,22 +364,28 @@ Interpretation:
 - empty dam: cannot generate, but can absorb overload/surplus or rain,
 - neutral dam: both fill and drain are actionable.
 
-## Total delivered power
+## Controllable generation output
 
 Simplified MVP calculation:
 
 ```ts
-const rawProductionMW =
+const generationMW =
   nuclearOutputMW +
   thermalOutputMW +
   solarOutputMW +
   windOutputMW +
   damOutputMW;
-
-const deliveredSupplyMW = Math.min(rawProductionMW, gridCapacityMW);
 ```
 
-Do not silently correct mismatch. If delivered supply is more than 5% away from current demand, breaker risk should rise in [`08-grid-overload-and-reliability.md`](./08-grid-overload-and-reliability.md).
+The production console compares `generationMW` to current demand. This is the value the player adjusts in real time.
+
+Grid-limited delivered power can still be computed separately for delivery/cap diagnostics:
+
+```ts
+const deliveredSupplyMW = Math.min(generationMW, gridCapacityMW);
+```
+
+Do not silently correct mismatch. If controllable generation is more than 5% away from current demand, breaker risk should rise in [`08-grid-overload-and-reliability.md`](./08-grid-overload-and-reliability.md).
 
 ## Dispatch rules
 

@@ -1,14 +1,25 @@
 export const GAME_CONFIG = {
   match: {
-    durationSeconds: 240,
+    durationSeconds: 300,
     tickRateHz: 30,
+    simulationSpeed: 0.6,
+    defaultSeed: "vivatech-grid-duel-demo",
+  },
+  weather: {
+    dayCycleSeconds: 36,
+    rainSnowHouseholdMultiplier: 1.03,
+    forecastOffsetsSeconds: [0, 15, 30, 45],
   },
   demand: {
     baseTotalMW: 140,
+    progressionSteps: 6,
+    progressionStartSeconds: 40,
+    progressionEndSeconds: 270,
+    progressionJitterSeconds: 10,
     sectors: {
-      householdsMW: 80,
-      businessMW: 45,
-      dataCentersMW: 15,
+      householdsMW: [80, 100, 120],
+      businessMW: [15, 35, 55],
+      dataCentersMW: [45, 65, 85],
     },
   },
   market: {
@@ -29,7 +40,14 @@ export const GAME_CONFIG = {
     startingStrikes: 0,
   },
   assets: {
-    gridCapacityMW: 90,
+    gridCapacityMW: 210,
+    plantLevels: {
+      nuclearMW: [35, 70, 105],
+      thermalMW: [45, 70, 95],
+      renewablePeakMW: [25, 40, 55],
+      waterDamStorageMWh: [20, 35, 50],
+      waterDamPowerMW: [15, 25, 35],
+    },
     nuclear: {
       capacityMW: 35,
       rampMWPerSecond: 15,
@@ -37,16 +55,17 @@ export const GAME_CONFIG = {
     },
     thermal: {
       capacityMW: 45,
+      initialThrottle: 0.38,
       heatGainPerSecond: 0.07,
       coolingPerSecond: 0.04,
       overheatThreshold: 0.85,
       outputMultiplierWhenOverheated: 0.85,
     },
     renewable: {
-      solarPeakMW: 25,
-      solarDefaultFactor: 0.75,
-      solarCloudFactor: 0.3,
-      windPeakMW: 25,
+      solarPeakMW: 10,
+      solarShare: 0.4,
+      windPeakMW: 15,
+      windShare: 0.6,
       windCutInKmh: 12,
       windFullPowerKmh: 45,
       windCutOutKmh: 90,
@@ -58,8 +77,10 @@ export const GAME_CONFIG = {
       initialStoredRatio: 0.5,
       fillEfficiency: 0.75,
       drainEfficiency: 0.9,
+      storageSecondsPerMWh: 20,
       rainFillMWhPerSecond: 0.5,
       rainAutoDrainThreshold: 0.95,
+      rainAutoDrainPowerRatio: 0.25,
     },
   },
   efficiency: {
@@ -78,6 +99,8 @@ export const GAME_CONFIG = {
     capacityOverloadBreakerSeconds: 3,
     capacityOverloadRecoverySeconds: 1,
     breakerTripSeconds: 8,
+    gridShutdownReliefSeconds: 15,
+    resetCost: 35,
   },
   strike: {
     cashPenalty: 25,
@@ -89,61 +112,39 @@ export const GAME_CONFIG = {
     renewable: {
       baseCost: 45,
       buildSeconds: 10,
-      solarPeakMW: 15,
-      windPeakMW: 15,
     },
     thermal: {
       baseCost: 40,
       buildSeconds: 8,
-      capacityMW: 25,
     },
     nuclear: {
       baseCost: 85,
       buildSeconds: 20,
-      capacityMW: 35,
     },
     waterDam: {
       baseCost: 50,
       buildSeconds: 12,
-      capacityMWh: 15,
-      maxPowerMW: 10,
     },
   },
   contracts: {
-    business: {
-      loadMW: 15,
-      durationSeconds: 45,
-      completionCashReward: 35,
-      strikeScorePenalty: 70,
-    },
-    dataCenter: {
-      loadMW: 25,
-      durationSeconds: 35,
-      completionCashReward: 60,
-      strikeScorePenalty: 140,
-    },
-  },
-  cards: {
-    demandResponse: {
-      cost: 20,
-      cooldownSeconds: 20,
-      durationSeconds: 8,
-      demandMultiplier: 0.85,
-      sharePenalty: 0.02,
-    },
-    cloudFront: {
-      cost: 30,
-      cooldownSeconds: 25,
-      warningSeconds: 2,
-      durationSeconds: 8,
-      opponentRenewableSolarFactorMultiplier: 0.65,
-    },
-    windStorm: {
-      cost: 30,
-      cooldownSeconds: 25,
-      warningSeconds: 2,
-      durationSeconds: 8,
-      opponentWindKmh: 100,
+    offerWindowSeconds: 5,
+    offerSchedule: [
+      { id: "business-1", kind: "business", startsAtSeconds: 3 },
+      { id: "data-center-1", kind: "dataCenter", startsAtSeconds: 75 },
+    ],
+    types: {
+      business: {
+        loadMW: 15,
+        durationSeconds: 45,
+        completionCashReward: 35,
+        strikeScorePenalty: 70,
+      },
+      dataCenter: {
+        loadMW: 25,
+        durationSeconds: 35,
+        completionCashReward: 60,
+        strikeScorePenalty: 140,
+      },
     },
   },
 } as const;

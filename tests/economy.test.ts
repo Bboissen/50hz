@@ -20,6 +20,22 @@ describe("economy", () => {
     expect(result.cashGainA).toBeGreaterThan(result.cashGainB);
   });
 
+  it.each([
+    [0.71, 0.7],
+    [1, 0],
+  ])("preserves the revenue invariant for efficiency %f vs %f", (efficiency, opponentEfficiency) => {
+    const result = computeRevenueTick({
+      efficiency,
+      opponentEfficiency,
+      totalDemandMW: 140,
+      dt: 1,
+    });
+
+    expect(result.priceA).toBeLessThan(result.priceB);
+    expect(result.targetShareA).toBeGreaterThan(result.targetShareB);
+    expect(result.cashGainA).toBeGreaterThan(result.cashGainB);
+  });
+
   it("uses price elasticity greater than one", () => {
     expect(GAME_CONFIG.market.priceElasticity).toBeGreaterThan(1);
   });

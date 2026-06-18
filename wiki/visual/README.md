@@ -23,7 +23,7 @@ Soviet-era dispatch room
 + old municipal infrastructure
 + green phosphor CRT displays
 + analog meters and warning lamps
-+ bureaucratic event cards
++ bureaucratic contract notices
 + slightly absurd educational energy chaos
 ```
 
@@ -42,7 +42,7 @@ Lower tariff -> more customers -> higher grid pressure -> overload risk
 | `23-ui-naming-and-taxonomy.md` | Final UI labels, code names, plant/sector naming | Human + coder |
 | `24-city-sectors-visual-design.md` | Homes / Services / Data Centers visual specs and states | Human + coder |
 | `25-grid-pressure-meter.md` | Central dual meter definition, gameplay-owned formulas, zones, animation | Agentic coder |
-| `26-events-cards-timelines.md` | Forecast Tape, Incident Queue, Dispatch Cards grammar | Human + coder |
+| `26-events-cards-timelines.md` | Forecast Tape, Incident Queue, fixed contract modal grammar | Human + coder |
 | `27-upgrades-generation-tariffs.md` | Generation Stack, Tariff Boards, Upgrade Rack | Agentic coder |
 | `28-animation-and-feedback-priorities.md` | Ranked animation implementation list | Agentic coder |
 | `29-asset-inventory-and-ownership.md` | What is authored art vs code-generated UI vs hybrid | Human + coder |
@@ -60,7 +60,7 @@ Lower tariff -> more customers -> higher grid pressure -> overload risk
 | City visualization | Pixel-art load diorama |
 | Market-share visualization | Separate `Contract Split` bar |
 | Top-row anticipation | `Forecast Tape` + `Incident Queue` |
-| Player actions | `Dispatch Cards` and `Upgrade Rack` |
+| Player actions | `Contract Offer Modal` and `Upgrade Rack` |
 | Prototype resolution | Fixed 16:9, target 1920x1080 |
 | Style | Industrial CRT control desk, not SaaS or cyberpunk |
 
@@ -69,7 +69,7 @@ Lower tariff -> more customers -> higher grid pressure -> overload risk
 1. Build layout containers with procedural panels.
 2. Implement the Grid Pressure Meter dual indicator and Contract Split bar.
 3. Implement City Load Window with code-generated placeholders.
-4. Implement Forecast Tape, Incident Queue, and Dispatch Cards.
+4. Implement Forecast Tape, Incident Queue, and Contract Offer Modal.
 5. Add Generation Stack, Tariff Boards, and Upgrade Rack.
 6. Swap placeholder icons/buildings for authored pixel-art assets.
 7. Add minimum animation pass.

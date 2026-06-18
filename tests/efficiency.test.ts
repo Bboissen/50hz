@@ -14,6 +14,14 @@ describe("efficiency", () => {
     expect(weak).toBeLessThan(strong);
   });
 
+  it("treats underused capacity as an efficiency penalty rather than breaker state", () => {
+    const underused = computeContractEfficiency({ currentContractLoadMW: 56, contractCapacityBasisMW: 80 });
+    const efficient = computeContractEfficiency({ currentContractLoadMW: 70, contractCapacityBasisMW: 80 });
+
+    expect(underused).toBeLessThan(efficient);
+    expect(underused).toBeGreaterThan(0);
+  });
+
   it("returns the best zone from 85% through 98% utilization", () => {
     expect(contractUtilizationEfficiency(0.85)).toBe(1);
     expect(contractUtilizationEfficiency(0.98)).toBe(1);

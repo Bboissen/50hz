@@ -1,6 +1,6 @@
 import { GAME_CONFIG } from "./config";
 import { clamp, clamp01, moveTowards } from "./math";
-import type { AssetCapacities, AssetOutputs, AssetRuntime, GenerationControls, IncomingAttack } from "./types";
+import type { AssetCapacities, AssetOutputs, AssetRuntime, GenerationControls, PlantOutputState } from "./types";
 
 export function windFactor(speedKmh: number): number {
   const config = GAME_CONFIG.assets.renewable;
@@ -22,9 +22,10 @@ export function updateAssetOutputs(args: {
   solarFactor: number;
   windKmh: number;
   rainActive?: boolean;
-  incomingAttacks?: IncomingAttack[];
 }): { runtime: AssetRuntime; outputs: AssetOutputs } {
-  const dtHours = args.dt / 3600;
+  const storageSecondsPerMWh = GAME_CONFIG.assets.waterDam.storageSecondsPerMWh;
+  const gridDown = args.runtime.breakerTrippedSeconds > 0;
+  const dtStorageUnits = args.dt / storageSecondsPerMWh;
   const nuclearTargetMW = clamp(args.controls.nuclearTargetMW, 0, args.capacities.nuclearCapacityMW);
   const nuclearOutputMW = moveTowards(
     args.runtime.nuclearOutputMW,
@@ -43,43 +44,54 @@ export function updateAssetOutputs(args: {
     thermalOutputMW *= GAME_CONFIG.assets.thermal.outputMultiplierWhenOverheated;
   }
 
-  let effectiveSolarFactor = clamp01(args.solarFactor);
-  let effectiveWindKmh = args.windKmh;
-  for (const attack of args.incomingAttacks ?? []) {
-    if (attack.warningRemainingSeconds <= 0 && attack.activeRemainingSeconds > 0 && attack.kind === "cloudFront") {
-      effectiveSolarFactor *= GAME_CONFIG.cards.cloudFront.opponentRenewableSolarFactorMultiplier;
+  let solarOutputMW = args.capacities.solarPeakMW * clamp01(args.solarFactor);
+  let windOutputMW = args.controls.windEnabled ? args.capacities.windPeakMW * windFactor(args.windKmh) : 0;
+  let gridNuclearOutputMW = nuclearOutputMW;
+  let gridThermalOutputMW = thermalOutputMW;
+  const plantStates: AssetOutputs["plantStates"] = {
+    nuclear: "online",
+    thermal: "online",
+    solar: "online",
+    wind: "online",
+    waterDam: "online",
+  };
+  if (gridDown) {
+    for (const key of Object.keys(plantStates) as Array<keyof typeof plantStates>) {
+      plantStates[key] = "gridDown" satisfies PlantOutputState;
     }
-    if (attack.warningRemainingSeconds <= 0 && attack.activeRemainingSeconds > 0 && attack.kind === "windStorm") {
-      effectiveWindKmh = GAME_CONFIG.cards.windStorm.opponentWindKmh;
-    }
+    gridNuclearOutputMW = 0;
+    gridThermalOutputMW = 0;
+    solarOutputMW = 0;
+    windOutputMW = 0;
   }
-
-  const solarOutputMW = args.capacities.solarPeakMW * effectiveSolarFactor;
-  const windOutputMW = args.controls.windEnabled ? args.capacities.windPeakMW * windFactor(effectiveWindKmh) : 0;
-  const baseProductionMW = nuclearOutputMW + thermalOutputMW + solarOutputMW + windOutputMW;
+  const baseProductionMW = gridNuclearOutputMW + gridThermalOutputMW + solarOutputMW + windOutputMW;
 
   let storedWaterMWh = args.runtime.storedWaterMWh;
   let damOutputMW = 0;
   let damAbsorbMW = 0;
 
-  if (args.rainActive) {
+  if (args.rainActive && !gridDown) {
     storedWaterMWh += GAME_CONFIG.assets.waterDam.rainFillMWhPerSecond * args.dt;
   }
 
   if (
+    !gridDown &&
     args.rainActive &&
     storedWaterMWh >= args.capacities.waterDamCapacityMWh * GAME_CONFIG.assets.waterDam.rainAutoDrainThreshold
   ) {
-    damOutputMW = args.capacities.waterDamMaxPowerMW;
-  } else if (args.controls.waterDamMode === "fill") {
+    damOutputMW = args.capacities.waterDamMaxPowerMW * GAME_CONFIG.assets.waterDam.rainAutoDrainPowerRatio;
+  } else if (!gridDown && args.controls.waterDamMode === "fill") {
     const surplusMW = Math.max(0, baseProductionMW - args.currentDemandMW);
-    damAbsorbMW = Math.min(surplusMW, args.capacities.waterDamMaxPowerMW);
-    storedWaterMWh += damAbsorbMW * GAME_CONFIG.assets.waterDam.fillEfficiency * dtHours;
-  } else if (args.controls.waterDamMode === "drain" && dtHours > 0) {
-    const storedPowerLimitMW = storedWaterMWh / dtHours;
+    const remainingStorageMWh = Math.max(0, args.capacities.waterDamCapacityMWh - storedWaterMWh);
+    const storageLimitedAbsorbMW =
+      dtStorageUnits > 0 ? remainingStorageMWh / GAME_CONFIG.assets.waterDam.fillEfficiency / dtStorageUnits : 0;
+    damAbsorbMW = Math.min(surplusMW, args.capacities.waterDamMaxPowerMW, storageLimitedAbsorbMW);
+    storedWaterMWh += damAbsorbMW * GAME_CONFIG.assets.waterDam.fillEfficiency * dtStorageUnits;
+  } else if (!gridDown && args.controls.waterDamMode === "drain" && dtStorageUnits > 0) {
+    const storedPowerLimitMW = storedWaterMWh / dtStorageUnits;
     const drainInputMW = Math.min(args.capacities.waterDamMaxPowerMW, storedPowerLimitMW);
     damOutputMW = drainInputMW * GAME_CONFIG.assets.waterDam.drainEfficiency;
-    storedWaterMWh -= drainInputMW * dtHours;
+    storedWaterMWh -= drainInputMW * dtStorageUnits;
   }
 
   storedWaterMWh = clamp(storedWaterMWh, 0, args.capacities.waterDamCapacityMWh);
@@ -87,9 +99,9 @@ export function updateAssetOutputs(args: {
 
   let rawProductionMW = baseProductionMW + damOutputMW - damAbsorbMW;
   let gridCapacityMW = args.capacities.gridCapacityMW;
-  if (args.runtime.breakerTrippedSeconds > 0) {
-    rawProductionMW *= 0.85;
-    gridCapacityMW *= 0.85;
+  if (gridDown) {
+    rawProductionMW = 0;
+    gridCapacityMW = 0;
   }
 
   const deliveredSupplyMW = Math.min(rawProductionMW, gridCapacityMW);
@@ -103,8 +115,8 @@ export function updateAssetOutputs(args: {
   return {
     runtime,
     outputs: {
-      nuclearOutputMW,
-      thermalOutputMW,
+      nuclearOutputMW: gridNuclearOutputMW,
+      thermalOutputMW: gridThermalOutputMW,
       solarOutputMW,
       windOutputMW,
       damOutputMW,
@@ -113,6 +125,7 @@ export function updateAssetOutputs(args: {
       deliveredSupplyMW,
       thermalHeat,
       storedWaterMWh,
+      plantStates,
     },
   };
 }

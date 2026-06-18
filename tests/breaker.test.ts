@@ -16,6 +16,33 @@ describe("breaker", () => {
     expect(result.tripped).toBe(false);
   });
 
+  it("does not treat low capacity utilization as a breaker underload", () => {
+    const result = updateBreakerRisk({
+      capacityUtilization: 0.82,
+      supplyDemandMismatch: 0,
+      capacityOverloadTimer: 0,
+      balanceBreakerTimer: 0,
+      dt: 5,
+    });
+
+    expect(result.capacityOverloadTimer).toBe(0);
+    expect(result.balanceBreakerTimer).toBe(0);
+    expect(result.tripped).toBe(false);
+  });
+
+  it("keeps 90%-95% capacity utilization out of capacity breaker risk when balance is safe", () => {
+    const result = updateBreakerRisk({
+      capacityUtilization: 0.93,
+      supplyDemandMismatch: 0,
+      capacityOverloadTimer: 0,
+      balanceBreakerTimer: 0,
+      dt: 5,
+    });
+
+    expect(result.capacityOverloadTimer).toBe(0);
+    expect(result.tripped).toBe(false);
+  });
+
   it("increases balance timer outside the safe band", () => {
     const result = updateBreakerRisk({
       capacityUtilization: 0.9,
@@ -26,6 +53,19 @@ describe("breaker", () => {
     });
 
     expect(result.balanceBreakerTimer).toBeGreaterThan(0);
+  });
+
+  it("increases balance timer for underload outside the safe band", () => {
+    const result = updateBreakerRisk({
+      capacityUtilization: 0.9,
+      supplyDemandMismatch: -0.08,
+      capacityOverloadTimer: 0,
+      balanceBreakerTimer: 0,
+      dt: 1,
+    });
+
+    expect(result.balanceBreakerTimer).toBeGreaterThan(0);
+    expect(result.tripped).toBe(false);
   });
 
   it("increases severe mismatch faster", () => {
@@ -71,5 +111,31 @@ describe("breaker", () => {
 
     expect(result.tripped).toBe(true);
     expect(result.reason).toBe("capacity-overload");
+  });
+
+  it("trips prolonged underload after the balance timer fills", () => {
+    const result = updateBreakerRisk({
+      capacityUtilization: 0.9,
+      supplyDemandMismatch: -0.08,
+      capacityOverloadTimer: 0,
+      balanceBreakerTimer: 2.5,
+      dt: 0.6,
+    });
+
+    expect(result.tripped).toBe(true);
+    expect(result.reason).toBe("underload");
+  });
+
+  it("trips prolonged overload after the balance timer fills", () => {
+    const result = updateBreakerRisk({
+      capacityUtilization: 0.9,
+      supplyDemandMismatch: 0.08,
+      capacityOverloadTimer: 0,
+      balanceBreakerTimer: 2.5,
+      dt: 0.6,
+    });
+
+    expect(result.tripped).toBe(true);
+    expect(result.reason).toBe("overload");
   });
 });

@@ -2,7 +2,7 @@
 title: "Manual Control Gameplay"
 type: "system"
 status: "draft"
-updated: "2026-06-17"
+updated: "2026-06-18"
 tags: ["50hz", "controls", "screens", "manual-control", "alarms"]
 summary: "Screen model, manual interaction principles, alarms, pressure pattern, anti-patterns, and shortcuts."
 related: []
@@ -60,7 +60,7 @@ Controls:
 - upgrade
 - play DISPATCH CARDS
 - accept fixed contracts
-- load shedding
+- reset the breaker through the emergency modal when grid-down
 
 This screen is mainly diagnostic.
 
@@ -72,10 +72,10 @@ Purpose:
 Manually match supply to customer load.
 ```
 
-The player must keep delivered supply within 5% of current demand.
+The player must keep controllable generation output within 5% of current demand.
 
 ```ts
-const supplyDemandMismatch = (deliveredSupplyMW - currentDemandMW) / Math.max(currentDemandMW, 1);
+const supplyDemandMismatch = (generationMW - currentDemandMW) / Math.max(currentDemandMW, 1);
 const supplyDemandSafe = Math.abs(supplyDemandMismatch) <= 0.05;
 ```
 
@@ -89,8 +89,9 @@ Controls:
 | Thermal throttle | Fast expensive emergency power |
 | Water dam control | Fill / neutral / drain |
 | Wind turbine routing | ON / OFF |
-| Load shedding | Emergency demand reduction with reputation and contract risk |
+| Breaker status | Grid-down and reset status; the reset action is handled by the main overview emergency modal |
 
+When the breaker trips, the game returns the player to the main overview and opens a blocking reset modal. The player must flip the large breaker switch to `ON`, then hold the fuse button for 2 seconds. Completing the hold pays the reset cost; if the player cannot pay, the match ends immediately. Every plant reports `gridDown` and contributes 0 MW while reset is required. Supply, demand, and served contract load read as 0 until reset completes. For 15 seconds after reset, served load follows actual supply so the operator has recovery headroom while ramping generation back up.
 
 ## Manual control principle
 
@@ -102,7 +103,7 @@ Each control should have a different response profile.
 | Thermal | Fast but costly | Crisis response |
 | Water dam | Immediate if filled, unavailable if empty | Timing |
 | Wind turbine | Produces only inside valid wind-speed range | Weather reading |
-| Load shedding | Immediate but damaging | Last-resort breaker prevention |
+| Breaker reset | Main-overview switch arm plus fuse hold, paid from cash reserve | Recovery discipline |
 
 ## Anti-patterns
 

@@ -1,17 +1,11 @@
 import { GAME_CONFIG } from "./config";
-import type { CardKind, PlayerId, PlayerState, UpgradeKind } from "./types";
+import type { PlayerId, PlayerState, UpgradeKind } from "./types";
 
 const emptyUpgradePurchases = (): Record<UpgradeKind, number> => ({
   renewable: 0,
   thermal: 0,
   nuclear: 0,
   waterDam: 0,
-});
-
-const emptyCardCooldowns = (): Record<CardKind, number> => ({
-  demandResponse: 0,
-  cloudFront: 0,
-  windStorm: 0,
 });
 
 export function createInitialPlayerState(id: PlayerId): PlayerState {
@@ -27,19 +21,27 @@ export function createInitialPlayerState(id: PlayerId): PlayerState {
 
   const emptyOutputs = {
     nuclearOutputMW: GAME_CONFIG.assets.nuclear.initialOutputMW,
-    thermalOutputMW: 0,
+    thermalOutputMW: capacities.thermalCapacityMW * GAME_CONFIG.assets.thermal.initialThrottle,
     solarOutputMW: 0,
     windOutputMW: 0,
     damOutputMW: 0,
     damAbsorbMW: 0,
-    rawProductionMW: GAME_CONFIG.assets.nuclear.initialOutputMW,
-    deliveredSupplyMW: GAME_CONFIG.assets.nuclear.initialOutputMW,
+    rawProductionMW: GAME_CONFIG.assets.nuclear.initialOutputMW + capacities.thermalCapacityMW * GAME_CONFIG.assets.thermal.initialThrottle,
+    deliveredSupplyMW: GAME_CONFIG.assets.nuclear.initialOutputMW + capacities.thermalCapacityMW * GAME_CONFIG.assets.thermal.initialThrottle,
     thermalHeat: 0,
     storedWaterMWh: capacities.waterDamCapacityMWh * GAME_CONFIG.assets.waterDam.initialStoredRatio,
+    plantStates: {
+      nuclear: "online" as const,
+      thermal: "online" as const,
+      solar: "online" as const,
+      wind: "online" as const,
+      waterDam: "online" as const,
+    },
   };
 
   return {
     id,
+    devGodMode: false,
     cash: GAME_CONFIG.players.startingCash,
     score: GAME_CONFIG.players.startingScore,
     strikes: GAME_CONFIG.players.startingStrikes,
@@ -47,7 +49,7 @@ export function createInitialPlayerState(id: PlayerId): PlayerState {
     targetMarketShare: GAME_CONFIG.players.startingSubscribedLoadShare,
     controls: {
       nuclearTargetMW: GAME_CONFIG.assets.nuclear.initialOutputMW,
-      thermalThrottle: 0,
+      thermalThrottle: GAME_CONFIG.assets.thermal.initialThrottle,
       waterDamMode: "hold",
       windEnabled: true,
     },
@@ -60,13 +62,13 @@ export function createInitialPlayerState(id: PlayerId): PlayerState {
       balanceBreakerTimer: 0,
       breakerTrippedSeconds: 0,
       breakerResetHoldSeconds: 0,
+      breakerTripFlashSeconds: 0,
+      breakerRecoveredPulseSeconds: 0,
+      gridShutdownReliefSeconds: 0,
     },
     activeContracts: [],
     upgradesInProgress: [],
     upgradePurchases: emptyUpgradePurchases(),
-    cardCooldowns: emptyCardCooldowns(),
-    incomingAttacks: [],
-    demandResponseSeconds: 0,
     lastCashGain: 0,
     lastEfficiency: 1,
     lastPrice: GAME_CONFIG.market.minPrice,

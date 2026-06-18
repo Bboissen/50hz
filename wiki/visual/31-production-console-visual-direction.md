@@ -2,7 +2,7 @@
 title: "Production Console Visual Direction"
 type: "screen"
 status: "draft"
-updated: "2026-06-17"
+updated: "2026-06-18"
 tags: ["50hz", "visual-design", "production-console", "manual-control", "controls"]
 summary: "Early visual direction for the manual production control center: gauges, potentiometers, switches, and breaker/reset controls."
 related: ["../gameplay/06-manual-control-room.md", "../gameplay/07-generation-assets.md", "../gameplay/08-grid-overload-and-reliability.md", "21-dispatch-console-layout.md", "25-grid-pressure-meter.md"]
@@ -44,8 +44,7 @@ This visual screen must expose the canonical controls from gameplay:
 | Thermal throttle | Lever or rotary throttle | Heat gauge and amber/red overheat lamp |
 | Water dam control | Three-position switch: `FILL / HOLD / DRAIN` | Stored-water gauge and available MW lamp |
 | Wind turbine routing | Protected toggle: `ON / OFF` | Wind-valid lamp and current wind output |
-| Load shedding | Guarded emergency switch | Trust/reputation warning and load reduction |
-| Breaker reset | Hold-to-reset button | Progress ring or charging lamp for reset hold |
+| Breaker status | Status-only emergency panel | Grid-down, reset-required, and recovery-relief readouts |
 
 ## Screen composition
 
@@ -60,7 +59,7 @@ Recommended MVP layout:
 │ current vs target    │ output MW            │ reservoir gauge             │
 ├──────────────────────┴──────────────────────┼─────────────────────────────┤
 │ RENEWABLE ROUTING                            │ EMERGENCY PANEL             │
-│ wind ON/OFF, solar available, weather lamp   │ LOAD SHED, BREAKER RESET    │
+│ wind ON/OFF, solar available, weather lamp   │ BREAKER STATUS              │
 └──────────────────────────────────────────────┴─────────────────────────────┘
 ```
 
@@ -69,7 +68,8 @@ Recommended MVP layout:
 - Controls must look physically actionable, not like flat dashboard cards.
 - Every interactive control needs a visible current state.
 - Slow controls need target and current readouts so inertia is readable.
-- Emergency controls need guarded styling and clear downside labels.
+- Emergency status needs guarded styling and clear downside labels.
+- Breaker reset itself is a main-overview modal: large switch to arm, then green fuse button hold.
 - Do not add automatic dispatch controls.
 - Do not hide overload/underload behind generic warning text.
 
@@ -101,6 +101,8 @@ type ProductionConsoleState = {
     windValid: boolean;
   };
   reliability: {
+    generationMW: number;
+    currentDemandMW: number;
     supplyDemandMismatch: number;
     balanceZone:
       | 'severeUnderload'
@@ -122,7 +124,7 @@ The first version can use procedural PixiJS controls:
 - lamp circles/squares,
 - text labels,
 - simple switch hit areas,
-- hold-to-reset progress bar,
+- reset status/progress readout,
 - no authored sprites required.
 
 ## Acceptance criteria
