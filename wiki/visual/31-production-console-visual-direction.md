@@ -44,7 +44,7 @@ This visual screen must expose the canonical controls from gameplay:
 | Thermal throttle | Lever or rotary throttle | Heat gauge and amber/red overheat lamp |
 | Water dam control | Three-position switch: `FILL / HOLD / DRAIN` | Stored-water gauge and available MW lamp |
 | Wind turbine routing | Protected toggle: `ON / OFF` | Wind-valid lamp and current wind output |
-| Breaker reset | Hold-to-reset button | Progress ring or charging lamp for reset hold |
+| Breaker status | Status-only emergency panel | Grid-down, reset-required, and recovery-relief readouts |
 
 ## Screen composition
 
@@ -59,7 +59,7 @@ Recommended MVP layout:
 │ current vs target    │ output MW            │ reservoir gauge             │
 ├──────────────────────┴──────────────────────┼─────────────────────────────┤
 │ RENEWABLE ROUTING                            │ EMERGENCY PANEL             │
-│ wind ON/OFF, solar available, weather lamp   │ BREAKER RESET               │
+│ wind ON/OFF, solar available, weather lamp   │ BREAKER STATUS              │
 └──────────────────────────────────────────────┴─────────────────────────────┘
 ```
 
@@ -68,7 +68,8 @@ Recommended MVP layout:
 - Controls must look physically actionable, not like flat dashboard cards.
 - Every interactive control needs a visible current state.
 - Slow controls need target and current readouts so inertia is readable.
-- Emergency controls need guarded styling and clear downside labels.
+- Emergency status needs guarded styling and clear downside labels.
+- Breaker reset itself is a main-overview modal: large switch to arm, then green fuse button hold.
 - Do not add automatic dispatch controls.
 - Do not hide overload/underload behind generic warning text.
 
@@ -123,7 +124,7 @@ The first version can use procedural PixiJS controls:
 - lamp circles/squares,
 - text labels,
 - simple switch hit areas,
-- hold-to-reset progress bar,
+- reset status/progress readout,
 - no authored sprites required.
 
 ## Acceptance criteria

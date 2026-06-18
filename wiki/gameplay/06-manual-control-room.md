@@ -60,6 +60,7 @@ Controls:
 - upgrade
 - play DISPATCH CARDS
 - accept fixed contracts
+- reset the breaker through the emergency modal when grid-down
 
 This screen is mainly diagnostic.
 
@@ -88,9 +89,9 @@ Controls:
 | Thermal throttle | Fast expensive emergency power |
 | Water dam control | Fill / neutral / drain |
 | Wind turbine routing | ON / OFF |
-| Breaker reset | Paid grid-down recovery action; unaffordable reset ends the match |
+| Breaker status | Grid-down and reset status; the reset action is handled by the main overview emergency modal |
 
-When the breaker trips, every plant reports `gridDown` and contributes 0 MW to the grid. Supply, demand, and served contract load read as 0 until the player completes the reset hold and pays the reset cost. For 15 seconds after reset, served load follows actual supply so the operator has recovery headroom while ramping generation back up.
+When the breaker trips, the game returns the player to the main overview and opens a blocking reset modal. The player must flip the large breaker switch to `ON`, then hold the fuse button for 2 seconds. Completing the hold pays the reset cost; if the player cannot pay, the match ends immediately. Every plant reports `gridDown` and contributes 0 MW while reset is required. Supply, demand, and served contract load read as 0 until reset completes. For 15 seconds after reset, served load follows actual supply so the operator has recovery headroom while ramping generation back up.
 
 ## Manual control principle
 
@@ -102,7 +103,7 @@ Each control should have a different response profile.
 | Thermal | Fast but costly | Crisis response |
 | Water dam | Immediate if filled, unavailable if empty | Timing |
 | Wind turbine | Produces only inside valid wind-speed range | Weather reading |
-| Breaker reset | Hold action after trip, paid from cash reserve | Recovery discipline |
+| Breaker reset | Main-overview switch arm plus fuse hold, paid from cash reserve | Recovery discipline |
 
 ## Anti-patterns
 

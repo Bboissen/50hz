@@ -52,9 +52,7 @@ function clamp01(value: number): number {
 export class ProductionConsoleScreen extends Container {
   private readonly g = new Graphics();
   private readonly labels = new Container();
-  private resetHeld = false;
   private draggingControl: "nuclear" | "thermal" | undefined;
-  private lastTimeSeconds = 0;
   private latestState: ProductionConsoleState | undefined;
 
   public constructor(private readonly sink: CommandSink, _assets: AssetResolver) {
@@ -65,17 +63,10 @@ export class ProductionConsoleScreen extends Container {
 
   public update(state: ProductionConsoleState): void {
     this.latestState = state;
-    const dt = Math.max(0, state.timeSeconds - this.lastTimeSeconds);
-    this.lastTimeSeconds = state.timeSeconds;
-    if (this.visible && this.resetHeld && state.breakerTrippedSeconds > 0 && dt > 0) {
-      this.sink({ type: "holdBreakerReset", playerId: "player", seconds: dt });
-    }
-
     this.draw(state);
   }
 
   public deactivate(): void {
-    this.resetHeld = false;
     this.draggingControl = undefined;
   }
 
@@ -87,17 +78,6 @@ export class ProductionConsoleScreen extends Container {
     this.addHitZone({ x: 1342, y: 338, w: 126, h: 86 }, () => this.dam("drain"));
     this.addHitZone({ x: 182, y: 762, w: 164, h: 90 }, () => this.wind(true));
     this.addHitZone({ x: 374, y: 762, w: 164, h: 90 }, () => this.wind(false));
-
-    const reset = this.addHitZone({ x: 1042, y: 762, w: 260, h: 86 }, () => undefined);
-    reset.on("pointerdown", () => {
-      this.resetHeld = this.latestState?.breakerResetRequired === true;
-    });
-    reset.on("pointerup", () => {
-      this.resetHeld = false;
-    });
-    reset.on("pointerupoutside", () => {
-      this.resetHeld = false;
-    });
   }
 
   private addHitZone(bounds: Rect, onTap: () => void): Container {
@@ -340,28 +320,21 @@ export class ProductionConsoleScreen extends Container {
   }
 
   private drawEmergency(state: ProductionConsoleState): void {
-    this.drawGuardedButton(1042, 762, 260, 86, "RESET HOLD", this.resetHeld, state.breakerResetRequired ? PX.green : DESIGN_TOKENS.colors.smokeGrey);
     this.drawBar(910, 882, 490, state.breakerResetProgress, PX.green);
     const resetLabel = state.breakerResetRequired
       ? state.canAffordBreakerReset
-        ? `RESET COST ${state.breakerResetCost}`
+        ? `RESET ON DISPATCH / COST ${state.breakerResetCost}`
         : `CASH SHORT ${state.breakerResetCost}`
       : state.gridShutdownReliefSeconds > 0
         ? `RELIEF ${state.gridShutdownReliefSeconds.toFixed(0)}s`
         : "RESET NOT NEEDED";
-    addLabel(this.labels, resetLabel, 1058, 862, 15, state.breakerResetRequired ? PX.green : PX.black);
-    addLabel(this.labels, state.breakerStatusText, 910, 918, 16, state.breakerResetRequired ? PX.red : PX.black);
-  }
-
-  private drawGuardedButton(x: number, y: number, w: number, h: number, text: string, active: boolean, color: number): void {
     this.g
-      .rect(x, y, w, h)
-      .fill({ color: PX.screen })
-      .stroke({ color: PX.black, width: 5 })
-      .rect(x + 26, y + 28 + (active ? 8 : 0), w - 52, h - 46)
-      .fill({ color })
-      .stroke({ color: PX.black, width: 4 });
-    addLabel(this.labels, text, x + 34, y + 14, 15, PX.cream);
+      .rect(910, 746, 490, 112)
+      .fill({ color: state.breakerResetRequired ? 0x3b1510 : PX.screen })
+      .stroke({ color: state.breakerResetRequired ? PX.red : PX.black, width: 5 });
+    addLabel(this.labels, state.breakerResetRequired ? "MAIN RESET MODAL ACTIVE" : "EMERGENCY RESET STANDBY", 946, 782, 18, state.breakerResetRequired ? PX.red : PX.green);
+    addLabel(this.labels, resetLabel, 928, 862, 15, state.breakerResetRequired ? PX.green : PX.black);
+    addLabel(this.labels, state.breakerStatusText, 910, 918, 16, state.breakerResetRequired ? PX.red : PX.black);
   }
 
   private drawStatus(state: ProductionConsoleState): void {

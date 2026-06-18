@@ -136,6 +136,7 @@ Design for this eye path:
 |---|---|---|
 | Upgrade Rack | Yes | Raised buttons, green lamps, cost labels |
 | Dispatch Cards | Yes | Card hover/lift, stamp on play |
+| Breaker Reset Modal | Yes when grid-down | Blocking center overlay; arm switch then hold fuse button |
 | City sectors | Optional inspect only | Not button-like in MVP |
 | Player Generation Stack | Optional inspect only | Lightly highlighted |
 | Rival Grid Stack | No | Darker monitor style, no hover |
@@ -174,6 +175,9 @@ DispatchConsoleRoot
 ├─ AlarmOverlayLayer
 │  ├─ OverloadFlash
 │  └─ StrikeStamp
+├─ BreakerResetModal
+│  ├─ HazardSwitch_OFF_ON
+│  └─ FuseHoldButton
 └─ DebugOverlayLayer_optional
 ```
 
@@ -185,6 +189,7 @@ DispatchConsoleRoot
 | Player mistakes Grid Pressure for total city demand | Label it `YOUR GRID PRESSURE`; show capacity utilization separately from load balance |
 | Event queue and playable cards feel identical | Use `Incident Queue` for incoming shocks and `Dispatch Cards` for player actions |
 | Rival looks clickable | Desaturate rival assets; no hover state; use surveillance-monitor framing |
+| Breaker reset is missed during grid-down | Use a blocking center modal that absorbs underlying clicks until reset completes |
 | Screen looks like SaaS | Heavy frames, screws, CRT glow, analog meter, paper cards |
 
 ## Acceptance criteria

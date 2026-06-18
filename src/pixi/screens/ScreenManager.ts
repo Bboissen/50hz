@@ -3,6 +3,7 @@ import { Container, Graphics, Text } from "pixi.js";
 import type { AssetResolver } from "../assets";
 import { DESIGN_TOKENS } from "../tokens";
 import type { DispatchConsoleState, FinalResult, MatchState, PlayerCommand, ProductionConsoleState } from "../../gameplay/types";
+import { BreakerResetModal } from "./BreakerResetModal";
 import { DispatchConsoleScreen } from "./DispatchConsoleScreen";
 import { ProductionConsoleScreen } from "./ProductionConsoleScreen";
 import { ResultScreen } from "./ResultScreen";
@@ -43,11 +44,13 @@ export class ScreenManager extends Container {
   private readonly productionScreen: ProductionConsoleScreen;
   private readonly resultScreen = new ResultScreen();
   private readonly transition = new ScreenTransition();
+  private readonly breakerResetModal: BreakerResetModal;
 
   public constructor(assets: AssetResolver, sink: (command: PlayerCommand) => void) {
     super();
     this.dispatchScreen = new DispatchConsoleScreen(assets, sink);
     this.productionScreen = new ProductionConsoleScreen(sink, assets);
+    this.breakerResetModal = new BreakerResetModal(sink);
     this.addChild(
       this.dispatchScreen,
       this.productionScreen,
@@ -55,6 +58,7 @@ export class ScreenManager extends Container {
       navButton("1 DISPATCH", 1330, () => this.switchTo("dispatch")),
       navButton("2 PRODUCTION", 1580, () => this.switchTo("production")),
       this.transition,
+      this.breakerResetModal,
     );
     this.syncVisibility();
   }
@@ -80,11 +84,14 @@ export class ScreenManager extends Container {
   }): void {
     if (args.isMatchOver && this.active !== "result") {
       this.switchTo("result");
+    } else if (args.dispatch.breakerResetRequired && this.active !== "dispatch") {
+      this.switchTo("dispatch");
     }
     this.dispatchScreen.update(args.dispatch);
     this.productionScreen.update(args.production);
     this.resultScreen.update(args.result, args.match);
     this.transition.update(args.dt);
+    this.breakerResetModal.update(args.dispatch, args.dt);
   }
 
   private switchTo(screen: ScreenId): void {
@@ -103,5 +110,8 @@ export class ScreenManager extends Container {
     this.dispatchScreen.visible = this.active === "dispatch";
     this.productionScreen.visible = this.active === "production";
     this.resultScreen.visible = this.active === "result";
+    if (this.active === "result") {
+      this.breakerResetModal.deactivate();
+    }
   }
 }

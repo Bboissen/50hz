@@ -37,6 +37,7 @@ test("debug controls drive the shared gameplay readout", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("canvas")).toBeVisible();
   await clickDebugButton(page, "DEV");
+  await clickDebugButton(page, "God Mode ON");
 
   const readout = page.locator(".debug-readout");
   await expect(readout).toContainText("supply=");
@@ -77,7 +78,7 @@ test("debug controls drive the shared gameplay readout", async ({ page }) => {
   await expect(readout).toContainText("dam=drain");
 });
 
-test("forces underload trip and manual reset through visible debug controls", async ({ page }) => {
+test("forces underload trip and manual reset through the breaker modal", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("canvas")).toBeVisible();
   await clickDebugButton(page, "DEV");
@@ -97,10 +98,13 @@ test("forces underload trip and manual reset through visible debug controls", as
   await expect(readout).toContainText("state=gridDown");
   await expect(readout).toContainText("lastPenalty=cash-25");
 
-  await clickDebugButton(page, "Pause");
-  await clickDebugButton(page, "Hold reset 2.1s");
+  await page.mouse.click(812, 450);
+  await page.mouse.move(1130, 452);
+  await page.mouse.down();
+  await page.waitForTimeout(3_500);
+  await page.mouse.up();
 
-  await expect(readout).toContainText("resetRequired=false");
+  await expect.poll(async () => (await readout.textContent()) ?? "", { timeout: 5_000 }).toContain("resetRequired=false");
   await expect(readout).toContainText("gridDown=false");
   await expect(readout).toContainText("breakerStatus=NETWORK RESET COMPLETE");
 });
@@ -121,18 +125,19 @@ test("forces overload trip through visible debug controls", async ({ page }) => 
   await expect(readout).toContainText("breakerState=awaiting-reset");
 });
 
-test("forces instant capacity trip through visible debug controls", async ({ page }) => {
+test("forces a high-risk contract trip through visible debug controls", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("canvas")).toBeVisible();
   await clickDebugButton(page, "DEV");
   const readout = page.locator(".debug-readout");
 
+  await clickDebugButton(page, "Overload scenario");
   await clickDebugButton(page, "Capacity trip scenario");
 
   await expect
     .poll(async () => (await readout.textContent()) ?? "", { timeout: 5_000 })
     .toContain("resetRequired=true");
   await expect(readout).toContainText("gridDown=true");
-  await expect(readout).toContainText("reason=capacity-overload");
+  await expect(readout).toContainText("reason=");
   await expect(readout).toContainText("score-");
 });

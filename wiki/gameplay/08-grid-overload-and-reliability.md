@@ -161,7 +161,8 @@ Example:
 
 ```txt
 Breaker tripped.
-Go to Production console screen and hold Reset for 2 seconds.
+The main overview opens a blocking breaker reset modal.
+Flip the breaker switch to ON, then hold the fuse button for 2 seconds.
 Pay the reset cost or lose the match.
 ```
 
@@ -185,6 +186,8 @@ currentContractLoadMW = 0;
 This is a derived grid state, not a forced market-share mutation. The underlying customer subscription can remain part of the economy model, but the served contract split displayed during grid-down is 0 because no plant is connected to the grid.
 
 Reset behavior:
+
+The reset modal is an input surface for the same paid reset rule. The switch arms the reset; the fuse hold advances reset progress.
 
 ```ts
 if (cash < BREAKER_RESET_COST) {
