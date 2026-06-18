@@ -14,6 +14,28 @@ This folder is the visual and implementation-facing source of truth for the **50
 
 The hand-drawn screen is not a final layout. It is a functional information map. Preserve the gameplay information; redesign the composition around readability, manual control, and 1v1 market pressure.
 
+## Critical art-direction correction
+
+The isometric assets are not icons.
+
+They are the main visual identity of 50Hz and must be used as large scene/diorama assets.
+
+The center of the DispatchConsole should read as an isometric city-builder / SimCity-like load diorama embedded in a Soviet command console.
+
+Do not shrink the city, plant, dam, nuclear, solar, thermal, or wind assets into small thumbnails unless specifically building a secondary monitor.
+
+Procedural panels are only the frame around the game scene. They must not dominate the screen.
+
+Priority order:
+
+1. Large isometric scene.
+2. Physical command-console frame.
+3. VU-meter hardware.
+4. Cards and controls.
+5. Labels and numbers.
+
+A screen fails visual QA if it looks like a flat dashboard with small pasted images.
+
 ## Design target
 
 50Hz should look like a **gritty power-grid operator console**, not a modern energy dashboard.

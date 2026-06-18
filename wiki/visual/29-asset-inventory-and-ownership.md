@@ -24,6 +24,19 @@ Code-generated UI first. Authored assets should be additive swaps.
 
 The game must remain playable if all authored assets are missing.
 
+## Correct asset role
+
+The current city and plant files are full isometric scene assets, not small icons.
+
+Use them as:
+
+- central city/load viewport scenes;
+- production console backdrops;
+- large plant inspection views;
+- optional upgrade previews.
+
+If small icons are needed, create separate simplified icon assets or procedural placeholders.
+
 ## Asset types
 
 | Type | Definition | MVP use |

@@ -1,5 +1,18 @@
-import { Application, Container, Graphics, Text } from "pixi.js";
-
+import { chooseBotCommands } from "./gameplay/bot";
+import {
+  applyPlayerCommand,
+  createInitialMatchState,
+  computeFinalResult,
+  selectDispatchConsoleState,
+  selectProductionConsoleState,
+  isMatchOver,
+  tickMatch,
+} from "./gameplay/match";
+import type { MatchState, PlayerCommand } from "./gameplay/types";
+import { createAssetResolver } from "./pixi/assets";
+import { createPixiApp } from "./pixi/createPixiApp";
+import { ScreenManager } from "./pixi/screens/ScreenManager";
+import { createDebugPanel } from "./ui/debugPanel";
 import "./styles.css";
 
 const appRoot = document.querySelector<HTMLDivElement>("#app");
@@ -11,55 +24,50 @@ if (!appRoot) {
 const root = appRoot;
 
 async function bootstrap(): Promise<void> {
-  const app = new Application();
+  let state: MatchState = createInitialMatchState();
+  const app = await createPixiApp(root);
+  const assets = await createAssetResolver();
 
-  await app.init({
-    width: 960,
-    height: 540,
-    background: "#101711",
-    antialias: true,
-    autoDensity: true,
-    resolution: window.devicePixelRatio || 1,
-  });
+  const dispatch = (command: PlayerCommand): void => {
+    state = applyPlayerCommand(state, command);
+  };
 
-  app.canvas.setAttribute("aria-label", "50Hz PixiJS canvas");
-  root.appendChild(app.canvas);
-
-  const scene = new Container();
-  app.stage.addChild(scene);
-
-  const panel = new Graphics()
-    .roundRect(96, 96, 768, 348, 18)
-    .fill({ color: 0x1f2b22 })
-    .stroke({ color: 0x8dfc7a, width: 3, alpha: 0.85 });
-  scene.addChild(panel);
-
-  const title = new Text({
-    text: "50Hz",
-    style: {
-      fontFamily: "Georgia, serif",
-      fontSize: 84,
-      fontWeight: "700",
-      fill: 0x8dfc7a,
-      letterSpacing: 2,
+  const debugPanel = createDebugPanel({
+    onCommand: dispatch,
+    onReset: () => {
+      state = createInitialMatchState();
     },
   });
-  title.anchor.set(0.5);
-  title.position.set(480, 230);
-  scene.addChild(title);
+  root.appendChild(debugPanel.element);
+  const screenManager = new ScreenManager(assets, dispatch);
+  app.stage.addChild(screenManager);
+  window.addEventListener("keydown", (event) => screenManager.handleKey(event));
 
-  const subtitle = new Text({
-    text: "Tooling ready",
-    style: {
-      fontFamily: "Courier New, monospace",
-      fontSize: 32,
-      fill: 0xc8b982,
-      letterSpacing: 1,
-    },
+  let accumulator = 0;
+  const fixedDt = 1 / 30;
+
+  app.ticker.add((ticker) => {
+    accumulator += Math.min(ticker.deltaMS / 1000, 0.1);
+    while (accumulator >= fixedDt) {
+      for (const command of chooseBotCommands(state.players.rival)) {
+        state = applyPlayerCommand(state, command);
+      }
+      state = tickMatch(state, fixedDt);
+      accumulator -= fixedDt;
+    }
+
+    const dispatchState = selectDispatchConsoleState(state);
+    const productionState = selectProductionConsoleState(state);
+    screenManager.update({
+      dispatch: dispatchState,
+      production: productionState,
+      result: computeFinalResult(state),
+      match: state,
+      isMatchOver: isMatchOver(state),
+      dt: Math.min(ticker.deltaMS / 1000, 0.1),
+    });
+    debugPanel.update(dispatchState, productionState, state.isPaused);
   });
-  subtitle.anchor.set(0.5);
-  subtitle.position.set(480, 320);
-  scene.addChild(subtitle);
 }
 
 bootstrap().catch((error: unknown) => {
