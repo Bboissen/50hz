@@ -106,6 +106,28 @@ export function applyPlayerCommand(state: MatchState, command: PlayerCommand): M
     return updatePlayer(state, applyDemandResponse(player));
   }
 
+  if (command.type === "holdBreakerReset") {
+    if (player.runtime.breakerTrippedSeconds <= 0) {
+      return updatePlayer(state, {
+        ...player,
+        runtime: {
+          ...player.runtime,
+          breakerResetHoldSeconds: 0,
+        },
+      });
+    }
+
+    const breakerResetHoldSeconds = player.runtime.breakerResetHoldSeconds + command.seconds;
+    return updatePlayer(state, {
+      ...player,
+      runtime: {
+        ...player.runtime,
+        breakerResetHoldSeconds,
+        breakerTrippedSeconds: breakerResetHoldSeconds >= 2 ? 0 : player.runtime.breakerTrippedSeconds,
+      },
+    });
+  }
+
   if (command.type === "buyUpgrade") {
     return updatePlayer(state, buyUpgrade(player, command.kind));
   }
@@ -149,6 +171,7 @@ function applyStrike(player: PlayerState, reason: BreakerReason): PlayerState {
     runtime: {
       ...player.runtime,
       breakerTrippedSeconds: GAME_CONFIG.breaker.breakerTripSeconds,
+      breakerResetHoldSeconds: 0,
       capacityOverloadTimer: 0,
       balanceBreakerTimer: 0,
       lastBreakerReason: reason,
@@ -163,6 +186,7 @@ function tickOnePlayer(player: PlayerState, totalDemandMW: number, solarFactor: 
     runtime: {
       ...next.runtime,
       breakerTrippedSeconds: Math.max(0, next.runtime.breakerTrippedSeconds - dt),
+      breakerResetHoldSeconds: next.runtime.breakerTrippedSeconds > 0 ? next.runtime.breakerResetHoldSeconds : 0,
     },
   };
 
@@ -492,9 +516,16 @@ export function selectProductionConsoleState(state: MatchState): ProductionConso
     nuclearOutputMW: player.runtime.nuclearOutputMW,
     thermalThrottle: player.controls.thermalThrottle,
     thermalHeat: player.runtime.thermalHeat,
+    thermalOutputMW: player.lastOutputs.thermalOutputMW,
+    solarOutputMW: player.lastOutputs.solarOutputMW,
+    windOutputMW: player.lastOutputs.windOutputMW,
+    damOutputMW: player.lastOutputs.damOutputMW,
     storedWaterMWh: player.runtime.storedWaterMWh,
+    waterDamCapacityMWh: player.capacities.waterDamCapacityMWh,
     waterDamMode: player.controls.waterDamMode,
     windEnabled: player.controls.windEnabled,
+    breakerTrippedSeconds: player.runtime.breakerTrippedSeconds,
+    breakerResetProgress: Math.min(1, player.runtime.breakerResetHoldSeconds / 2),
   };
 }
 

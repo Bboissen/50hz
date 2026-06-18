@@ -59,6 +59,7 @@ export function createInitialPlayerState(id: PlayerId): PlayerState {
       capacityOverloadTimer: 0,
       balanceBreakerTimer: 0,
       breakerTrippedSeconds: 0,
+      breakerResetHoldSeconds: 0,
     },
     activeContracts: [],
     upgradesInProgress: [],

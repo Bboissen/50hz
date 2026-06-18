@@ -39,6 +39,7 @@ canvas {
   height: auto;
   border: 1px solid rgba(141, 252, 122, 0.35);
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+  image-rendering: pixelated;
 }
 
 .debug-panel {
@@ -53,6 +54,22 @@ canvas {
   background: rgba(16, 23, 17, 0.88);
   border: 1px solid rgba(141, 252, 122, 0.42);
   box-shadow: 0 16px 60px rgba(0, 0, 0, 0.45);
+}
+
+.debug-toggle {
+  position: sticky;
+  top: 0;
+  margin-bottom: 8px;
+}
+
+.debug-panel.is-collapsed {
+  width: auto;
+  padding: 6px;
+}
+
+.debug-panel.is-collapsed .debug-readout,
+.debug-panel.is-collapsed .debug-controls {
+  display: none;
 }
 
 .debug-readout {

@@ -35,7 +35,14 @@ function labeledRange(label: string, min: number, max: number, step: number, onI
 
 export function createDebugPanel(options: DebugPanelOptions): DebugPanel {
   const element = document.createElement("aside");
-  element.className = "debug-panel";
+  element.className = "debug-panel is-collapsed";
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "debug-toggle";
+  toggle.textContent = "DEV";
+  toggle.addEventListener("click", () => {
+    element.classList.toggle("is-collapsed");
+  });
 
   const readout = document.createElement("pre");
   readout.className = "debug-readout";
@@ -84,7 +91,7 @@ export function createDebugPanel(options: DebugPanelOptions): DebugPanel {
     controls.appendChild(button(`Buy ${kind}`, () => options.onCommand({ type: "buyUpgrade", playerId: "player", kind })));
   }
 
-  element.append(readout, controls);
+  element.append(toggle, readout, controls);
 
   return {
     element,

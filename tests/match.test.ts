@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { applyPlayerCommand, createInitialMatchState, selectDispatchConsoleState, tickMatch } from "../src/gameplay/match";
+import {
+  applyPlayerCommand,
+  createInitialMatchState,
+  selectDispatchConsoleState,
+  selectProductionConsoleState,
+  tickMatch,
+} from "../src/gameplay/match";
 
 function tickFor(seconds: number) {
   let state = createInitialMatchState();
@@ -49,5 +55,73 @@ describe("match", () => {
     state = tickMatch(state, 2);
 
     expect(selectDispatchConsoleState(state).supplyDemandMismatch).toBeLessThan(-0.05);
+  });
+
+  it("changes nuclear target without snapping current output instantly", () => {
+    const before = createInitialMatchState();
+    const after = applyPlayerCommand(before, { type: "setNuclearTarget", playerId: "player", targetMW: 5 });
+
+    expect(after.players.player.controls.nuclearTargetMW).toBe(5);
+    expect(after.players.player.runtime.nuclearOutputMW).toBe(before.players.player.runtime.nuclearOutputMW);
+  });
+
+  it("thermal throttle affects output and heat", () => {
+    let state = applyPlayerCommand(createInitialMatchState(), { type: "setThermalThrottle", playerId: "player", throttle: 1 });
+    state = tickMatch(state, 1);
+
+    expect(state.players.player.lastOutputs.thermalOutputMW).toBeGreaterThan(0);
+    expect(state.players.player.runtime.thermalHeat).toBeGreaterThan(0);
+  });
+
+  it("dam drain lowers stored water and wind toggle removes wind contribution", () => {
+    let state = createInitialMatchState();
+    const initialWater = state.players.player.runtime.storedWaterMWh;
+    state = applyPlayerCommand(state, { type: "setWaterDamMode", playerId: "player", mode: "drain" });
+    state = applyPlayerCommand(state, { type: "setWindEnabled", playerId: "player", enabled: false });
+    state = tickMatch(state, 1);
+
+    expect(state.players.player.runtime.storedWaterMWh).toBeLessThan(initialWater);
+    expect(state.players.player.lastOutputs.windOutputMW).toBe(0);
+  });
+
+  it("load shedding reduces current demand with a downside", () => {
+    const baseline = tickMatch(createInitialMatchState(), 1);
+    let shed = applyPlayerCommand(createInitialMatchState(), { type: "shedLoad", playerId: "player" });
+    shed = tickMatch(shed, 1);
+
+    expect(shed.players.player.lastCurrentDemandMW).toBeLessThan(baseline.players.player.lastCurrentDemandMW);
+    expect(shed.players.player.subscribedLoadShare).toBeLessThan(baseline.players.player.subscribedLoadShare);
+  });
+
+  it("hold breaker reset only clears after two seconds", () => {
+    const base = createInitialMatchState();
+    const tripped = {
+      ...base,
+      players: {
+        ...base.players,
+        player: {
+          ...base.players.player,
+          runtime: {
+            ...base.players.player.runtime,
+            breakerTrippedSeconds: 8,
+          },
+        },
+      },
+    };
+    const partial = applyPlayerCommand(tripped, { type: "holdBreakerReset", playerId: "player", seconds: 1 });
+    const complete = applyPlayerCommand(partial, { type: "holdBreakerReset", playerId: "player", seconds: 1.1 });
+
+    expect(partial.players.player.runtime.breakerTrippedSeconds).toBeGreaterThan(0);
+    expect(complete.players.player.runtime.breakerTrippedSeconds).toBe(0);
+  });
+
+  it("production selector exposes manual control state", () => {
+    const state = tickMatch(createInitialMatchState(), 1);
+    const production = selectProductionConsoleState(state);
+
+    expect(production.nuclearTargetMW).toBeGreaterThanOrEqual(0);
+    expect(production.thermalOutputMW).toBeGreaterThanOrEqual(0);
+    expect(production.waterDamCapacityMWh).toBeGreaterThan(0);
+    expect(production.breakerResetProgress).toBeGreaterThanOrEqual(0);
   });
 });

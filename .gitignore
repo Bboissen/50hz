@@ -19,6 +19,10 @@ dist-ssr/
 coverage/
 *.lcov
 
+# Playwright
+playwright-report/
+test-results/
+
 # Logs
 logs/
 *.log
