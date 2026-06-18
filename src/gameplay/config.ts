@@ -1,0 +1,151 @@
+export const GAME_CONFIG = {
+  match: {
+    durationSeconds: 240,
+    tickRateHz: 30,
+  },
+  demand: {
+    baseTotalMW: 140,
+    sectors: {
+      householdsMW: 80,
+      businessMW: 45,
+      dataCentersMW: 15,
+    },
+  },
+  market: {
+    minPrice: 70,
+    maxPrice: 120,
+    priceElasticity: 2.2,
+    minMargin: 0.3,
+    maxMargin: 1,
+    moneyScale: 0.001,
+    maxShareChangePerSecond: 0.012,
+    minShare: 0.1,
+    maxShare: 0.9,
+  },
+  players: {
+    startingCash: 80,
+    startingSubscribedLoadShare: 0.5,
+    startingScore: 0,
+    startingStrikes: 0,
+  },
+  assets: {
+    gridCapacityMW: 90,
+    nuclear: {
+      capacityMW: 35,
+      rampMWPerSecond: 15,
+      initialOutputMW: 35,
+    },
+    thermal: {
+      capacityMW: 45,
+      heatGainPerSecond: 0.07,
+      coolingPerSecond: 0.04,
+      overheatThreshold: 0.85,
+      outputMultiplierWhenOverheated: 0.85,
+    },
+    renewable: {
+      solarPeakMW: 25,
+      solarDefaultFactor: 0.75,
+      solarCloudFactor: 0.3,
+      windPeakMW: 25,
+      windCutInKmh: 12,
+      windFullPowerKmh: 45,
+      windCutOutKmh: 90,
+      windDefaultKmh: 35,
+    },
+    waterDam: {
+      capacityMWh: 20,
+      maxPowerMW: 15,
+      initialStoredRatio: 0.5,
+      fillEfficiency: 0.75,
+      drainEfficiency: 0.9,
+      rainFillMWhPerSecond: 0.5,
+      rainAutoDrainThreshold: 0.95,
+    },
+  },
+  efficiency: {
+    targetUtilizationMin: 0.85,
+    targetUtilizationMax: 0.98,
+    edgeUtilizationMax: 1,
+    overContractedMax: 1.05,
+  },
+  breaker: {
+    safeBalanceBand: 0.05,
+    severeBalanceMismatch: 0.15,
+    balanceBreakerSeconds: 3,
+    severeBalanceTimerMultiplier: 3,
+    balanceRecoverySeconds: 1,
+    capacityOverloadInstantThreshold: 1.05,
+    capacityOverloadBreakerSeconds: 3,
+    capacityOverloadRecoverySeconds: 1,
+    breakerTripSeconds: 8,
+  },
+  strike: {
+    cashPenalty: 25,
+    subscriberLossRatio: 0.1,
+    scorePenalty: 80,
+  },
+  upgrades: {
+    repeatCostMultiplier: 1.25,
+    renewable: {
+      baseCost: 45,
+      buildSeconds: 10,
+      solarPeakMW: 15,
+      windPeakMW: 15,
+    },
+    thermal: {
+      baseCost: 40,
+      buildSeconds: 8,
+      capacityMW: 25,
+    },
+    nuclear: {
+      baseCost: 85,
+      buildSeconds: 20,
+      capacityMW: 35,
+    },
+    waterDam: {
+      baseCost: 50,
+      buildSeconds: 12,
+      capacityMWh: 15,
+      maxPowerMW: 10,
+    },
+  },
+  contracts: {
+    business: {
+      loadMW: 15,
+      durationSeconds: 45,
+      completionCashReward: 35,
+      strikeScorePenalty: 70,
+    },
+    dataCenter: {
+      loadMW: 25,
+      durationSeconds: 35,
+      completionCashReward: 60,
+      strikeScorePenalty: 140,
+    },
+  },
+  cards: {
+    demandResponse: {
+      cost: 20,
+      cooldownSeconds: 20,
+      durationSeconds: 8,
+      demandMultiplier: 0.85,
+      sharePenalty: 0.02,
+    },
+    cloudFront: {
+      cost: 30,
+      cooldownSeconds: 25,
+      warningSeconds: 2,
+      durationSeconds: 8,
+      opponentRenewableSolarFactorMultiplier: 0.65,
+    },
+    windStorm: {
+      cost: 30,
+      cooldownSeconds: 25,
+      warningSeconds: 2,
+      durationSeconds: 8,
+      opponentWindKmh: 100,
+    },
+  },
+} as const;
+
+export const PLAYER_IDS = ["player", "rival"] as const;
