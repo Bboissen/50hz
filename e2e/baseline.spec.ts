@@ -1,4 +1,30 @@
+import { mkdirSync } from "node:fs";
+
 import { expect, test, type Page } from "@playwright/test";
+import sharp from "sharp";
+
+const proofScreenshotDir = ".artifacts/ui-migration";
+
+async function saveProofScreenshot(page: Page, name: string): Promise<string> {
+  mkdirSync(proofScreenshotDir, { recursive: true });
+  const path = `${proofScreenshotDir}/${name}`;
+  await page.screenshot({
+    path,
+    fullPage: true,
+  });
+  return path;
+}
+
+async function saveProofScreenshotAndAssertSize(
+  page: Page,
+  name: string,
+  expected: { width: number; height: number },
+): Promise<void> {
+  const path = await saveProofScreenshot(page, name);
+  const metadata = await sharp(path).metadata();
+  expect(metadata.width).toBe(expected.width);
+  expect(metadata.height).toBe(expected.height);
+}
 
 function numberFromReadout(text: string, pattern: RegExp): number {
   const match = pattern.exec(text);
@@ -12,29 +38,115 @@ async function clickDebugButton(page: Page, name: string): Promise<void> {
   await page.getByRole("button", { name }).click({ force: true });
 }
 
-test("captures the game screens", async ({ page }, testInfo) => {
-  await page.goto("/");
+async function screenshotPixelStats(buffer: Buffer): Promise<{ nonTransparentPixels: number; distinctSampledColors: number }> {
+  const image = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const data = image.data;
+  let nonTransparentPixels = 0;
+  const colors = new Set<string>();
+  for (let index = 0; index < data.length; index += 4) {
+    if (data[index + 3] > 0) {
+      nonTransparentPixels += 1;
+      if (index % 4012 === 0) {
+        colors.add(`${data[index]},${data[index + 1]},${data[index + 2]}`);
+      }
+    }
+  }
+  return { nonTransparentPixels, distinctSampledColors: colors.size };
+}
+
+async function canvasPixelStats(page: Page): Promise<{ nonTransparentPixels: number; distinctSampledColors: number }> {
+  return screenshotPixelStats(await page.locator("canvas").screenshot());
+}
+
+async function pageClip(page: Page, clip: { x: number; y: number; width: number; height: number }): Promise<Buffer> {
+  return page.screenshot({ clip });
+}
+
+test("captures the frozen clean control desk route", async ({ page }) => {
+  await page.goto("/?ui=desk");
+  const canvas = page.locator("canvas");
+
+  await expect(canvas).toBeVisible();
+  await expect(page.locator(".debug-panel")).toHaveCount(0);
+  await page.waitForTimeout(250);
+
+  const box = await canvas.boundingBox();
+  expect(Math.round(box?.width ?? 0)).toBe(1920);
+  expect(Math.round(box?.height ?? 0)).toBe(1080);
+  const stats = await canvasPixelStats(page);
+  expect(stats.nonTransparentPixels).toBeGreaterThan(1920 * 1080 * 0.9);
+  expect(stats.distinctSampledColors).toBeGreaterThan(8);
+
+  const staticBefore = await pageClip(page, { x: 0, y: 0, width: 1360, height: 600 });
+  const controlBefore = await pageClip(page, { x: 1640, y: 500, width: 230, height: 170 });
+  const forecastBefore = await pageClip(page, { x: 1518, y: 682, width: 304, height: 218 });
+  const forecastStats = await screenshotPixelStats(
+    forecastBefore,
+  );
+  expect(forecastStats.distinctSampledColors).toBeGreaterThan(4);
+  await page.waitForTimeout(1_100);
+  expect(Buffer.compare(staticBefore, await pageClip(page, { x: 0, y: 0, width: 1360, height: 600 }))).toBe(0);
+  expect(Buffer.compare(forecastBefore, await pageClip(page, { x: 1518, y: 682, width: 304, height: 218 }))).not.toBe(0);
+
+  await page.keyboard.press("2");
+  await page.keyboard.press("Tab");
+  expect(Buffer.compare(staticBefore, await pageClip(page, { x: 0, y: 0, width: 1360, height: 600 }))).toBe(0);
+
+  await saveProofScreenshotAndAssertSize(page, "control-desk-1920x1080.png", { width: 1920, height: 1080 });
+
+  await page.mouse.move(1735, 562);
+  await page.mouse.down();
+  await page.mouse.move(1800, 562, { steps: 4 });
+  await page.mouse.up();
+  const controlAfter = await pageClip(page, { x: 1640, y: 500, width: 230, height: 170 });
+  expect(Buffer.compare(controlBefore, controlAfter)).not.toBe(0);
+  await expect(page.locator(".debug-panel")).toHaveCount(0);
+});
+
+test("keeps the UI-focus desk frozen even when the play flag is present", async ({ page }) => {
+  await page.goto("/?ui=desk&play=1");
+  const canvas = page.locator("canvas");
+
+  await expect(canvas).toBeVisible();
+  await expect(page.locator(".debug-panel")).toHaveCount(0);
+  await page.waitForTimeout(250);
+  const before = await pageClip(page, { x: 0, y: 0, width: 1360, height: 600 });
+  await page.waitForTimeout(1_100);
+
+  expect(Buffer.compare(before, await pageClip(page, { x: 0, y: 0, width: 1360, height: 600 }))).toBe(0);
+});
+
+test("captures the clean control desk route on a mobile viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/?ui=desk&layoutDebug=1");
+  const canvas = page.locator("canvas");
+
+  await expect(canvas).toBeVisible();
+  await page.waitForTimeout(250);
+  const stats = await canvasPixelStats(page);
+  expect(stats.nonTransparentPixels).toBeGreaterThan(40_000);
+  expect(stats.distinctSampledColors).toBeGreaterThan(8);
+
+  await saveProofScreenshotAndAssertSize(page, "control-desk-mobile.png", { width: 390, height: 844 });
+});
+
+test("captures the game screens", async ({ page }) => {
+  await page.goto("/?play=1");
   const canvas = page.locator("canvas");
 
   await expect(canvas).toBeVisible();
   await page.waitForTimeout(1_000);
 
-  await page.screenshot({
-    path: testInfo.outputPath("dispatch-1920x1080.png"),
-    fullPage: true,
-  });
+  await saveProofScreenshot(page, "dispatch-1920x1080.png");
 
   await page.keyboard.press("2");
   await page.waitForTimeout(400);
 
-  await page.screenshot({
-    path: testInfo.outputPath("production-1920x1080.png"),
-    fullPage: true,
-  });
+  await saveProofScreenshot(page, "production-1920x1080.png");
 });
 
 test("debug controls drive the shared gameplay readout", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/?play=1");
   await expect(page.locator("canvas")).toBeVisible();
   await clickDebugButton(page, "DEV");
   await clickDebugButton(page, "God Mode ON");
@@ -48,7 +160,7 @@ test("debug controls drive the shared gameplay readout", async ({ page }) => {
 
   await page.getByLabel("Nuclear target").evaluate((input) => {
     const range = input as HTMLInputElement;
-    range.value = "30";
+    range.value = "0";
     range.dispatchEvent(new Event("input", { bubbles: true }));
   });
 
@@ -79,7 +191,7 @@ test("debug controls drive the shared gameplay readout", async ({ page }) => {
 });
 
 test("forces underload trip and manual reset through the breaker modal", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/?play=1");
   await expect(page.locator("canvas")).toBeVisible();
   await clickDebugButton(page, "DEV");
   const readout = page.locator(".debug-readout");
@@ -110,7 +222,7 @@ test("forces underload trip and manual reset through the breaker modal", async (
 });
 
 test("forces overload trip through visible debug controls", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/?play=1");
   await expect(page.locator("canvas")).toBeVisible();
   await clickDebugButton(page, "DEV");
   const readout = page.locator(".debug-readout");
@@ -126,7 +238,7 @@ test("forces overload trip through visible debug controls", async ({ page }) => 
 });
 
 test("forces a high-risk contract trip through visible debug controls", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/?play=1");
   await expect(page.locator("canvas")).toBeVisible();
   await clickDebugButton(page, "DEV");
   const readout = page.locator(".debug-readout");

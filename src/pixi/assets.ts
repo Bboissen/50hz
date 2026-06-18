@@ -1,5 +1,10 @@
 import { Assets, Texture } from "pixi.js";
 
+import {
+  CONTROL_DESK_ASSET_SOURCES,
+  type ControlDeskAssetKey,
+} from "./controlDesk/controlDeskAssets";
+
 export type VisualAssetKey =
   | "city_homes_slab"
   | "city_services_tower"
@@ -17,11 +22,14 @@ export type VisualAssetKey =
   | "contract_business"
   | "contract_data_center";
 
+export type PixiAssetKey = VisualAssetKey | ControlDeskAssetKey;
+
 export type AssetResolver = {
-  texture: (key: VisualAssetKey) => Texture | undefined;
+  texture: (key: PixiAssetKey) => Texture | undefined;
+  fontFamily: string;
 };
 
-const assetSources: Partial<Record<VisualAssetKey, string>> = {
+const visualAssetSources: Partial<Record<VisualAssetKey, string>> = {
   city_homes_slab: "/assets/city/buildings/house.png",
   city_services_tower: "/assets/city/buildings/business.png",
   city_data_bunker: "/assets/city/buildings/data_center.png",
@@ -33,15 +41,20 @@ const assetSources: Partial<Record<VisualAssetKey, string>> = {
   plant_water_dam: "/assets/city/buildings/dam.png",
 };
 
+export const PIXI_ASSET_SOURCES: Partial<Record<PixiAssetKey, string>> = {
+  ...visualAssetSources,
+  ...CONTROL_DESK_ASSET_SOURCES,
+};
+
 export async function createAssetResolver(): Promise<AssetResolver> {
-  const textures = new Map<VisualAssetKey, Texture>();
+  const textures = new Map<PixiAssetKey, Texture>();
 
   await Promise.all(
-    Object.entries(assetSources).map(async ([key, src]) => {
+    Object.entries(PIXI_ASSET_SOURCES).map(async ([key, src]) => {
       try {
         const texture = await Assets.load<Texture>({ src, data: { scaleMode: "nearest" } });
         texture.source.scaleMode = "nearest";
-        textures.set(key as VisualAssetKey, texture);
+        textures.set(key as PixiAssetKey, texture);
       } catch {
         // Missing authored assets are expected during prototype work.
       }
@@ -50,5 +63,6 @@ export async function createAssetResolver(): Promise<AssetResolver> {
 
   return {
     texture: (key) => textures.get(key),
+    fontFamily: "Courier New, monospace",
   };
 }
