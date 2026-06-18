@@ -117,6 +117,8 @@ export function createDebugPanel(options: DebugPanelOptions): DebugPanel {
     element,
     update: (dispatch, production, paused) => {
       nuclearTarget.input.max = String(Math.ceil(production.nuclearCapacityMW));
+      nuclearTarget.input.value = String(Math.min(Math.max(production.nuclearTargetMW, 0), production.nuclearCapacityMW));
+      thermalThrottle.input.value = String(Math.min(Math.max(production.thermalThrottle, 0), 1));
       damSelect.value = production.waterDamMode;
       readout.textContent = [
         `${paused ? "PAUSED" : "RUNNING"}  t=${dispatch.timeSeconds.toFixed(1)}s`,

@@ -145,6 +145,14 @@ describe("match", () => {
     expect(waitingDispatch.lastBreakerTripSummary?.totalScorePenalty).toBe(GAME_CONFIG.strike.scorePenalty);
   });
 
+  it("does not subtract breaker strike penalties a second time from final score", () => {
+    const state = forceUnderloadTrip();
+    const result = computeFinalResult(state);
+
+    expect(state.players.player.strikes).toBe(1);
+    expect(result.playerFinalScore).toBeCloseTo(state.players.player.score);
+  });
+
   it("grid down zeroes plant supply, demand, and served contract split through plant state", () => {
     const state = forceUnderloadTrip();
     const production = selectProductionConsoleState(state);

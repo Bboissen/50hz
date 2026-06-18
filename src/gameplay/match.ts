@@ -700,8 +700,8 @@ export function isMatchOver(state: MatchState): boolean {
 }
 
 export function computeFinalResult(state: MatchState): FinalResult {
-  const playerFinalScore = state.players.player.score - state.players.player.strikes * GAME_CONFIG.strike.scorePenalty;
-  const rivalFinalScore = state.players.rival.score - state.players.rival.strikes * GAME_CONFIG.strike.scorePenalty;
+  const playerFinalScore = state.players.player.score;
+  const rivalFinalScore = state.players.rival.score;
   const winner =
     state.gameOverReason === "player-reset-bankrupt"
       ? "rival"
