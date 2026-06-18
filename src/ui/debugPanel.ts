@@ -21,7 +21,13 @@ function button(label: string, onClick: () => void): HTMLButtonElement {
   return element;
 }
 
-function labeledRange(label: string, min: number, max: number, step: number, onInput: (value: number) => void): HTMLLabelElement {
+function labeledRange(
+  label: string,
+  min: number,
+  max: number,
+  step: number,
+  onInput: (value: number) => void,
+): { wrapper: HTMLLabelElement; input: HTMLInputElement } {
   const wrapper = document.createElement("label");
   const input = document.createElement("input");
   input.type = "range";
@@ -30,7 +36,7 @@ function labeledRange(label: string, min: number, max: number, step: number, onI
   input.step = String(step);
   input.addEventListener("input", () => onInput(Number(input.value)));
   wrapper.append(label, input);
-  return wrapper;
+  return { wrapper, input };
 }
 
 export function createDebugPanel(options: DebugPanelOptions): DebugPanel {
@@ -50,14 +56,13 @@ export function createDebugPanel(options: DebugPanelOptions): DebugPanel {
   const controls = document.createElement("div");
   controls.className = "debug-controls";
 
-  controls.append(
-    labeledRange("Nuclear target", 0, 100, 1, (targetMW) =>
-      options.onCommand({ type: "setNuclearTarget", playerId: "player", targetMW }),
-    ),
-    labeledRange("Thermal throttle", 0, 1, 0.01, (throttle) =>
-      options.onCommand({ type: "setThermalThrottle", playerId: "player", throttle }),
-    ),
+  const nuclearTarget = labeledRange("Nuclear target", 0, 100, 1, (targetMW) =>
+    options.onCommand({ type: "setNuclearTarget", playerId: "player", targetMW }),
   );
+  const thermalThrottle = labeledRange("Thermal throttle", 0, 1, 0.01, (throttle) =>
+    options.onCommand({ type: "setThermalThrottle", playerId: "player", throttle }),
+  );
+  controls.append(nuclearTarget.wrapper, thermalThrottle.wrapper);
 
   const damSelect = document.createElement("select");
   for (const mode of damModes) {
@@ -96,6 +101,7 @@ export function createDebugPanel(options: DebugPanelOptions): DebugPanel {
   return {
     element,
     update: (dispatch, production, paused) => {
+      nuclearTarget.input.max = String(Math.ceil(production.nuclearCapacityMW));
       damSelect.value = production.waterDamMode;
       readout.textContent = [
         `${paused ? "PAUSED" : "RUNNING"}  t=${dispatch.timeSeconds.toFixed(1)}s`,
@@ -103,11 +109,12 @@ export function createDebugPanel(options: DebugPanelOptions): DebugPanel {
         `eff=${(dispatch.playerEfficiency * 100).toFixed(0)}% rival=${(dispatch.rivalEfficiency * 100).toFixed(0)}%`,
         `price=${dispatch.playerTariffCents.toFixed(1)} rival=${dispatch.rivalTariffCents.toFixed(1)}`,
         `targetShare=${(dispatch.playerTargetMarketShare * 100).toFixed(1)}% subscribed=${(dispatch.playerSubscribedLoadShare * 100).toFixed(1)}%`,
-        `demand=${dispatch.currentDemandMW.toFixed(1)} supply=${dispatch.deliveredSupplyMW.toFixed(1)}`,
-        `capacity=${(dispatch.capacityUtilization * 100).toFixed(1)}% mismatch=${(dispatch.supplyDemandMismatch * 100).toFixed(1)}%`,
+        `load=${dispatch.currentDemandMW.toFixed(1)} generation=${dispatch.generationMW.toFixed(1)}`,
+        `capacity=${(dispatch.capacityUtilization * 100).toFixed(1)}% basis=${dispatch.contractCapacityBasisMW.toFixed(1)} detMax=${dispatch.deterministicMaxCapacityMW.toFixed(1)} totalMax=${dispatch.totalMaxCapacityMW.toFixed(1)}`,
+        `mismatch=${(dispatch.supplyDemandMismatch * 100).toFixed(1)}%`,
         `breaker=${dispatch.breakerTimer.toFixed(1)}s event=${dispatch.activeEventLabel}`,
-        `nuclear=${production.nuclearOutputMW.toFixed(1)}/${production.nuclearTargetMW.toFixed(1)} thermal=${(production.thermalThrottle * 100).toFixed(0)}% heat=${(production.thermalHeat * 100).toFixed(0)}%`,
-        `dam=${production.waterDamMode} stored=${production.storedWaterMWh.toFixed(1)} wind=${production.windEnabled ? "ON" : "OFF"}`,
+        `nuclear=${production.nuclearOutputMW.toFixed(1)}/${production.nuclearTargetMW.toFixed(1)} cap=${production.nuclearCapacityMW.toFixed(1)} thermal=${(production.thermalThrottle * 100).toFixed(0)}% cap=${production.thermalCapacityMW.toFixed(1)} heat=${(production.thermalHeat * 100).toFixed(0)}%`,
+        `dam=${production.waterDamMode} stored=${production.storedWaterMWh.toFixed(1)} out=${production.damOutputMW.toFixed(1)} fill=${production.damAbsorbMW.toFixed(1)} max=${production.waterDamMaxPowerMW.toFixed(1)} wind=${production.windEnabled ? "ON" : "OFF"}`,
       ].join("\n");
     },
   };

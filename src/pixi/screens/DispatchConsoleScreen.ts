@@ -1,6 +1,14 @@
 import { Container, Graphics, Text } from "pixi.js";
 
-import type { DispatchCardState, DispatchConsoleState, PlantKey, PlayerCommand, SectorKey, SectorVisualState } from "../../gameplay/types";
+import type {
+  DispatchCardState,
+  DispatchConsoleState,
+  PlantKey,
+  PlantUpgradeState,
+  PlayerCommand,
+  SectorKey,
+  SectorVisualState,
+} from "../../gameplay/types";
 import type { AssetResolver } from "../assets";
 import { DESIGN_TOKENS, type DesignTokens } from "../tokens";
 
@@ -309,8 +317,8 @@ class DioramaViewport extends Container {
     this.labelLayer.removeChildren();
     this.drawBackdrop(state.timeSeconds);
     this.drawCitySectors(state.sectors, pulse);
-    this.drawPlantSide("YOU", this.bounds.x + 34, this.bounds.y + 66, state.capacityUtilization, false);
-    this.drawPlantSide("RIVAL", this.bounds.x + this.bounds.w - 332, this.bounds.y + 66, state.rivalEfficiency, true);
+    this.drawPlayerPlantSide(this.bounds.x + 34, this.bounds.y + 66, state.plants);
+    this.drawRivalPlantSide(this.bounds.x + this.bounds.w - 332, this.bounds.y + 66, state.rivalEfficiency);
     this.split.update(state);
   }
 
@@ -380,19 +388,47 @@ class DioramaViewport extends Container {
     this.labelLayer.addChild(text);
   }
 
-  private drawPlantSide(label: string, x: number, y: number, ratio: number, rival: boolean): void {
-    this.g.rect(x, y, 286, 244).fill({ color: rival ? 0x202923 : PIXEL.screenDark }).stroke({ color: PIXEL.black, width: 5 });
-    const title = makeLabel(label, 18, PIXEL.cream);
+  private drawPlayerPlantSide(x: number, y: number, plants: Record<PlantKey, PlantUpgradeState>): void {
+    this.g.rect(x, y, 286, 244).fill({ color: PIXEL.screenDark }).stroke({ color: PIXEL.black, width: 5 });
+    const title = makeLabel("YOU", 18, PIXEL.cream);
     title.position.set(x + 18, y + 16);
     this.labelLayer.addChild(title);
-    const keys: PlantKey[] = rival ? ["reactor", "boiler", "renewables"] : ["reactor", "boiler", "renewables", "waterDam"];
+    const keys: PlantKey[] = ["reactor", "boiler", "renewables", "waterDam"];
+    keys.forEach((key, index) => {
+      const plant = plants[key];
+      const rowY = y + 48 + index * 46;
+      this.g.rect(x + 18, rowY, 250, 34).fill({ color: 0x2f382f }).stroke({ color: PIXEL.black, width: 2 });
+      drawTinyPlant(this.g, key, x + 26, rowY - 8, 1.8);
+      this.g.rect(x + 94, rowY + 11, 138, 8).fill({ color: 0x1a241d });
+      this.g.rect(x + 94, rowY + 11, Math.round(138 * (plant.level / plant.maxLevel)), 8).fill({
+        color: DESIGN_TOKENS.colors.phosphorGreen,
+        alpha: 0.95,
+      });
+      if (plant.isBuilding) {
+        this.g.rect(x + 94, rowY + 24, Math.round(138 * plant.buildProgressRatio), 4).fill({
+          color: DESIGN_TOKENS.colors.amberWarn,
+          alpha: 0.95,
+        });
+      }
+      const label = makeLabel(`${plant.shortLabel} ${plant.capacityLabel}`, 10, PIXEL.cream);
+      label.position.set(x + 94, rowY - 1);
+      this.labelLayer.addChild(label);
+    });
+  }
+
+  private drawRivalPlantSide(x: number, y: number, efficiency: number): void {
+    this.g.rect(x, y, 286, 244).fill({ color: 0x202923 }).stroke({ color: PIXEL.black, width: 5 });
+    const title = makeLabel("RIVAL", 18, PIXEL.cream);
+    title.position.set(x + 18, y + 16);
+    this.labelLayer.addChild(title);
+    const keys: PlantKey[] = ["reactor", "boiler", "renewables"];
     keys.forEach((key, index) => {
       const rowY = y + 48 + index * 46;
       this.g.rect(x + 18, rowY, 250, 34).fill({ color: 0x2f382f }).stroke({ color: PIXEL.black, width: 2 });
       drawTinyPlant(this.g, key, x + 26, rowY - 8, 1.8);
-      this.g.rect(x + 94, rowY + 11, Math.round(138 * Math.min(1, ratio + index * 0.08)), 8).fill({
-        color: rival ? 0xb66b4d : DESIGN_TOKENS.colors.phosphorGreen,
-        alpha: rival ? 0.65 : 0.95,
+      this.g.rect(x + 94, rowY + 11, Math.round(138 * Math.min(1, efficiency + index * 0.08)), 8).fill({
+        color: 0xb66b4d,
+        alpha: 0.65,
       });
     });
   }
@@ -401,6 +437,7 @@ class DioramaViewport extends Container {
 class PlantRack extends Container {
   private readonly rows = new Map<PlantKey, Text>();
   private readonly g = new Graphics();
+  private latestPlants: Record<PlantKey, PlantUpgradeState> | undefined;
 
   public constructor(private readonly bounds: Rect, private readonly sink: CommandSink, private readonly tokens: DesignTokens) {
     super();
@@ -410,6 +447,7 @@ class PlantRack extends Container {
   }
 
   public update(state: DispatchConsoleState): void {
+    this.latestPlants = state.plants;
     this.g.clear();
     pixelPanel(this.g, this.bounds, PIXEL.paper);
     const entries: PlantKey[] = ["reactor", "boiler", "renewables", "waterDam"];
@@ -426,9 +464,10 @@ class PlantRack extends Container {
     });
     for (const [key, text] of this.rows) {
       const plant = state.plants[key];
-      const lamps = "■".repeat(plant.level).padEnd(3, "□");
-      text.text = `${key === "waterDam" ? "DAM" : key.toUpperCase()}  ${lamps}  ${plant.isMaxed ? "MAX" : `€${plant.upgradeCost.toFixed(0)}`}`;
-      text.style.fill = plant.canAfford || plant.isMaxed ? PIXEL.black : this.tokens.colors.smokeGrey;
+      const lamps = "■".repeat(plant.level).padEnd(plant.maxLevel, "□");
+      const pending = plant.purchasedLevel > plant.level ? " +" : "  ";
+      text.text = `${plant.shortLabel} ${lamps}${pending} ${plant.statusText}  ${plant.capacityLabel}`;
+      text.style.fill = plant.canAfford || plant.isMaxed || plant.isBuilding ? PIXEL.black : this.tokens.colors.smokeGrey;
     }
   }
 
@@ -445,8 +484,10 @@ class PlantRack extends Container {
       row.eventMode = "static";
       row.cursor = "pointer";
       row.on("pointertap", () => {
-        const kind = key === "reactor" ? "nuclear" : key === "boiler" ? "thermal" : key === "renewables" ? "renewable" : "waterDam";
-        this.sink({ type: "buyUpgrade", playerId: "player", kind });
+        const plant = this.latestPlants?.[key];
+        if (plant?.canAfford) {
+          this.sink({ type: "buyUpgrade", playerId: "player", kind: plant.kind });
+        }
       });
       row.addChild(new Graphics().rect(this.bounds.x + 24, y, this.bounds.w - 48, 48).fill({ color: 0xffffff, alpha: 0.001 }));
       const text = makeLabel("", 17, PIXEL.black);
@@ -489,6 +530,14 @@ class VuGridPressureMeter extends Container {
     this.g.rect(this.bounds.x + 38, this.bounds.y + 28, 36, 22).fill({ color: state.balanceZone === "lock" ? this.tokens.colors.phosphorGreen : 0x3b1610 });
     this.g.rect(this.bounds.x + this.bounds.w - 74, this.bounds.y + 28, 36, 22).fill({ color: blink ? this.tokens.colors.overloadRed : 0x3b1610 });
     this.readout.text = `CAP ${(state.capacityUtilization * 100).toFixed(0)}% ${state.capacityZone.toUpperCase()}   BAL ${(state.supplyDemandMismatch * 100).toFixed(1)}% ${state.balanceZone.toUpperCase()}`;
+    addLabel(
+      this.labelLayer,
+      `${state.currentContractLoadMW.toFixed(0)}/${state.contractCapacityBasisMW.toFixed(0)}MW CONTRACT   ${state.generationMW.toFixed(0)}/${state.currentDemandMW.toFixed(0)}MW GEN/LOAD`,
+      this.bounds.x + 54,
+      this.bounds.y + 258,
+      13,
+      PIXEL.cream,
+    );
   }
 
   private drawMeterFace(cx: number, cy: number, radius: number, ratio: number, redStart: number, jitter: number): void {

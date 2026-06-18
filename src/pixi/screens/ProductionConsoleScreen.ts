@@ -56,6 +56,7 @@ export class ProductionConsoleScreen extends Container {
   private shedPressedUntil = 0;
   private draggingControl: "nuclear" | "thermal" | undefined;
   private lastTimeSeconds = 0;
+  private latestState: ProductionConsoleState | undefined;
 
   public constructor(private readonly sink: CommandSink, _assets: AssetResolver) {
     super();
@@ -64,6 +65,7 @@ export class ProductionConsoleScreen extends Container {
   }
 
   public update(state: ProductionConsoleState): void {
+    this.latestState = state;
     const dt = Math.max(0, state.timeSeconds - this.lastTimeSeconds);
     this.lastTimeSeconds = state.timeSeconds;
     if (this.resetHeld && state.breakerTrippedSeconds > 0 && dt > 0) {
@@ -139,7 +141,8 @@ export class ProductionConsoleScreen extends Container {
     const angle = Math.atan2(event.global.y - cy, event.global.x - cx);
     const ratio = clamp01((angle + 2.35) / 4.7);
     if (control === "nuclear") {
-      this.sink({ type: "setNuclearTarget", playerId: "player", targetMW: Math.round((ratio * 70) / 5) * 5 });
+      const capacityMW = this.latestState?.nuclearCapacityMW ?? 70;
+      this.sink({ type: "setNuclearTarget", playerId: "player", targetMW: Math.round((ratio * capacityMW) / 5) * 5 });
       return;
     }
     this.sink({ type: "setThermalThrottle", playerId: "player", throttle: Math.round(ratio * 20) / 20 });
@@ -166,16 +169,38 @@ export class ProductionConsoleScreen extends Container {
     this.drawPanel({ x: 704, y: 610, w: 808, h: 338 }, "EMERGENCY PANEL");
     this.drawPanel({ x: 1542, y: 610, w: 300, h: 338 }, "BALANCE LOCK");
 
-    this.drawRotary(280, 382, 108, state.nuclearTargetMW / 70, PX.green);
-    this.drawValuePlate(130, 506, 300, `${state.nuclearTargetMW.toFixed(0)}MW TARGET`, `${state.nuclearOutputMW.toFixed(0)}MW ACTUAL`, PX.green);
+    this.drawRotary(280, 382, 108, state.nuclearTargetMW / Math.max(state.nuclearCapacityMW, 1), PX.green);
+    this.drawValuePlate(
+      130,
+      506,
+      300,
+      `${state.nuclearTargetMW.toFixed(0)}/${state.nuclearCapacityMW.toFixed(0)}MW TARGET`,
+      `${state.nuclearOutputMW.toFixed(0)}MW ACTUAL`,
+      PX.green,
+    );
 
     this.drawRotary(728, 382, 96, state.thermalThrottle, PX.amber);
     this.drawLever(842, 260, 210, state.thermalThrottle, state.thermalHeat);
-    this.drawValuePlate(592, 506, 230, `${(state.thermalThrottle * 100).toFixed(0)}% THROTTLE`, `${state.thermalOutputMW.toFixed(0)}MW OUT`, PX.amber);
+    this.drawValuePlate(
+      592,
+      506,
+      230,
+      `${(state.thermalThrottle * 100).toFixed(0)}% / ${state.thermalCapacityMW.toFixed(0)}MW`,
+      `${state.thermalOutputMW.toFixed(0)}MW OUT`,
+      PX.amber,
+    );
 
     this.drawDamSwitches(1046, 338, state.waterDamMode);
     this.drawBar(1060, 474, 384, state.storedWaterMWh / Math.max(state.waterDamCapacityMWh, 1), PX.cyan);
     addLabel(this.labels, `STORE ${state.storedWaterMWh.toFixed(0)}/${state.waterDamCapacityMWh.toFixed(0)}MWh`, 1060, 502, 16, PX.black);
+    addLabel(
+      this.labels,
+      `DAM ${state.damOutputMW.toFixed(0)}MW OUT / ${state.damAbsorbMW.toFixed(0)}MW FILL  MAX ${state.waterDamMaxPowerMW.toFixed(0)}MW`,
+      1042,
+      536,
+      13,
+      PX.black,
+    );
 
     this.drawRenewables(state);
     this.drawEmergency(state);
@@ -213,7 +238,7 @@ export class ProductionConsoleScreen extends Container {
     );
     addLabel(
       this.labels,
-      `LOAD ${state.currentDemandMW.toFixed(1)}MW / SUPPLY ${state.deliveredSupplyMW.toFixed(1)}MW   BALANCE ${(state.supplyDemandMismatch * 100).toFixed(1)}%   BREAKER ${state.breakerTimer.toFixed(1)}s`,
+      `GENERATION ${state.generationMW.toFixed(1)}MW / LOAD ${state.currentDemandMW.toFixed(1)}MW   BALANCE ${(state.supplyDemandMismatch * 100).toFixed(1)}%   BREAKER ${state.breakerTimer.toFixed(1)}s`,
       62,
       114,
       19,
@@ -307,10 +332,10 @@ export class ProductionConsoleScreen extends Container {
       .stroke({ color: PX.black, width: 4 });
     addLabel(this.labels, "WIND ON", 224, 772, 15, PX.black);
     addLabel(this.labels, "CUT OFF", 404, 772, 15, PX.black);
-    this.drawBar(176, 854, 390, state.solarOutputMW / 25, PX.amber);
-    this.drawBar(176, 900, 390, state.windOutputMW / 25, state.windEnabled ? PX.green : DESIGN_TOKENS.colors.smokeGrey);
-    addLabel(this.labels, `SOLAR ${state.solarOutputMW.toFixed(0)}MW`, 176, 832, 16, PX.black);
-    addLabel(this.labels, `WIND ${state.windOutputMW.toFixed(0)}MW`, 176, 878, 16, PX.black);
+    this.drawBar(176, 854, 390, state.solarOutputMW / Math.max(state.solarPeakMW, 1), PX.amber);
+    this.drawBar(176, 900, 390, state.windOutputMW / Math.max(state.windPeakMW, 1), state.windEnabled ? PX.green : DESIGN_TOKENS.colors.smokeGrey);
+    addLabel(this.labels, `SOLAR ${state.solarOutputMW.toFixed(0)}/${state.solarPeakMW.toFixed(0)}MW`, 176, 832, 16, PX.black);
+    addLabel(this.labels, `WIND ${state.windOutputMW.toFixed(0)}/${state.windPeakMW.toFixed(0)}MW`, 176, 878, 16, PX.black);
   }
 
   private drawEmergency(state: ProductionConsoleState): void {
@@ -337,6 +362,7 @@ export class ProductionConsoleScreen extends Container {
     this.g.circle(1692, 764, 70).fill({ color: statusColor }).stroke({ color: PX.black, width: 8 }).circle(1692, 764, 30).fill({ color: 0xffffff, alpha: 0.18 });
     addLabel(this.labels, state.balanceZone.toUpperCase(), 1602, 868, 16, PX.black);
     addLabel(this.labels, `CAP ${(state.capacityUtilization * 100).toFixed(0)}%`, 1624, 902, 16, PX.black);
+    addLabel(this.labels, `${state.currentContractLoadMW.toFixed(0)}/${state.contractCapacityBasisMW.toFixed(0)}MW`, 1604, 930, 14, PX.black);
   }
 
   private drawValuePlate(x: number, y: number, w: number, title: string, sub: string, color: number): void {
