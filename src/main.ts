@@ -7,8 +7,9 @@ import {
   tickMatch,
 } from "./gameplay/match";
 import type { MatchState, PlayerCommand } from "./gameplay/types";
+import { createAssetResolver } from "./pixi/assets";
 import { createPixiApp } from "./pixi/createPixiApp";
-import { MinimalGameView } from "./pixi/MinimalGameView";
+import { DispatchConsoleScreen } from "./pixi/DispatchConsoleScreen";
 import { createDebugPanel } from "./ui/debugPanel";
 import "./styles.css";
 
@@ -23,8 +24,7 @@ const root = appRoot;
 async function bootstrap(): Promise<void> {
   let state: MatchState = createInitialMatchState();
   const app = await createPixiApp(root);
-  const view = new MinimalGameView();
-  app.stage.addChild(view);
+  const assets = await createAssetResolver();
 
   const dispatch = (command: PlayerCommand): void => {
     state = applyPlayerCommand(state, command);
@@ -37,6 +37,8 @@ async function bootstrap(): Promise<void> {
     },
   });
   root.appendChild(debugPanel.element);
+  const screen = new DispatchConsoleScreen(assets, dispatch);
+  app.stage.addChild(screen);
 
   let accumulator = 0;
   const fixedDt = 1 / 30;
@@ -53,7 +55,7 @@ async function bootstrap(): Promise<void> {
 
     const dispatchState = selectDispatchConsoleState(state);
     const productionState = selectProductionConsoleState(state);
-    view.update(dispatchState);
+    screen.update(dispatchState);
     debugPanel.update(dispatchState, productionState, state.isPaused);
   });
 }
