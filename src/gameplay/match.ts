@@ -112,6 +112,23 @@ export function applyPlayerCommand(state: MatchState, command: PlayerCommand): M
     });
   }
 
+  if (command.type === "setGodMode") {
+    return updatePlayer(state, {
+      ...player,
+      devGodMode: command.enabled,
+      runtime: {
+        ...player.runtime,
+        capacityOverloadTimer: 0,
+        balanceBreakerTimer: 0,
+        breakerTrippedSeconds: command.enabled ? 0 : player.runtime.breakerTrippedSeconds,
+        breakerResetHoldSeconds: 0,
+        breakerTripFlashSeconds: 0,
+        breakerRecoveredPulseSeconds: 0,
+        gridShutdownReliefSeconds: command.enabled ? 0 : player.runtime.gridShutdownReliefSeconds,
+      },
+    });
+  }
+
   if (command.type === "holdBreakerReset") {
     if (player.runtime.breakerTrippedSeconds <= 0) {
       return updatePlayer(state, {
@@ -302,7 +319,20 @@ function tickOnePlayer(
   const capacityUtilization = contractLoadMW / Math.max(basisMW, 1);
   const supplyDemandMismatch = computeSupplyDemandMismatch(assets.outputs.rawProductionMW, currentDemandMW);
 
-  if (next.runtime.breakerTrippedSeconds <= 0) {
+  if (next.devGodMode) {
+    next = {
+      ...next,
+      runtime: {
+        ...next.runtime,
+        capacityOverloadTimer: 0,
+        balanceBreakerTimer: 0,
+        breakerTrippedSeconds: 0,
+        breakerResetHoldSeconds: 0,
+        breakerTripFlashSeconds: 0,
+        gridShutdownReliefSeconds: 0,
+      },
+    };
+  } else if (next.runtime.breakerTrippedSeconds <= 0) {
     const breaker = updateBreakerRisk({
       capacityUtilization,
       supplyDemandMismatch,
@@ -491,6 +521,9 @@ function breakerRiskSource(player: PlayerState): BreakerRiskSource {
 }
 
 function breakerLifecycle(player: PlayerState): BreakerLifecycleState {
+  if (player.devGodMode) {
+    return "safe";
+  }
   if (player.runtime.breakerRecoveredPulseSeconds > 0) {
     return "recovered";
   }
@@ -510,6 +543,9 @@ function breakerLifecycle(player: PlayerState): BreakerLifecycleState {
 }
 
 function breakerStatusText(player: PlayerState): string {
+  if (player.devGodMode) {
+    return "GOD MODE: BREAKER BYPASSED";
+  }
   const lifecycle = breakerLifecycle(player);
   const reason = player.runtime.lastBreakerReason?.replace("-", " ").toUpperCase() ?? "UNKNOWN";
   if (lifecycle === "tripped") {
@@ -635,6 +671,7 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
     canAffordBreakerReset: player.cash >= GAME_CONFIG.breaker.resetCost,
     gridShutdownReliefSeconds: player.runtime.gridShutdownReliefSeconds,
     isGridDown,
+    devGodMode: player.devGodMode,
     breakerStatusText: breakerStatusText(player),
     lastBreakerTripSummary: player.runtime.lastBreakerTripSummary,
     activeEventLabel: state.activeEvents[0]?.label ?? "BASELINE",

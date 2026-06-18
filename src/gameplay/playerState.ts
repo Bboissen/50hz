@@ -46,6 +46,7 @@ export function createInitialPlayerState(id: PlayerId): PlayerState {
 
   return {
     id,
+    devGodMode: false,
     cash: GAME_CONFIG.players.startingCash,
     score: GAME_CONFIG.players.startingScore,
     strikes: GAME_CONFIG.players.startingStrikes,

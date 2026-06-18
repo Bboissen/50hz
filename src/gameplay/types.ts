@@ -93,6 +93,7 @@ export type IncomingAttack = {
 
 export type PlayerState = {
   id: PlayerId;
+  devGodMode: boolean;
   cash: number;
   score: number;
   strikes: number;
@@ -206,6 +207,7 @@ export type PlayerCommand =
   | { type: "buyUpgrade"; playerId: PlayerId; kind: UpgradeKind }
   | { type: "playCard"; playerId: PlayerId; kind: CardKind }
   | { type: "acceptContract"; playerId: PlayerId; kind: ContractKind }
+  | { type: "setGodMode"; playerId: PlayerId; enabled: boolean }
   | { type: "pause" }
   | { type: "resume" };
 
@@ -259,6 +261,7 @@ export type DispatchConsoleState = {
   canAffordBreakerReset: boolean;
   gridShutdownReliefSeconds: number;
   isGridDown: boolean;
+  devGodMode: boolean;
   breakerStatusText: string;
   lastBreakerTripSummary?: BreakerTripSummary;
   activeEventLabel: string;

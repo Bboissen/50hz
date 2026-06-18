@@ -145,6 +145,38 @@ describe("match", () => {
     expect(waitingDispatch.lastBreakerTripSummary?.totalScorePenalty).toBe(GAME_CONFIG.strike.scorePenalty);
   });
 
+  it("god mode lets dev supply changes run without tripping the breaker", () => {
+    let state = createInitialMatchState();
+    state = applyPlayerCommand(state, { type: "setGodMode", playerId: "player", enabled: true });
+    state = applyPlayerCommand(state, { type: "setNuclearTarget", playerId: "player", targetMW: 0 });
+    state = applyPlayerCommand(state, { type: "setThermalThrottle", playerId: "player", throttle: 0 });
+    state = applyPlayerCommand(state, { type: "setWindEnabled", playerId: "player", enabled: false });
+    state = tickMatch(state, 10);
+
+    const dispatch = selectDispatchConsoleState(state);
+
+    expect(state.players.player.strikes).toBe(0);
+    expect(dispatch.devGodMode).toBe(true);
+    expect(dispatch.breakerTimer).toBe(0);
+    expect(dispatch.balanceBreakerTimer).toBe(0);
+    expect(dispatch.breakerResetRequired).toBe(false);
+    expect(dispatch.breakerStatusText).toContain("GOD MODE");
+    expect(dispatch.supplyDemandMismatch).toBeLessThan(-GAME_CONFIG.breaker.safeBalanceBand);
+  });
+
+  it("enabling god mode clears an active breaker trip for dev iteration", () => {
+    let state = forceUnderloadTrip();
+    expect(selectDispatchConsoleState(state).breakerResetRequired).toBe(true);
+
+    state = applyPlayerCommand(state, { type: "setGodMode", playerId: "player", enabled: true });
+    const production = selectProductionConsoleState(state);
+
+    expect(production.devGodMode).toBe(true);
+    expect(production.breakerResetRequired).toBe(false);
+    expect(production.isGridDown).toBe(false);
+    expect(state.players.player.runtime.breakerTrippedSeconds).toBe(0);
+  });
+
   it("does not subtract breaker strike penalties a second time from final score", () => {
     const state = forceUnderloadTrip();
     const result = computeFinalResult(state);

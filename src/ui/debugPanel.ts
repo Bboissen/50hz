@@ -79,6 +79,8 @@ export function createDebugPanel(options: DebugPanelOptions): DebugPanel {
   controls.appendChild(damLabel);
 
   controls.append(
+    button("God Mode ON", () => options.onCommand({ type: "setGodMode", playerId: "player", enabled: true })),
+    button("God Mode OFF", () => options.onCommand({ type: "setGodMode", playerId: "player", enabled: false })),
     button("Wind ON", () => options.onCommand({ type: "setWindEnabled", playerId: "player", enabled: true })),
     button("Wind OFF", () => options.onCommand({ type: "setWindEnabled", playerId: "player", enabled: false })),
     button("Underload scenario", () => {
@@ -122,6 +124,7 @@ export function createDebugPanel(options: DebugPanelOptions): DebugPanel {
       damSelect.value = production.waterDamMode;
       readout.textContent = [
         `${paused ? "PAUSED" : "RUNNING"}  t=${dispatch.timeSeconds.toFixed(1)}s`,
+        `godMode=${dispatch.devGodMode ? "ON" : "OFF"}`,
         `cash=${dispatch.cash.toFixed(1)} score=${dispatch.score.toFixed(1)} strikes=${dispatch.strikes}`,
         `eff=${(dispatch.playerEfficiency * 100).toFixed(0)}% rival=${(dispatch.rivalEfficiency * 100).toFixed(0)}%`,
         `price=${dispatch.playerTariffCents.toFixed(1)} rival=${dispatch.rivalTariffCents.toFixed(1)}`,
