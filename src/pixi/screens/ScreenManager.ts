@@ -16,8 +16,12 @@ function navButton(text: string, x: number, onTap: () => void): Container {
   root.cursor = "pointer";
   root.on("pointertap", onTap);
   const g = new Graphics()
-    .roundRect(x, 1008, 232, 48, 8)
+    .rect(x, 1004, 232, 52)
+    .fill({ color: 0x0d110e })
+    .rect(x + 6, 1010, 220, 40)
     .fill({ color: DESIGN_TOKENS.colors.paperTan })
+    .rect(x + 12, 1016, 208, 4)
+    .fill({ color: 0xf0dfaa, alpha: 0.45 })
     .stroke({ color: DESIGN_TOKENS.colors.inkBlack, width: 3 });
   const label = new Text({
     text,
@@ -28,7 +32,7 @@ function navButton(text: string, x: number, onTap: () => void): Container {
       fontWeight: "700",
     },
   });
-  label.position.set(x + 14, 1021);
+  label.position.set(x + 18, 1022);
   root.addChild(g, label);
   return root;
 }
