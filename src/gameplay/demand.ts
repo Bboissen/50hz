@@ -1,15 +1,102 @@
 import { GAME_CONFIG } from "./config";
-import type { DemandBreakdown, PublicEventState } from "./types";
+import type { DemandBreakdown, DemandLevel, DemandScheduleStep, DemandSectorKey, MatchSeed, PublicEventState } from "./types";
 
-export function computeDemand(eventState: PublicEventState): DemandBreakdown {
-  const householdsMW = GAME_CONFIG.demand.sectors.householdsMW * eventState.householdMultiplier;
-  const businessMW = GAME_CONFIG.demand.sectors.businessMW * eventState.businessMultiplier;
-  const dataCentersMW = GAME_CONFIG.demand.sectors.dataCentersMW * eventState.dataCenterMultiplier;
+const DEMAND_SECTORS: DemandSectorKey[] = ["households", "business", "dataCenters"];
+
+const BASE_DEMAND_LEVELS: Record<DemandSectorKey, DemandLevel> = {
+  households: 1,
+  business: 1,
+  dataCenters: 1,
+};
+
+function seedHash(seed: MatchSeed): number {
+  let hash = 2166136261;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash ^= seed.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function createSeededRandom(seed: MatchSeed): () => number {
+  let state = seedHash(seed) || 1;
+  return () => {
+    state += 0x6d2b79f5;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffledSectors(random: () => number): DemandSectorKey[] {
+  const sectors = [...DEMAND_SECTORS];
+  for (let index = sectors.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [sectors[index], sectors[swapIndex]] = [sectors[swapIndex], sectors[index]];
+  }
+  return sectors;
+}
+
+export function generateDemandSchedule(seed: MatchSeed = GAME_CONFIG.match.defaultSeed): DemandScheduleStep[] {
+  const random = createSeededRandom(seed);
+  const config = GAME_CONFIG.demand;
+  const stepCount = config.progressionSteps;
+  const slotSpacing = (config.progressionEndSeconds - config.progressionStartSeconds) / Math.max(stepCount - 1, 1);
+  const levelTwoOrder = shuffledSectors(random);
+  const levelThreeOrder = shuffledSectors(random);
+
+  return [...levelTwoOrder, ...levelThreeOrder].map((sector, index) => {
+    const jitter = (random() * 2 - 1) * config.progressionJitterSeconds;
+    const baseTime = config.progressionStartSeconds + slotSpacing * index;
+    return {
+      id: `${sector}-level-${index < DEMAND_SECTORS.length ? 2 : 3}`,
+      sector,
+      level: (index < DEMAND_SECTORS.length ? 2 : 3) as Exclude<DemandLevel, 1>,
+      timeSeconds: Math.max(0, baseTime + jitter),
+    };
+  });
+}
+
+export function demandLevelsAtTime(schedule: DemandScheduleStep[], timeSeconds: number): Record<DemandSectorKey, DemandLevel> {
+  return schedule.reduce(
+    (levels, step) => {
+      if (timeSeconds >= step.timeSeconds) {
+        return {
+          ...levels,
+          [step.sector]: Math.max(levels[step.sector], step.level) as DemandLevel,
+        };
+      }
+      return levels;
+    },
+    { ...BASE_DEMAND_LEVELS },
+  );
+}
+
+function sectorDemandMW(sector: DemandSectorKey, level: DemandLevel): number {
+  const sectorConfig = GAME_CONFIG.demand.sectors;
+  const levelsMW =
+    sector === "households"
+      ? sectorConfig.householdsMW
+      : sector === "business"
+        ? sectorConfig.businessMW
+        : sectorConfig.dataCentersMW;
+  return levelsMW[level - 1];
+}
+
+export function computeDemand(
+  eventState: PublicEventState,
+  levels: Record<DemandSectorKey, DemandLevel> = BASE_DEMAND_LEVELS,
+): DemandBreakdown {
+  const householdsMW = sectorDemandMW("households", levels.households) * eventState.householdMultiplier;
+  const businessMW = sectorDemandMW("business", levels.business) * eventState.businessMultiplier;
+  const dataCentersMW = sectorDemandMW("dataCenters", levels.dataCenters) * eventState.dataCenterMultiplier;
 
   return {
     householdsMW,
     businessMW,
     dataCentersMW,
-    totalMW: householdsMW + businessMW + dataCentersMW + eventState.finalDemandBonusMW,
+    totalMW: householdsMW + businessMW + dataCentersMW,
+    levels,
   };
 }

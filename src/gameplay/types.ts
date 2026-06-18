@@ -1,6 +1,9 @@
 import type { GAME_CONFIG, PLAYER_IDS } from "./config";
 
 export type PlayerId = (typeof PLAYER_IDS)[number];
+export type MatchSeed = string;
+export type DemandLevel = 1 | 2 | 3;
+export type DemandSectorKey = "households" | "business" | "dataCenters";
 export type WaterDamMode = "fill" | "hold" | "drain";
 export type UpgradeKind = keyof typeof GAME_CONFIG.upgrades extends infer Key
   ? Exclude<Key, "repeatCostMultiplier">
@@ -121,6 +124,14 @@ export type DemandBreakdown = {
   businessMW: number;
   dataCentersMW: number;
   totalMW: number;
+  levels: Record<DemandSectorKey, DemandLevel>;
+};
+
+export type DemandScheduleStep = {
+  id: string;
+  sector: DemandSectorKey;
+  level: Exclude<DemandLevel, 1>;
+  timeSeconds: number;
 };
 
 export type TimelineToken = {
@@ -175,10 +186,11 @@ export type PublicEventState = {
   dataCenterMultiplier: number;
   solarFactorMultiplier: number;
   windKmhOverride?: number;
-  finalDemandBonusMW: number;
 };
 
 export type MatchState = {
+  seed: MatchSeed;
+  demandSchedule: DemandScheduleStep[];
   timeSeconds: number;
   isPaused: boolean;
   players: Record<PlayerId, PlayerState>;

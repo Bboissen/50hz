@@ -2,7 +2,7 @@
 title: "Implementation Guardrails"
 type: "guardrails"
 status: "draft"
-updated: "2026-06-17"
+updated: "2026-06-18"
 tags: ["50hz", "implementation", "tests", "state", "determinism", "guardrails"]
 summary: "Recommended module split, pure functions, clamping, required tests, state separation, synthetic data, demo determinism, and documentation rule."
 related: []
@@ -96,11 +96,37 @@ expect(updateBreakerRisk({ deliveredSupplyMW: 106, demandMW: 100 }).timer).toBeG
 expect(capacityBreaker({ contractLoadMW: 85, deterministicMaxMW: 80 }).tripped).toBe(true);
 ```
 
+### Seeded demand progression tests
+
+```ts
+expect(generateDemandSchedule('demo')).toEqual(generateDemandSchedule('demo'));
+expect(generateDemandSchedule('demo-a')).not.toEqual(generateDemandSchedule('demo-b'));
+expect(demandLevelsAtTime(schedule, 0)).toEqual({
+  households: 1,
+  business: 1,
+  dataCenters: 1,
+});
+expect(demandLevelsAtTime(schedule, 290)).toEqual({
+  households: 3,
+  business: 3,
+  dataCenters: 3,
+});
+```
+
+Also prove each sector reaches level 2 before level 3 and that level totals remain exactly:
+
+```txt
+level 1 total = 140 MW
+level 2 total = 200 MW
+level 3 total = 260 MW
+```
+
 ### Upgrade tests
 
 ```ts
 expect(buyUpgrade(player, thermalUpgrade).cash).toBeLessThan(player.cash);
-expect(applyUpgrade(player, thermalUpgrade).thermalCapacityMW).toBeGreaterThan(player.thermalCapacityMW);
+expect(applyUpgrade(player, thermalUpgrade).thermalCapacityMW).toBe(70);
+expect(applyUpgrade(level2ThermalPlayer, thermalUpgrade).thermalCapacityMW).toBe(95);
 ```
 
 ## Do not mix presentation state and simulation state

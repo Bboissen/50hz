@@ -17,17 +17,22 @@ This file contains a recommended first playable configuration. Treat it as a sta
 ```ts
 export const GAME_CONFIG = {
   match: {
-    durationSeconds: 240,
+    durationSeconds: 300,
     tickRateHz: 30,
     simulationSpeed: 0.60,
+    defaultSeed: 'vivatech-grid-duel-demo',
   },
 
   demand: {
     baseTotalMW: 140,
+    progressionSteps: 6,
+    progressionStartSeconds: 40,
+    progressionEndSeconds: 270,
+    progressionJitterSeconds: 10,
     sectors: {
-      householdsMW: 80,
-      businessMW: 45,
-      dataCentersMW: 15,
+      householdsMW: [80, 100, 120],
+      businessMW: [15, 35, 55],
+      dataCentersMW: [45, 65, 85],
     },
   },
 
@@ -51,7 +56,14 @@ export const GAME_CONFIG = {
   },
 
   assets: {
-    gridCapacityMW: 90,
+    gridCapacityMW: 210,
+    plantLevels: {
+      nuclearMW: [35, 70, 105],
+      thermalMW: [45, 70, 95],
+      renewablePeakMW: [25, 40, 55],
+      waterDamStorageMWh: [20, 35, 50],
+      waterDamPowerMW: [15, 25, 35],
+    },
 
     nuclear: {
       capacityMW: 35,
@@ -61,6 +73,7 @@ export const GAME_CONFIG = {
 
     thermal: {
       capacityMW: 45,
+      initialThrottle: 0.38,
       heatGainPerSecond: 0.07,
       coolingPerSecond: 0.04,
       overheatThreshold: 0.85,
@@ -68,10 +81,12 @@ export const GAME_CONFIG = {
     },
 
     renewable: {
-      solarPeakMW: 25,
+      solarPeakMW: 10,
+      solarShare: 0.40,
       solarDefaultFactor: 0.75,
       solarCloudFactor: 0.30,
-      windPeakMW: 25,
+      windPeakMW: 15,
+      windShare: 0.60,
       windCutInKmh: 12,
       windFullPowerKmh: 45,
       windCutOutKmh: 90,
@@ -122,24 +137,18 @@ export const GAME_CONFIG = {
     renewable: {
       baseCost: 45,
       buildSeconds: 10,
-      solarPeakMW: 15,
-      windPeakMW: 15,
     },
     thermal: {
       baseCost: 40,
       buildSeconds: 8,
-      capacityMW: 25,
     },
     nuclear: {
       baseCost: 85,
       buildSeconds: 20,
-      capacityMW: 35,
     },
     waterDam: {
       baseCost: 50,
       buildSeconds: 12,
-      capacityMWh: 15,
-      maxPowerMW: 10,
     },
   },
 
@@ -206,9 +215,9 @@ Baseline:
 total demand = 140 MW
 player share = 50%
 customer load = 70 MW
-grid delivery capacity = 90 MW
+grid delivery capacity = 210 MW
 nuclear + thermal deterministic generation = 80 MW
-deterministic max capacity = min(90, 80) = 80 MW
+deterministic max capacity = min(210, 80) = 80 MW
 contract utilization = 70 / 80 = 87.5%
 ```
 
@@ -222,6 +231,18 @@ base total demand = 140 MW
 max normal subscribed load share = 80 / 140 = 57.1%
 ```
 
+Sector level sanity checks:
+
+```txt
+all sectors level 1 = 140 MW
+all sectors level 2 = 200 MW
+all sectors level 3 = 260 MW
+level-2 demand at 50% share = 100 MW
+level-3 demand at 50% share = 130 MW
+level-2 reactor + level-2 boiler = 140 MW deterministic
+level-3 reactor + level-3 boiler = 200 MW deterministic
+```
+
 If the player accepts a Business Contract at the starting state:
 
 ```txt
@@ -229,9 +250,9 @@ customer load = 70 MW
 business contract = 15 MW
 current contract load = 85 MW
 deterministic max capacity = 80 MW
-total max capacity with normal renewable/dam available = 90 MW
-fixed-contract capacity basis = 90 MW
-capacity utilization = 85 / 90 = 94.4%
+total max capacity with normal renewable/dam available is above deterministic capacity
+fixed-contract capacity basis uses current total max capacity
+capacity utilization remains below instant-trip range if production is prepared
 result = no capacity breaker yet, but high real-time supply/demand risk if renewable or dam output drops
 ```
 

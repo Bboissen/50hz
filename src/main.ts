@@ -25,7 +25,8 @@ if (!appRoot) {
 const root = appRoot;
 
 async function bootstrap(): Promise<void> {
-  let state: MatchState = createInitialMatchState();
+  const matchSeed = new URLSearchParams(window.location.search).get("seed") ?? undefined;
+  let state: MatchState = createInitialMatchState({ seed: matchSeed });
   const app = await createPixiApp(root);
   const assets = await createAssetResolver();
 
@@ -36,7 +37,7 @@ async function bootstrap(): Promise<void> {
   const debugPanel = createDebugPanel({
     onCommand: dispatch,
     onReset: () => {
-      state = createInitialMatchState();
+      state = createInitialMatchState({ seed: matchSeed });
     },
   });
   root.appendChild(debugPanel.element);

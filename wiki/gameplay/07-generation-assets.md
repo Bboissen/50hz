@@ -41,13 +41,15 @@ grid = delivery cap for all supply
 
 | System | Starting value |
 |---|---:|
-| Grid delivery capacity | 90 MW |
+| Grid delivery capacity | 210 MW |
 | Nuclear capacity | 35 MW |
 | Thermal capacity | 45 MW |
-| Solar peak | 25 MW |
-| Wind peak | 25 MW |
+| Renewable peak | 25 MW |
+| Solar peak | 10 MW |
+| Wind peak | 15 MW |
 | Water dam capacity | 20 MWh |
 | Water dam max power | 15 MW |
+| Starting boiler throttle | 38% |
 | Starting cash | 80 |
 
 Initial demand:
@@ -56,11 +58,38 @@ Initial demand:
 total demand = 140 MW
 player share = 50%
 player customer load = 70 MW
-deterministic max capacity = min(90, 35 + 45) = 80 MW
+deterministic max capacity = min(210, 35 + 45) = 80 MW
 starting contract utilization = 70 / 80 = 87.5%
 ```
 
 This means the player starts in the efficient contract-utilization zone but still must manually match real-time supply to demand.
+
+## Physical level tables
+
+Plant upgrades set the next explicit physical level. Do not derive new levels by adding capacity deltas.
+
+| Track | Level 1 | Level 2 | Level 3 | Meaning |
+|---|---:|---:|---:|---|
+| Reactor | 35 MW | 70 MW | 105 MW | Slow deterministic baseload |
+| Boiler | 45 MW | 70 MW | 95 MW | Fast deterministic peaker |
+| Renewable peak | 25 MW | 40 MW | 55 MW | Non-deterministic renewable peak |
+| Water dam storage | 20 MWh | 35 MWh | 50 MWh | Compressed arcade storage |
+| Water dam power | 15 MW | 25 MW | 35 MW | Instant buffer power |
+
+Renewable peak is split as:
+
+```txt
+wind = 60%
+solar = 40%
+```
+
+Examples:
+
+| Renewable level | Solar peak | Wind peak | Total peak |
+|---:|---:|---:|---:|
+| 1 | 10 MW | 15 MW | 25 MW |
+| 2 | 16 MW | 24 MW | 40 MW |
+| 3 | 22 MW | 33 MW | 55 MW |
 
 ## Deterministic max capacity
 

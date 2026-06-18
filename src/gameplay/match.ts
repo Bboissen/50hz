@@ -3,7 +3,7 @@ import { updateBreakerRisk, computeSupplyDemandMismatch } from "./breaker";
 import { applyCardCostAndCooldown, applyDemandResponse, canPlayCard, createIncomingAttack, opponentOf, tickCards } from "./cards";
 import { GAME_CONFIG } from "./config";
 import { acceptContract, tickContracts } from "./contracts";
-import { computeDemand } from "./demand";
+import { computeDemand, demandLevelsAtTime, generateDemandSchedule } from "./demand";
 import {
   contractCapacityBasisMW,
   computeContractEfficiency,
@@ -28,6 +28,7 @@ import type {
   DispatchConsoleState,
   FinalResult,
   MatchState,
+  MatchSeed,
   PlayerCommand,
   PlayerId,
   PlayerState,
@@ -35,8 +36,11 @@ import type {
   ProductionConsoleState,
 } from "./types";
 
-export function createInitialMatchState(): MatchState {
+export function createInitialMatchState(options: { seed?: MatchSeed } = {}): MatchState {
+  const seed = options.seed ?? GAME_CONFIG.match.defaultSeed;
   return {
+    seed,
+    demandSchedule: generateDemandSchedule(seed),
     timeSeconds: 0,
     isPaused: false,
     gameOverReason: undefined,
@@ -356,7 +360,7 @@ export function tickMatch(state: MatchState, dt = 1 / GAME_CONFIG.match.tickRate
 
   const nextTime = state.timeSeconds + dt;
   const publicEvents = getPublicEventState(nextTime);
-  const demand = computeDemand(publicEvents);
+  const demand = computeDemand(publicEvents, demandLevelsAtTime(state.demandSchedule, nextTime));
   const solarFactor = GAME_CONFIG.assets.renewable.solarDefaultFactor * publicEvents.solarFactorMultiplier;
   const windKmh = publicEvents.windKmhOverride ?? GAME_CONFIG.assets.renewable.windDefaultKmh;
 
@@ -396,6 +400,8 @@ export function tickMatch(state: MatchState, dt = 1 / GAME_CONFIG.match.tickRate
   };
 
   return {
+    seed: state.seed,
+    demandSchedule: state.demandSchedule,
     timeSeconds: nextTime,
     isPaused: false,
     gameOverReason: state.gameOverReason,
@@ -532,7 +538,7 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
   const player = state.players.player;
   const rival = state.players.rival;
   const events = getPublicEventState(state.timeSeconds);
-  const demand = computeDemand(events);
+  const demand = computeDemand(events, demandLevelsAtTime(state.demandSchedule, state.timeSeconds));
   const deterministicMaxMW = deterministicMaxCapacityMW(player.capacities);
   const totalMaxMW = totalMaxCapacityForPlayer(player);
   const breakerLifecycleState = breakerLifecycle(player);
@@ -542,38 +548,26 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
   const inShutdownRelief = player.runtime.gridShutdownReliefSeconds > 0;
   const effectiveLoadShare = inShutdownRelief ? player.lastContractLoadMW / Math.max(demand.totalMW, 1) : player.subscribedLoadShare;
   const effectiveTargetShare = inShutdownRelief ? effectiveLoadShare : player.targetMarketShare;
-  const sectorLevel = (ratio: number): 0 | 1 | 2 | 3 => {
-    if (ratio > 1.25) {
-      return 3;
-    }
-    if (ratio > 1.05) {
-      return 2;
-    }
-    if (ratio > 0.5) {
-      return 1;
-    }
-    return 0;
-  };
   const activeEventId = state.activeEvents[0]?.id;
   const sectors: Record<"homes" | "services" | "dataCenters", SectorVisualState> = {
     homes: {
-      demandLevel: sectorLevel(demand.householdsMW / GAME_CONFIG.demand.sectors.householdsMW),
+      demandLevel: isGridDown ? 0 : demand.levels.households,
       isSpiking: state.activeEvents.some((event) => event.id === "footballFinal" && event.phase === "impact"),
-      isDemandCritical: demand.householdsMW > GAME_CONFIG.demand.sectors.householdsMW * 1.25,
+      isDemandCritical: demand.levels.households === 3 || demand.householdsMW > GAME_CONFIG.demand.sectors.householdsMW[2],
       isBrownedOut: player.strikes > 0 && player.lastSupplyDemandMismatch < -0.15,
       activeEventId,
     },
     services: {
-      demandLevel: sectorLevel(demand.businessMW / GAME_CONFIG.demand.sectors.businessMW),
+      demandLevel: isGridDown ? 0 : demand.levels.business,
       isSpiking: false,
-      isDemandCritical: false,
+      isDemandCritical: demand.levels.business === 3,
       isBrownedOut: false,
       activeEventId: undefined,
     },
     dataCenters: {
-      demandLevel: sectorLevel(demand.dataCentersMW / GAME_CONFIG.demand.sectors.dataCentersMW),
+      demandLevel: isGridDown ? 0 : demand.levels.dataCenters,
       isSpiking: state.activeEvents.some((event) => event.id === "dataCenterBurst" && event.phase === "impact"),
-      isDemandCritical: demand.dataCentersMW > GAME_CONFIG.demand.sectors.dataCentersMW * 1.35,
+      isDemandCritical: demand.levels.dataCenters === 3 || demand.dataCentersMW > GAME_CONFIG.demand.sectors.dataCentersMW[2],
       isBrownedOut: player.strikes > 0 && player.lastSupplyDemandMismatch < -0.15,
       activeEventId,
     },

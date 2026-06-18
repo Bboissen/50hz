@@ -2,7 +2,7 @@
 title: "Demand and Customers"
 type: "system"
 status: "draft"
-updated: "2026-06-17"
+updated: "2026-06-18"
 tags: ["50hz", "demand", "customers", "load", "market-movement"]
 summary: "Shared demand, customer share types, deterministic subscription caps, fixed contracts, demand events, and timeline examples."
 related: []
@@ -24,18 +24,45 @@ Do not simulate every individual customer. Use sector labels to make demand unde
 const totalDemandMW =
   householdDemandMW +
   businessDemandMW +
-  dataCenterDemandMW +
-  eventDemandMW;
+  dataCenterDemandMW;
 ```
 
-Recommended baseline:
+Each sector has three physical demand levels. Level 1 is the starting state. Level 2 and level 3 are reached through a seeded deterministic schedule generated for the match.
 
-| Sector | Baseline |
-|---|---:|
-| Households | 80 MW |
-| Business | 45 MW |
-| Data centers | 15 MW |
-| **Total** | **140 MW** |
+| Sector | Level 1 | Level 2 | Level 3 |
+|---|---:|---:|---:|
+| Households | 80 MW | 100 MW | 120 MW |
+| Business | 15 MW | 35 MW | 55 MW |
+| Data centers | 45 MW | 65 MW | 85 MW |
+| **Total if all same level** | **140 MW** | **200 MW** | **260 MW** |
+
+Public events and cards can temporarily multiply sector demand, but they do not own the baseline progression. Final pressure comes from sectors reaching level 3, not from a separate final demand bonus.
+
+## Seeded demand progression
+
+`createInitialMatchState({ seed })` generates one deterministic schedule per match.
+
+Rules:
+
+- all sectors start at level 1,
+- there are 6 progression steps,
+- each sector reaches level 2 once, then level 3 once,
+- level 2 order and level 3 order are randomized separately from the seed,
+- a sector cannot reach level 3 before it reaches level 2,
+- slots are linearly spaced from about `40s` to `270s`,
+- each slot receives seeded `+/-10s` jitter.
+
+Example shape:
+
+```txt
+0:00 all sectors level 1 = 140 MW
+~0:40 first sector reaches level 2
+~1:26 second sector reaches level 2
+~2:12 third sector reaches level 2
+~2:58 first sector reaches level 3
+~3:44 second sector reaches level 3
+~4:30 final sector reaches level 3 = 260 MW
+```
 
 ## Player customer load
 
@@ -180,18 +207,18 @@ const footballFinal = {
 
 ## MVP demand timeline example
 
-A 2-minute match can use a semi-scripted sequence:
+A 5-minute match combines seeded sector progression with semi-scripted public incidents:
 
 ```txt
-0:00 baseline demand
-0:20 customer growth pressure begins
+0:00 all sectors level 1
 0:35 football final warning
 0:42 football final impact
+~0:40 first sector reaches level 2
 1:05 cloud front warning
 1:10 cloud front impact
 1:30 data center burst warning
 1:36 data center impact
-1:50 final demand ramp
+~4:30 final sector reaches level 3
 ```
 
-Semi-scripted events are recommended for a hackathon demo because they make the story readable.
+Semi-scripted events are recommended for a hackathon demo because they make the story readable. The seed keeps sector progression reproducible without making every match use the same sector order.

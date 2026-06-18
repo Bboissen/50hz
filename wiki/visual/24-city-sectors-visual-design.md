@@ -2,7 +2,7 @@
 title: "City Sectors Visual Design"
 type: "visual_system"
 status: "draft"
-updated: "2026-06-17"
+updated: "2026-06-18"
 tags: ["50hz", "city", "demand", "sectors", "pixel-art"]
 summary: "Visual state specification for the City Load Window: Homes, Services, Data Centers, demand spikes, overload states, icons, and event links."
 related: ["21-dispatch-console-layout.md", "23-ui-naming-and-taxonomy.md", "26-events-cards-timelines.md", "29-asset-inventory-and-ownership.md"]
@@ -58,12 +58,26 @@ type SectorVisualState = {
 
 ## Demand levels
 
+`demandLevel` comes from the canonical sector progression in gameplay state. Do not infer it from a temporary multiplier, tariff, or animation intensity.
+
 | Level | Label | Visual |
 |---:|---|---|
-| 0 | Idle | Few lights, slow animation |
+| 0 | Offline / browned out | Few or no lights, slow emergency animation |
 | 1 | Normal | Moderate lights, stable lamps |
-| 2 | Spike | More lights, amber pulse |
+| 2 | Higher load | More lights, amber pulse |
 | 3 | Demand critical | Red lamp, flicker, fast animation |
+
+Level `0` is a display-only state for grid-down, brownout, or unavailable visuals. Normal demand progression uses levels `1`, `2`, and `3`.
+
+Canonical sector values:
+
+| Sector | Level 1 | Level 2 | Level 3 |
+|---|---:|---:|---:|
+| Homes | 80 MW | 100 MW | 120 MW |
+| Services | 15 MW | 35 MW | 55 MW |
+| Data Centers | 45 MW | 65 MW | 85 MW |
+
+`isSpiking` marks temporary event impact on top of the current level, such as Football Final or Data Center Burst.
 
 ## Sector 1 — Homes
 

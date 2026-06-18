@@ -21,4 +21,21 @@ describe("events", () => {
   it("applies cloud front solar reduction during impact", () => {
     expect(getPublicEventState(71).solarFactorMultiplier).toBeLessThan(1);
   });
+
+  it("layers public demand multipliers on top of sector demand levels", () => {
+    const baselineLevelThree = computeDemand(getPublicEventState(0), {
+      households: 3,
+      business: 3,
+      dataCenters: 3,
+    });
+    const footballLevelThree = computeDemand(getPublicEventState(43), {
+      households: 3,
+      business: 3,
+      dataCenters: 3,
+    });
+
+    expect(footballLevelThree.householdsMW).toBeCloseTo(120 * 1.25);
+    expect(footballLevelThree.businessMW).toBe(baselineLevelThree.businessMW);
+    expect(footballLevelThree.dataCentersMW).toBe(baselineLevelThree.dataCentersMW);
+  });
 });

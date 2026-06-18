@@ -4,8 +4,26 @@ import type { AssetCapacities, PlantKey, PlantUpgradeState, PlayerState, Upgrade
 
 export const PLANT_ORDER: PlantKey[] = ["reactor", "boiler", "renewables", "waterDam"];
 
-function levelFromDelta(current: number, base: number, delta: number): 0 | 1 | 2 | 3 {
-  return Math.min(3, 1 + Math.max(0, Math.floor((current - base) / Math.max(delta, 1)))) as 0 | 1 | 2 | 3;
+function completedLevelFromValue(current: number, levels: readonly number[]): 1 | 2 | 3 {
+  if (current >= levels[2]) {
+    return 3;
+  }
+  if (current >= levels[1]) {
+    return 2;
+  }
+  return 1;
+}
+
+function nextLevel(currentLevel: 1 | 2 | 3): 1 | 2 | 3 {
+  return Math.min(3, currentLevel + 1) as 1 | 2 | 3;
+}
+
+function renewableCapacityForLevel(level: 1 | 2 | 3): Pick<AssetCapacities, "solarPeakMW" | "windPeakMW"> {
+  const peakMW = GAME_CONFIG.assets.plantLevels.renewablePeakMW[level - 1];
+  return {
+    solarPeakMW: peakMW * GAME_CONFIG.assets.renewable.solarShare,
+    windPeakMW: peakMW * GAME_CONFIG.assets.renewable.windShare,
+  };
 }
 
 export abstract class PlantDefinition {
@@ -74,29 +92,20 @@ class RenewablePlant extends PlantDefinition {
   }
 
   public completedLevel(capacities: AssetCapacities): 0 | 1 | 2 | 3 {
-    const solarLevel = levelFromDelta(
-      capacities.solarPeakMW,
-      GAME_CONFIG.assets.renewable.solarPeakMW,
-      GAME_CONFIG.upgrades.renewable.solarPeakMW,
-    );
-    const windLevel = levelFromDelta(
-      capacities.windPeakMW,
-      GAME_CONFIG.assets.renewable.windPeakMW,
-      GAME_CONFIG.upgrades.renewable.windPeakMW,
-    );
-    return Math.min(solarLevel, windLevel) as 0 | 1 | 2 | 3;
+    const renewablePeakMW = capacities.solarPeakMW + capacities.windPeakMW;
+    return completedLevelFromValue(renewablePeakMW, GAME_CONFIG.assets.plantLevels.renewablePeakMW);
   }
 
   public apply(capacities: AssetCapacities): AssetCapacities {
+    const level = nextLevel(this.completedLevel(capacities) || 1);
     return {
       ...capacities,
-      solarPeakMW: capacities.solarPeakMW + GAME_CONFIG.upgrades.renewable.solarPeakMW,
-      windPeakMW: capacities.windPeakMW + GAME_CONFIG.upgrades.renewable.windPeakMW,
+      ...renewableCapacityForLevel(level),
     };
   }
 
   public capacityLabel(capacities: AssetCapacities): string {
-    return `${capacities.solarPeakMW.toFixed(0)}S/${capacities.windPeakMW.toFixed(0)}W MW`;
+    return `${(capacities.solarPeakMW + capacities.windPeakMW).toFixed(0)} MW peak`;
   }
 }
 
@@ -106,13 +115,14 @@ class ThermalPlant extends PlantDefinition {
   }
 
   public completedLevel(capacities: AssetCapacities): 0 | 1 | 2 | 3 {
-    return levelFromDelta(capacities.thermalCapacityMW, GAME_CONFIG.assets.thermal.capacityMW, GAME_CONFIG.upgrades.thermal.capacityMW);
+    return completedLevelFromValue(capacities.thermalCapacityMW, GAME_CONFIG.assets.plantLevels.thermalMW);
   }
 
   public apply(capacities: AssetCapacities): AssetCapacities {
+    const level = nextLevel(this.completedLevel(capacities) || 1);
     return {
       ...capacities,
-      thermalCapacityMW: capacities.thermalCapacityMW + GAME_CONFIG.upgrades.thermal.capacityMW,
+      thermalCapacityMW: GAME_CONFIG.assets.plantLevels.thermalMW[level - 1],
     };
   }
 
@@ -127,13 +137,14 @@ class NuclearPlant extends PlantDefinition {
   }
 
   public completedLevel(capacities: AssetCapacities): 0 | 1 | 2 | 3 {
-    return levelFromDelta(capacities.nuclearCapacityMW, GAME_CONFIG.assets.nuclear.capacityMW, GAME_CONFIG.upgrades.nuclear.capacityMW);
+    return completedLevelFromValue(capacities.nuclearCapacityMW, GAME_CONFIG.assets.plantLevels.nuclearMW);
   }
 
   public apply(capacities: AssetCapacities): AssetCapacities {
+    const level = nextLevel(this.completedLevel(capacities) || 1);
     return {
       ...capacities,
-      nuclearCapacityMW: capacities.nuclearCapacityMW + GAME_CONFIG.upgrades.nuclear.capacityMW,
+      nuclearCapacityMW: GAME_CONFIG.assets.plantLevels.nuclearMW[level - 1],
     };
   }
 
@@ -148,24 +159,17 @@ class WaterDamPlant extends PlantDefinition {
   }
 
   public completedLevel(capacities: AssetCapacities): 0 | 1 | 2 | 3 {
-    const storageLevel = levelFromDelta(
-      capacities.waterDamCapacityMWh,
-      GAME_CONFIG.assets.waterDam.capacityMWh,
-      GAME_CONFIG.upgrades.waterDam.capacityMWh,
-    );
-    const powerLevel = levelFromDelta(
-      capacities.waterDamMaxPowerMW,
-      GAME_CONFIG.assets.waterDam.maxPowerMW,
-      GAME_CONFIG.upgrades.waterDam.maxPowerMW,
-    );
+    const storageLevel = completedLevelFromValue(capacities.waterDamCapacityMWh, GAME_CONFIG.assets.plantLevels.waterDamStorageMWh);
+    const powerLevel = completedLevelFromValue(capacities.waterDamMaxPowerMW, GAME_CONFIG.assets.plantLevels.waterDamPowerMW);
     return Math.min(storageLevel, powerLevel) as 0 | 1 | 2 | 3;
   }
 
   public apply(capacities: AssetCapacities): AssetCapacities {
+    const level = nextLevel(this.completedLevel(capacities) || 1);
     return {
       ...capacities,
-      waterDamCapacityMWh: capacities.waterDamCapacityMWh + GAME_CONFIG.upgrades.waterDam.capacityMWh,
-      waterDamMaxPowerMW: capacities.waterDamMaxPowerMW + GAME_CONFIG.upgrades.waterDam.maxPowerMW,
+      waterDamCapacityMWh: GAME_CONFIG.assets.plantLevels.waterDamStorageMWh[level - 1],
+      waterDamMaxPowerMW: GAME_CONFIG.assets.plantLevels.waterDamPowerMW[level - 1],
     };
   }
 

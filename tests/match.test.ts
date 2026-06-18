@@ -220,7 +220,11 @@ describe("match", () => {
     let state = forceUnderloadTrip();
     state = tickMatch(state, GAME_CONFIG.breaker.gridShutdownReliefSeconds + 1);
     state = applyPlayerCommand(state, { type: "setNuclearTarget", playerId: "player", targetMW: 35 });
-    state = applyPlayerCommand(state, { type: "setThermalThrottle", playerId: "player", throttle: 0.05 });
+    state = applyPlayerCommand(state, {
+      type: "setThermalThrottle",
+      playerId: "player",
+      throttle: GAME_CONFIG.assets.thermal.initialThrottle,
+    });
     state = applyPlayerCommand(state, { type: "setWindEnabled", playerId: "player", enabled: true });
     state = applyPlayerCommand(state, { type: "holdBreakerReset", playerId: "player", seconds: 2.1 });
     state = tickMatch(state, 1);
@@ -265,7 +269,11 @@ describe("match", () => {
     expect(selectDispatchConsoleState(state).balanceBreakerTimer).toBeGreaterThan(0);
 
     state = applyPlayerCommand(state, { type: "setNuclearTarget", playerId: "player", targetMW: 35 });
-    state = applyPlayerCommand(state, { type: "setThermalThrottle", playerId: "player", throttle: 0.05 });
+    state = applyPlayerCommand(state, {
+      type: "setThermalThrottle",
+      playerId: "player",
+      throttle: GAME_CONFIG.assets.thermal.initialThrottle,
+    });
     state = applyPlayerCommand(state, { type: "setWindEnabled", playerId: "player", enabled: true });
     state = applyPlayerCommand(state, { type: "setWaterDamMode", playerId: "player", mode: "hold" });
     state = tickMatch(state, 2);
@@ -277,6 +285,19 @@ describe("match", () => {
 
   it("capacity overrun from stacked fixed contracts trips instantly", () => {
     let state = createInitialMatchState();
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        player: {
+          ...state.players.player,
+          capacities: {
+            ...state.players.player.capacities,
+            gridCapacityMW: 90,
+          },
+        },
+      },
+    };
     state = applyPlayerCommand(state, { type: "acceptContract", playerId: "player", kind: "business" });
     state = applyPlayerCommand(state, { type: "acceptContract", playerId: "player", kind: "dataCenter" });
     state = tickMatch(state, 0.1);
@@ -354,7 +375,7 @@ describe("match", () => {
     const afterProduction = selectProductionConsoleState(state);
     const afterDispatch = selectDispatchConsoleState(state);
 
-    expect(afterProduction.thermalCapacityMW).toBe(before.thermalCapacityMW + GAME_CONFIG.upgrades.thermal.capacityMW);
+    expect(afterProduction.thermalCapacityMW).toBe(GAME_CONFIG.assets.plantLevels.thermalMW[1]);
     expect(afterDispatch.plants.boiler.level).toBe(2);
     expect(afterDispatch.deterministicMaxCapacityMW).toBeGreaterThan(before.deterministicMaxCapacityMW);
     expect(afterDispatch.contractCapacityBasisMW).toBeGreaterThan(before.contractCapacityBasisMW);

@@ -27,13 +27,13 @@ export function createInitialPlayerState(id: PlayerId): PlayerState {
 
   const emptyOutputs = {
     nuclearOutputMW: GAME_CONFIG.assets.nuclear.initialOutputMW,
-    thermalOutputMW: 0,
+    thermalOutputMW: capacities.thermalCapacityMW * GAME_CONFIG.assets.thermal.initialThrottle,
     solarOutputMW: 0,
     windOutputMW: 0,
     damOutputMW: 0,
     damAbsorbMW: 0,
-    rawProductionMW: GAME_CONFIG.assets.nuclear.initialOutputMW,
-    deliveredSupplyMW: GAME_CONFIG.assets.nuclear.initialOutputMW,
+    rawProductionMW: GAME_CONFIG.assets.nuclear.initialOutputMW + capacities.thermalCapacityMW * GAME_CONFIG.assets.thermal.initialThrottle,
+    deliveredSupplyMW: GAME_CONFIG.assets.nuclear.initialOutputMW + capacities.thermalCapacityMW * GAME_CONFIG.assets.thermal.initialThrottle,
     thermalHeat: 0,
     storedWaterMWh: capacities.waterDamCapacityMWh * GAME_CONFIG.assets.waterDam.initialStoredRatio,
     plantStates: {
@@ -54,7 +54,7 @@ export function createInitialPlayerState(id: PlayerId): PlayerState {
     targetMarketShare: GAME_CONFIG.players.startingSubscribedLoadShare,
     controls: {
       nuclearTargetMW: GAME_CONFIG.assets.nuclear.initialOutputMW,
-      thermalThrottle: 0,
+      thermalThrottle: GAME_CONFIG.assets.thermal.initialThrottle,
       waterDamMode: "hold",
       windEnabled: true,
     },

@@ -1,5 +1,3 @@
-import { GAME_CONFIG } from "./config";
-import { clamp01, lerp } from "./math";
 import type { PublicEventState, TimelineToken } from "./types";
 
 type ScriptedEvent = {
@@ -70,9 +68,6 @@ export function getPublicEventState(timeSeconds: number): PublicEventState {
     }
   }
 
-  const finalRamp = clamp01((timeSeconds - 110) / 20);
-  const finalDemandBonusMW = lerp(0, GAME_CONFIG.demand.baseTotalMW * 0.18, finalRamp);
-
   return {
     tokens,
     householdMultiplier,
@@ -80,6 +75,5 @@ export function getPublicEventState(timeSeconds: number): PublicEventState {
     dataCenterMultiplier,
     solarFactorMultiplier,
     windKmhOverride,
-    finalDemandBonusMW,
   };
 }
