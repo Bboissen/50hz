@@ -42,6 +42,68 @@ describe("match", () => {
     expect(impact.activeEvents.some((event) => event.id === "footballFinal" && event.phase === "impact")).toBe(true);
   });
 
+  it("opens the scripted business contract offer once", () => {
+    const before = tickFor(GAME_CONFIG.contracts.offerSchedule[0].startsAtSeconds - 1);
+    const active = tickMatch(before, 1.1);
+    const offer = selectDispatchConsoleState(active).contractOffer;
+
+    expect(selectDispatchConsoleState(before).contractOffer).toBeUndefined();
+    expect(offer?.kind).toBe("business");
+    expect(offer?.loadMW).toBe(GAME_CONFIG.contracts.types.business.loadMW);
+    expect(offer?.remainingSeconds).toBe(GAME_CONFIG.contracts.offerWindowSeconds);
+  });
+
+  it("accepts only the active contract offer and removes it", () => {
+    let state = tickFor(GAME_CONFIG.contracts.offerSchedule[0].startsAtSeconds + 1);
+
+    state = applyPlayerCommand(state, { type: "acceptContract", playerId: "player", kind: "business" });
+    const repeated = applyPlayerCommand(state, { type: "acceptContract", playerId: "player", kind: "business" });
+
+    expect(state.players.player.activeContracts).toHaveLength(1);
+    expect(state.contractOffers[0].status).toBe("accepted");
+    expect(selectDispatchConsoleState(state).contractOffer).toBeUndefined();
+    expect(repeated.players.player.activeContracts).toHaveLength(1);
+  });
+
+  it("declines and auto-declines active contract offers", () => {
+    let declined = tickFor(GAME_CONFIG.contracts.offerSchedule[0].startsAtSeconds + 1);
+    const offerId = declined.contractOffers[0].id;
+    declined = applyPlayerCommand(declined, { type: "declineContract", offerId });
+
+    let timedOut = tickFor(GAME_CONFIG.contracts.offerSchedule[0].startsAtSeconds + 1);
+    timedOut = tickMatch(timedOut, GAME_CONFIG.contracts.offerWindowSeconds + 0.1);
+
+    expect(declined.contractOffers[0].status).toBe("declined");
+    expect(declined.players.player.activeContracts).toHaveLength(0);
+    expect(timedOut.contractOffers[0].status).toBe("declined");
+    expect(selectDispatchConsoleState(timedOut).contractOffer).toBeUndefined();
+  });
+
+  it("pauses the contract offer countdown while breaker reset is required", () => {
+    let state = tickFor(GAME_CONFIG.contracts.offerSchedule[0].startsAtSeconds + 1);
+    const remaining = state.contractOffers[0].remainingSeconds;
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        player: {
+          ...state.players.player,
+          runtime: {
+            ...state.players.player.runtime,
+            breakerTrippedSeconds: 8,
+            lastBreakerReason: "underload",
+          },
+        },
+      },
+    };
+
+    state = tickMatch(state, 2);
+
+    expect(state.contractOffers[0].status).toBe("active");
+    expect(state.contractOffers[0].remainingSeconds).toBe(remaining);
+    expect(selectDispatchConsoleState(state).breakerResetRequired).toBe(true);
+  });
+
   it("increases cash and score from cash gain", () => {
     const before = createInitialMatchState();
     const after = tickMatch(before, 1);
@@ -328,8 +390,8 @@ describe("match", () => {
         },
       },
     };
-    state = applyPlayerCommand(state, { type: "acceptContract", playerId: "player", kind: "business" });
-    state = applyPlayerCommand(state, { type: "acceptContract", playerId: "player", kind: "dataCenter" });
+    state = applyPlayerCommand(state, { type: "forceAcceptContract", playerId: "player", kind: "business" });
+    state = applyPlayerCommand(state, { type: "forceAcceptContract", playerId: "player", kind: "dataCenter" });
     state = tickMatch(state, 0.1);
 
     expect(state.players.player.strikes).toBe(1);
@@ -339,7 +401,7 @@ describe("match", () => {
 
   it("does not complete and reward a contract on the same tick that trips the breaker", () => {
     let state = createInitialMatchState();
-    state = applyPlayerCommand(state, { type: "acceptContract", playerId: "player", kind: "business" });
+    state = applyPlayerCommand(state, { type: "forceAcceptContract", playerId: "player", kind: "business" });
     state = applyPlayerCommand(state, { type: "setNuclearTarget", playerId: "player", targetMW: 0 });
     state = applyPlayerCommand(state, { type: "setThermalThrottle", playerId: "player", throttle: 0 });
     state = applyPlayerCommand(state, { type: "setWindEnabled", playerId: "player", enabled: false });
@@ -357,13 +419,13 @@ describe("match", () => {
     state = tickMatch(state, 2);
 
     const player = state.players.player;
-    const expectedPenalty = GAME_CONFIG.strike.scorePenalty + GAME_CONFIG.contracts.business.strikeScorePenalty;
+    const expectedPenalty = GAME_CONFIG.strike.scorePenalty + GAME_CONFIG.contracts.types.business.strikeScorePenalty;
 
     expect(player.strikes).toBe(1);
     expect(player.activeContracts).toHaveLength(1);
     expect(player.cash).toBeCloseTo(before.cash - GAME_CONFIG.strike.cashPenalty);
     expect(player.score).toBeCloseTo(before.score - expectedPenalty);
-    expect(player.runtime.lastBreakerTripSummary?.contractScorePenalty).toBe(GAME_CONFIG.contracts.business.strikeScorePenalty);
+    expect(player.runtime.lastBreakerTripSummary?.contractScorePenalty).toBe(GAME_CONFIG.contracts.types.business.strikeScorePenalty);
     expect(player.runtime.lastBreakerTripSummary?.totalScorePenalty).toBe(expectedPenalty);
   });
 

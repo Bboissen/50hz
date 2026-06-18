@@ -159,34 +159,24 @@ export const GAME_CONFIG = {
 
   contracts: {
     offerMode: 'first-come-first-served',
-    business: {
-      loadMW: 15,
-      durationSeconds: 45,
-      completionCashReward: 35,
-      strikeScorePenalty: 70,
-    },
-    dataCenter: {
-      loadMW: 25,
-      durationSeconds: 35,
-      completionCashReward: 60,
-      strikeScorePenalty: 140,
-    },
-  },
-
-  cards: {
-    cloudFront: {
-      cost: 30,
-      cooldownSeconds: 25,
-      warningSeconds: 2,
-      durationSeconds: 8,
-      opponentRenewableSolarFactorMultiplier: 0.65,
-    },
-    windStorm: {
-      cost: 30,
-      cooldownSeconds: 25,
-      warningSeconds: 2,
-      durationSeconds: 8,
-      opponentWindKmh: 100,
+    offerWindowSeconds: 5,
+    offerSchedule: [
+      { id: 'business-1', kind: 'business', startsAtSeconds: 3 },
+      { id: 'data-center-1', kind: 'dataCenter', startsAtSeconds: 75 },
+    ],
+    types: {
+      business: {
+        loadMW: 15,
+        durationSeconds: 45,
+        completionCashReward: 35,
+        strikeScorePenalty: 70,
+      },
+      dataCenter: {
+        loadMW: 25,
+        durationSeconds: 35,
+        completionCashReward: 60,
+        strikeScorePenalty: 140,
+      },
     },
   },
 };

@@ -24,7 +24,6 @@ Manual actions include:
 - filling or draining the water dam,
 - accepting fixed-load contracts,
 - resetting breakers,
-- playing cards,
 - buying upgrades under pressure.
 
 ## AX-02 — Better efficiency means lower price
@@ -112,9 +111,9 @@ forecast warning -> player response window -> event impact -> recovery
 
 Punishment should be tied to player reaction.
 
-## AX-10 — Cards create stress, not instant unavoidable failure
+## AX-10 — Optional contracts create stress, not instant unavoidable failure
 
-Bonus/malus cards should force decisions and screen switching. They should not instantly decide the match with no counterplay.
+Fixed-contract offers should tempt the player into extra load and revenue. They should not replace public event warnings or instantly decide the match with no counterplay.
 
 ## AX-11 — Synthetic balance beats realism for MVP
 

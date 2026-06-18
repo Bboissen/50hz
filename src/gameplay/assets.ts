@@ -1,6 +1,6 @@
 import { GAME_CONFIG } from "./config";
 import { clamp, clamp01, moveTowards } from "./math";
-import type { AssetCapacities, AssetOutputs, AssetRuntime, GenerationControls, IncomingAttack, PlantOutputState } from "./types";
+import type { AssetCapacities, AssetOutputs, AssetRuntime, GenerationControls, PlantOutputState } from "./types";
 
 export function windFactor(speedKmh: number): number {
   const config = GAME_CONFIG.assets.renewable;
@@ -22,7 +22,6 @@ export function updateAssetOutputs(args: {
   solarFactor: number;
   windKmh: number;
   rainActive?: boolean;
-  incomingAttacks?: IncomingAttack[];
 }): { runtime: AssetRuntime; outputs: AssetOutputs } {
   const storageSecondsPerMWh = GAME_CONFIG.assets.waterDam.storageSecondsPerMWh;
   const gridDown = args.runtime.breakerTrippedSeconds > 0;
@@ -45,19 +44,8 @@ export function updateAssetOutputs(args: {
     thermalOutputMW *= GAME_CONFIG.assets.thermal.outputMultiplierWhenOverheated;
   }
 
-  let effectiveSolarFactor = clamp01(args.solarFactor);
-  let effectiveWindKmh = args.windKmh;
-  for (const attack of args.incomingAttacks ?? []) {
-    if (attack.warningRemainingSeconds <= 0 && attack.activeRemainingSeconds > 0 && attack.kind === "cloudFront") {
-      effectiveSolarFactor *= GAME_CONFIG.cards.cloudFront.opponentRenewableSolarFactorMultiplier;
-    }
-    if (attack.warningRemainingSeconds <= 0 && attack.activeRemainingSeconds > 0 && attack.kind === "windStorm") {
-      effectiveWindKmh = GAME_CONFIG.cards.windStorm.opponentWindKmh;
-    }
-  }
-
-  let solarOutputMW = args.capacities.solarPeakMW * effectiveSolarFactor;
-  let windOutputMW = args.controls.windEnabled ? args.capacities.windPeakMW * windFactor(effectiveWindKmh) : 0;
+  let solarOutputMW = args.capacities.solarPeakMW * clamp01(args.solarFactor);
+  let windOutputMW = args.controls.windEnabled ? args.capacities.windPeakMW * windFactor(args.windKmh) : 0;
   let gridNuclearOutputMW = nuclearOutputMW;
   let gridThermalOutputMW = thermalOutputMW;
   const plantStates: AssetOutputs["plantStates"] = {

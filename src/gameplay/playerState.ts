@@ -1,16 +1,11 @@
 import { GAME_CONFIG } from "./config";
-import type { CardKind, PlayerId, PlayerState, UpgradeKind } from "./types";
+import type { PlayerId, PlayerState, UpgradeKind } from "./types";
 
 const emptyUpgradePurchases = (): Record<UpgradeKind, number> => ({
   renewable: 0,
   thermal: 0,
   nuclear: 0,
   waterDam: 0,
-});
-
-const emptyCardCooldowns = (): Record<CardKind, number> => ({
-  cloudFront: 0,
-  windStorm: 0,
 });
 
 export function createInitialPlayerState(id: PlayerId): PlayerState {
@@ -74,8 +69,6 @@ export function createInitialPlayerState(id: PlayerId): PlayerState {
     activeContracts: [],
     upgradesInProgress: [],
     upgradePurchases: emptyUpgradePurchases(),
-    cardCooldowns: emptyCardCooldowns(),
-    incomingAttacks: [],
     lastCashGain: 0,
     lastEfficiency: 1,
     lastPrice: GAME_CONFIG.market.minPrice,

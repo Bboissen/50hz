@@ -1,7 +1,6 @@
 import { Container, Graphics, Text } from "pixi.js";
 
 import type {
-  DispatchCardState,
   DispatchConsoleState,
   EventTracePoint,
   PlantKey,
@@ -21,7 +20,6 @@ const BOUNDS = {
   diorama: { x: 64, y: 196, w: 1792, h: 488 },
   upgrades: { x: 54, y: 726, w: 500, h: 318 },
   meter: { x: 590, y: 710, w: 650, h: 334 },
-  cards: { x: 1276, y: 726, w: 592, h: 318 },
 } satisfies Record<string, Rect>;
 
 const PIXEL = {
@@ -652,6 +650,34 @@ class VuGridPressureMeter extends Container {
       14,
       state.breakerResetRequired ? this.tokens.colors.overloadRed : PIXEL.cream,
     );
+    this.drawActiveContractTickets(state);
+  }
+
+  private drawActiveContractTickets(state: DispatchConsoleState): void {
+    const x = this.bounds.x + 366;
+    const y = this.bounds.y + 190;
+    const w = 226;
+    const h = 48;
+    const contracts = state.activeContracts.slice(0, 2);
+
+    if (contracts.length === 0) {
+      this.g.rect(x, y, w, h).fill({ color: 0x263026 }).stroke({ color: PIXEL.black, width: 3 });
+      addLabel(this.labelLayer, "NO FIXED CONTRACT", x + 18, y + 16, 13, PIXEL.cream);
+      return;
+    }
+
+    contracts.forEach((contract, index) => {
+      const rowY = y + index * (h + 6);
+      this.g
+        .rect(x, rowY, w, h)
+        .fill({ color: 0x17231c })
+        .stroke({ color: this.tokens.colors.amberWarn, width: 3 })
+        .rect(x + 8, rowY + 8, 42, h - 16)
+        .fill({ color: this.tokens.colors.dataCyan });
+      addLabel(this.labelLayer, `${contract.loadMW.toFixed(0)}MW`, x + 12, rowY + 18, 12, PIXEL.black);
+      addLabel(this.labelLayer, contract.title.replace(" CONTRACT", ""), x + 62, rowY + 8, 12, PIXEL.cream);
+      addLabel(this.labelLayer, `${Math.ceil(contract.remainingSeconds)}s REMAIN`, x + 62, rowY + 26, 12, this.tokens.colors.amberWarn);
+    });
   }
 
   private drawMeterFace(cx: number, cy: number, radius: number, ratio: number, redStart: number, jitter: number): void {
@@ -731,74 +757,6 @@ class VuGridPressureMeter extends Container {
   }
 }
 
-class DispatchCardsPanel extends Container {
-  private readonly g = new Graphics();
-
-  public constructor(private readonly bounds: Rect, private readonly sink: CommandSink, private readonly tokens: DesignTokens) {
-    super();
-    this.addChild(this.g);
-  }
-
-  public update(state: DispatchConsoleState): void {
-    this.removeChildren();
-    this.addChild(this.g);
-    pixelPanel(this.g.clear(), this.bounds, PIXEL.paper);
-    addLabel(this, "DISPATCH CARDS", this.bounds.x + 38, this.bounds.y + 28, 18, PIXEL.black);
-    state.cards.slice(0, 4).forEach((card, index) => this.addCard(card, index, state.timeSeconds));
-  }
-
-  private addCard(card: DispatchCardState, index: number, timeSeconds: number): void {
-    const cardW = 126;
-    const cardH = 218;
-    const gap = 14;
-    const x = this.bounds.x + 28 + index * (cardW + gap);
-    const y = this.bounds.y + 72 + (card.state === "available" ? Math.sin(timeSeconds * 5 + index) * 2 : 8);
-    const root = new Container();
-    root.eventMode = card.state === "available" ? "static" : "passive";
-    root.cursor = card.state === "available" ? "pointer" : "default";
-    root.on("pointertap", () => {
-      if (card.id === "business" || card.id === "dataCenter") {
-        this.sink({ type: "acceptContract", playerId: "player", kind: card.id });
-      } else {
-        this.sink({ type: "playCard", playerId: "player", kind: card.id as "cloudFront" | "windStorm" });
-      }
-    });
-
-    const shell = new Graphics()
-      .rect(x, y, cardW, cardH)
-      .fill({ color: card.state === "disabled" ? 0x948a70 : 0xe2d19f })
-      .stroke({ color: card.type === "offense" ? this.tokens.colors.overloadRed : PIXEL.black, width: 4 })
-      .rect(x + 16, y + 54, cardW - 32, 50)
-      .fill({ color: card.type === "offense" ? 0x351412 : 0x2f3b2b })
-      .rect(x + 16, y + 184, cardW - 32, 12)
-      .fill({ color: PIXEL.black })
-      .rect(x + 16, y + 184, (cardW - 32) * (1 - card.cooldownRatio), 12)
-      .fill({ color: this.tokens.colors.phosphorGreen });
-    drawWeatherIcon(shell, card.id, x + 42, y + 66, 3);
-
-    const title = makeLabel(shortTitle(card.title), 13, PIXEL.black, "center");
-    title.style.wordWrap = true;
-    title.style.wordWrapWidth = cardW - 20;
-    title.position.set(x + 10, y + 14);
-    const effect = makeLabel(shortEffect(card.effectText), 12, PIXEL.black, "center");
-    effect.style.wordWrap = true;
-    effect.style.wordWrapWidth = cardW - 20;
-    effect.position.set(x + 10, y + 118);
-    const stateLabel = makeLabel(card.state.toUpperCase(), 10, card.state === "available" ? PIXEL.black : this.tokens.colors.smokeGrey, "center");
-    stateLabel.position.set(x + 12, y + 166);
-    root.addChild(shell, title, effect, stateLabel);
-    this.addChild(root);
-  }
-}
-
-function shortTitle(title: string): string {
-  return title.replace("DEMAND RESPONSE", "DEMAND\nRESPONSE").replace("BUSINESS CONTRACT", "BUSINESS\nCONTRACT").replace("DATA CONTRACT", "DATA\nCONTRACT").replace("WIND STORM", "WIND\nSTORM").replace("CLOUD FRONT", "CLOUD\nFRONT");
-}
-
-function shortEffect(effect: string): string {
-  return effect.replace("RIVAL SOLAR DOWN", "RIVAL\nSOLAR DOWN").replace("RIVAL WIND CUTOUT", "RIVAL\nWIND CUT").replace("-15% LOAD / -TRUST", "-15% LOAD\n-TRUST").replace(" / ", "\n");
-}
-
 class AlarmOverlay extends Container {
   private readonly flash = new Graphics();
   private readonly stamp = makeLabel("TRIP", 116, DESIGN_TOKENS.colors.overloadRed);
@@ -826,14 +784,12 @@ export class DispatchConsoleScreen extends Container {
   private readonly topStrip = new TopStatusStrip(this.tokens);
   private readonly upgrades: PlantRack;
   private readonly meter = new VuGridPressureMeter(BOUNDS.meter, this.tokens);
-  private readonly cards: DispatchCardsPanel;
   private readonly alarmOverlayLayer = new AlarmOverlay();
 
   public constructor(_assets: AssetResolver, sink: CommandSink) {
     super();
     this.upgrades = new PlantRack(BOUNDS.upgrades, sink, this.tokens);
-    this.cards = new DispatchCardsPanel(BOUNDS.cards, sink, this.tokens);
-    this.addChild(this.backgroundLayer, this.diorama, this.topStrip, this.upgrades, this.meter, this.cards, this.alarmOverlayLayer);
+    this.addChild(this.backgroundLayer, this.diorama, this.topStrip, this.upgrades, this.meter, this.alarmOverlayLayer);
     this.drawBackground();
   }
 
@@ -842,7 +798,6 @@ export class DispatchConsoleScreen extends Container {
     this.diorama.update(state);
     this.upgrades.update(state);
     this.meter.update(state);
-    this.cards.update(state);
     this.alarmOverlayLayer.update(state);
   }
 

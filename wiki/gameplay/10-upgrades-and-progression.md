@@ -84,7 +84,7 @@ Players can specialize through upgrade sequence.
 | Reliable provider | Nuclear + thermal | Stable dependable capacity | Slow/expensive |
 | Crisis survivor | Thermal + water dam | Handles events | Heat/cost pressure if overused |
 | Storage operator | Water dam first | Buffers underload/overload events | Limited stored energy |
-| Aggressive market grabber | Renewable + PR cards | Fast growth | Breaker risk |
+| Aggressive market grabber | Renewable + fixed contracts | Fast growth | Breaker risk |
 
 
 Do not subtract from score/cumulative revenue. Score should track generated value; cash is spendable.

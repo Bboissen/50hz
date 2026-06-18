@@ -59,7 +59,7 @@ This is a **diagnostic and intervention screen**, not a passive dashboard.
 |---|---:|---:|---|
 | Top anticipation strip | 36–174 | 138 px | Cash, weather, incoming incidents |
 | Middle confrontation | 186–654 | 468 px | Player vs city vs rival |
-| Bottom operator console | 672–1044 | 372 px | Upgrades, meter, cards |
+| Bottom operator console | 672–1044 | 372 px | Upgrades and grid pressure meter |
 
 ## Suggested zone bounds
 
@@ -77,7 +77,7 @@ Use these as implementation defaults, not strict art constraints.
 | `RivalGridStack` | `1581,186,303,468` | Low-medium | Monitored, not clickable |
 | `UpgradeRack` | `36,672,495,372` | High | Clickable upgrades; lamps show levels |
 | `GridPressureMeter` | `549,672,672,372` | Highest bottom priority | Largest iconic dual indicator |
-| `DispatchCardsPanel` | `1239,672,645,372` | High | 3–5 playable cards max |
+| `ContractOfferModal` | centered overlay | Conditional high | Fixed-contract accept/decline modal only |
 
 ## Reading order
 
@@ -88,7 +88,7 @@ Design for this eye path:
 2. Contract Split under the city
 3. City sector pressure
 4. Grid Pressure Meter
-5. Dispatch Cards / Upgrade Rack
+5. Contract offer modal / Upgrade Rack
 6. Forecast Tape / Incident Queue
 ```
 
@@ -100,7 +100,7 @@ Design for this eye path:
 | 2 | City Load Window | Animated pixel diorama; sector lights and overload states |
 | 3 | Tariff Boards | Large mechanical digits; easy comparison |
 | 4 | Contract Split | Centered under city; directly links price to load share |
-| 5 | Dispatch Cards | Large enough for title + icon + one effect line |
+| 5 | Contract Offer Modal | Blocking offer, accept/decline buttons, 5s countdown |
 | 6 | Incident Queue | Top row, warning tokens moving toward NOW |
 | 7 | Upgrade Rack | Functional, compact; lamps and prices |
 | 8 | Generation Stacks | Small contextual cards/icons |
@@ -109,7 +109,7 @@ Design for this eye path:
 ## Density rules
 
 - Show at most **3 city sectors**.
-- Show at most **5 dispatch cards**.
+- Do not show a bottom-right dispatch-card row.
 - Show at most **4 upcoming time buckets**: `NOW`, `+15s`, `+30s`, `+45s`.
 - Show at most **3 plant categories**.
 - Avoid stat blocks inside the city. Use lamps and icons.
@@ -120,7 +120,7 @@ Design for this eye path:
 1. Grid Pressure Meter.
 2. City Load Window.
 3. Tariff Boards.
-4. Dispatch Cards.
+4. Contract Offer Modal when active.
 
 ## What should be smaller
 
@@ -135,7 +135,7 @@ Design for this eye path:
 | Zone | Interactive? | Visual cue |
 |---|---|---|
 | Upgrade Rack | Yes | Raised buttons, green lamps, cost labels |
-| Dispatch Cards | Yes | Card hover/lift, stamp on play |
+| Contract Offer Modal | Yes when offer-active | Blocking center overlay; accept/decline buttons and countdown |
 | Breaker Reset Modal | Yes when grid-down | Blocking center overlay; arm switch then hold fuse button |
 | City sectors | Optional inspect only | Not button-like in MVP |
 | Player Generation Stack | Optional inspect only | Lightly highlighted |
@@ -170,11 +170,11 @@ DispatchConsoleRoot
 │  └─ RivalGridStack
 ├─ OperatorConsoleLayer
 │  ├─ UpgradeRack
-│  ├─ GridPressureMeter
-│  └─ DispatchCardsPanel
+│  └─ GridPressureMeter
 ├─ AlarmOverlayLayer
 │  ├─ OverloadFlash
 │  └─ StrikeStamp
+├─ ContractOfferModal
 ├─ BreakerResetModal
 │  ├─ HazardSwitch_OFF_ON
 │  └─ FuseHoldButton
@@ -187,10 +187,10 @@ DispatchConsoleRoot
 |---|---|
 | Player does not understand why winning customers is dangerous | Put `Contract Split` directly under city and animate it before meter rises |
 | Player mistakes Grid Pressure for total city demand | Label it `YOUR GRID PRESSURE`; show capacity utilization separately from load balance |
-| Event queue and playable cards feel identical | Use `Incident Queue` for incoming shocks and `Dispatch Cards` for player actions |
+| Event queue and fixed contracts feel identical | Use `Incident Queue` for incoming shocks and a centered modal for contract offers |
 | Rival looks clickable | Desaturate rival assets; no hover state; use surveillance-monitor framing |
 | Breaker reset is missed during grid-down | Use a blocking center modal that absorbs underlying clicks until reset completes |
-| Screen looks like SaaS | Heavy frames, screws, CRT glow, analog meter, paper cards |
+| Screen looks like SaaS | Heavy frames, screws, CRT glow, analog meter, and industrial modal controls |
 
 ## Acceptance criteria
 

@@ -26,7 +26,6 @@ src/gameplay/
   assets.ts
   breaker.ts
   events.ts
-  cards.ts
   contracts.ts
   upgrades.ts
   match.ts
@@ -203,5 +202,5 @@ Formula owners:
 | Customer movement | `05-demand-and-customers.md` |
 | Asset dynamics | `07-generation-assets.md` |
 | Breaker/strikes | `08-grid-overload-and-reliability.md` |
-| Events/cards | `09-events-and-cards.md` |
+| Events/contracts | `09-events-and-cards.md` |
 | Upgrades | `10-upgrades-and-progression.md` |

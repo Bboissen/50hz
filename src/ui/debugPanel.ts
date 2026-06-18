@@ -96,14 +96,12 @@ export function createDebugPanel(options: DebugPanelOptions): DebugPanel {
       options.onCommand({ type: "setWaterDamMode", playerId: "player", mode: "hold" });
     }),
     button("Capacity trip scenario", () => {
-      options.onCommand({ type: "acceptContract", playerId: "player", kind: "business" });
-      options.onCommand({ type: "acceptContract", playerId: "player", kind: "dataCenter" });
+      options.onCommand({ type: "forceAcceptContract", playerId: "player", kind: "business" });
+      options.onCommand({ type: "forceAcceptContract", playerId: "player", kind: "dataCenter" });
     }),
     button("Hold reset 2.1s", () => options.onCommand({ type: "holdBreakerReset", playerId: "player", seconds: 2.1 })),
-    button("Cloud front", () => options.onCommand({ type: "playCard", playerId: "player", kind: "cloudFront" })),
-    button("Wind storm", () => options.onCommand({ type: "playCard", playerId: "player", kind: "windStorm" })),
-    button("Business contract", () => options.onCommand({ type: "acceptContract", playerId: "player", kind: "business" })),
-    button("Data contract", () => options.onCommand({ type: "acceptContract", playerId: "player", kind: "dataCenter" })),
+    button("Business contract", () => options.onCommand({ type: "forceAcceptContract", playerId: "player", kind: "business" })),
+    button("Data contract", () => options.onCommand({ type: "forceAcceptContract", playerId: "player", kind: "dataCenter" })),
     button("Pause", () => options.onCommand({ type: "pause" })),
     button("Resume", () => options.onCommand({ type: "resume" })),
     button("Reset demo", options.onReset),
@@ -135,6 +133,7 @@ export function createDebugPanel(options: DebugPanelOptions): DebugPanel {
         `breakerState=${dispatch.breakerLifecycle} gridDown=${dispatch.isGridDown} resetRequired=${dispatch.breakerResetRequired} resetProgress=${(dispatch.breakerResetProgress * 100).toFixed(0)}% reason=${dispatch.breakerTripReason ?? "none"}`,
         `resetCost=${dispatch.breakerResetCost} canReset=${dispatch.canAffordBreakerReset} relief=${dispatch.gridShutdownReliefSeconds.toFixed(1)}s gameOver=${production.gameOverReason ?? "none"}`,
         `breakerStatus=${dispatch.breakerStatusText}`,
+        `contractOffer=${dispatch.contractOffer?.kind ?? "none"} offerRemaining=${(dispatch.contractOffer?.remainingSeconds ?? 0).toFixed(1)}s activeContracts=${dispatch.activeContracts.length}`,
         `lastPenalty=cash-${dispatch.lastBreakerTripSummary?.cashPenalty ?? 0} score-${dispatch.lastBreakerTripSummary?.totalScorePenalty ?? 0} subscriberLoss=${((dispatch.lastBreakerTripSummary?.subscriberLossRatio ?? 0) * 100).toFixed(0)}%`,
         `event=${dispatch.activeEventLabel}`,
         `nuclear=${production.nuclearOutputMW.toFixed(1)}/${production.nuclearTargetMW.toFixed(1)} state=${production.plantStates.nuclear} cap=${production.nuclearCapacityMW.toFixed(1)} thermal=${(production.thermalThrottle * 100).toFixed(0)}% thermalState=${production.plantStates.thermal} cap=${production.thermalCapacityMW.toFixed(1)} heat=${(production.thermalHeat * 100).toFixed(0)}%`,

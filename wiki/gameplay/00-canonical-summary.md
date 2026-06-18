@@ -22,7 +22,7 @@ The player manages several operational surfaces under time pressure:
 - grid overload monitors,
 - customer/market pressure,
 - weather and event forecast,
-- bonus/malus cards,
+- fixed-contract offers,
 - upgrade panel.
 
 The pace should be closer to **manual crisis management** than to a spreadsheet simulation.
@@ -68,7 +68,7 @@ high contract utilization, supply within 5% of demand
 | Supply/demand balance | Measures real-time delivered supply against current demand |
 | Breaker risk | Converts unmanaged overload or underload into trips/strikes |
 | Manual controls | Give the player real-time responsibility |
-| Events/cards | Create synchronized shocks and tactical decisions |
+| Events/contracts | Events create synchronized shocks; fixed contracts create optional load commitments |
 | Upgrades | Expand capacity but can reduce efficiency if bought too early |
 
 ## MVP boundaries

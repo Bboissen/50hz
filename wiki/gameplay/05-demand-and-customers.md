@@ -36,7 +36,7 @@ Each sector has three physical demand levels. Level 1 is the starting state. Lev
 | Data centers | 45 MW | 65 MW | 85 MW |
 | **Total if all same level** | **140 MW** | **200 MW** | **260 MW** |
 
-Public events, weather, and cards can temporarily multiply sector demand, but they do not own the baseline progression. Final pressure comes from sectors reaching level 3, not from a separate final demand bonus.
+Public events and weather can temporarily multiply sector demand, but they do not own the baseline progression. Fixed contracts add committed load on top of customer demand. Final pressure comes from sectors reaching level 3, not from a separate final demand bonus.
 
 Rain and snow increase household demand by 3%, representing heating, lighting, and indoor activity. This modifier stacks with public event multipliers.
 

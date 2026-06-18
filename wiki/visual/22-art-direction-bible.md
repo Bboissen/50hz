@@ -47,7 +47,7 @@ Use muted industrial colors and reserve saturated colors for state changes.
 | `panelGreen` | `#1f2b22` | Main metal panels |
 | `oxideGreen` | `#3d4b36` | Secondary panels, worn edges |
 | `fadedOlive` | `#7b8060` | Bevels, inactive frames, old plastic |
-| `paperTan` | `#c8b982` | Labels, cards, paper tape |
+| `paperTan` | `#c8b982` | Labels, contract notices, paper tape |
 | `phosphorGreen` | `#8dfc7a` | CRT text, active lamps |
 | `amberWarn` | `#ffbd45` | Strain, warning, incoming incidents |
 | `overloadRed` | `#e34b35` | Overload, trip, rival malus |
@@ -89,7 +89,7 @@ Do not implement complex lighting for MVP. Use flat colors, small glow sprites, 
 | Lamps | Small glass bulbs with hard on/off states |
 | Tariff displays | Mechanical flip board or segmented digits |
 | Forecast / incidents | Paper tape or CRT ticker |
-| Dispatch cards | Paper files, punch cards, stamped forms |
+| Contract modal | Municipal notice, punch form, stamped terms |
 | Meter | Dusty glass, printed arc, physical needle |
 | City | Pixel diorama inside CRT/map window |
 
@@ -117,7 +117,7 @@ Use two typographic modes.
 | Use | Style |
 |---|---|
 | Numeric readouts | Blocky segmented digits or pixel mono |
-| Labels / cards | Condensed all-caps pixel mono |
+| Labels / contract terms | Condensed all-caps pixel mono |
 
 Rules:
 

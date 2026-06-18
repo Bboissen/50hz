@@ -45,7 +45,7 @@ Multiplayer is not part of the first release plan.
 The hackathon demo should show the core loop in under 30 seconds:
 
 ```txt
-efficient contract load -> lower price -> more customers -> more revenue -> supply/demand pressure -> breaker risk -> upgrades/events/cards
+efficient contract load -> lower price -> more customers -> more revenue -> supply/demand pressure -> breaker risk -> upgrades/events/fixed contracts
 ```
 
 Match duration target: **180-300 seconds**.

@@ -44,7 +44,7 @@ The prototype needs only five:
 2. red overload lamp blinks
 3. city lights flicker/pulse
 4. Contract Split current share and target marker shift
-5. cards slide/stamp
+5. contract modal snaps in and active-contract ticket counts down
 ```
 
 Everything else is polish.
@@ -112,7 +112,7 @@ Use:
 | Main panel frames | Stability; console feels heavy |
 | Labels | Readability |
 | Rival plant icons | Avoid false click affordance |
-| Inactive cards | Reduce visual noise |
+| Inactive contract offers | They should not be visible |
 | Cash label | Functional only |
 
 ## Do not implement for MVP
@@ -132,4 +132,4 @@ The animation pass succeeds if the screen feels alive when:
 1. city demand spikes,
 2. the player becomes cheaper,
 3. grid pressure enters danger,
-4. a card is played.
+4. a fixed contract is accepted.

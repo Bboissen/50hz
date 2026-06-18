@@ -34,7 +34,7 @@ Use separate values.
 
 | Value | Meaning |
 |---|---|
-| `cash` | Spendable money for upgrades/cards |
+| `cash` | Spendable money for upgrades and breaker resets |
 | `score` | Cumulative profit generated during the match, minus strike penalties already applied when failures happen |
 
 Every tick:

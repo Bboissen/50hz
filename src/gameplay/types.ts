@@ -8,8 +8,8 @@ export type WaterDamMode = "fill" | "hold" | "drain";
 export type UpgradeKind = keyof typeof GAME_CONFIG.upgrades extends infer Key
   ? Exclude<Key, "repeatCostMultiplier">
   : never;
-export type ContractKind = keyof typeof GAME_CONFIG.contracts;
-export type CardKind = keyof typeof GAME_CONFIG.cards;
+export type ContractKind = keyof typeof GAME_CONFIG.contracts.types;
+export type ContractOfferStatus = "pending" | "active" | "accepted" | "declined";
 export type BreakerReason = "capacity-overload" | "underload" | "overload";
 export type BreakerLifecycleState = "safe" | "warning" | "tripped" | "awaiting-reset" | "reset-progress" | "recovered";
 export type BreakerRiskSource = "none" | "capacity" | "balance";
@@ -85,12 +85,6 @@ export type UpgradeInProgress = {
   remainingSeconds: number;
 };
 
-export type IncomingAttack = {
-  kind: Extract<CardKind, "cloudFront" | "windStorm">;
-  warningRemainingSeconds: number;
-  activeRemainingSeconds: number;
-};
-
 export type PlayerState = {
   id: PlayerId;
   devGodMode: boolean;
@@ -105,8 +99,6 @@ export type PlayerState = {
   activeContracts: ActiveContract[];
   upgradesInProgress: UpgradeInProgress[];
   upgradePurchases: Record<UpgradeKind, number>;
-  cardCooldowns: Record<CardKind, number>;
-  incomingAttacks: IncomingAttack[];
   lastCashGain: number;
   lastEfficiency: number;
   lastPrice: number;
@@ -149,6 +141,14 @@ export type EventTracePoint = {
   eventIntensity: number;
 };
 
+export type ContractOffer = {
+  id: string;
+  kind: ContractKind;
+  startsAtSeconds: number;
+  status: ContractOfferStatus;
+  remainingSeconds: number;
+};
+
 export type PlantKey = "reactor" | "boiler" | "renewables" | "waterDam";
 export type SectorKey = "homes" | "services" | "dataCenters";
 
@@ -178,15 +178,6 @@ export type SectorVisualState = {
   activeEventId?: string;
 };
 
-export type DispatchCardState = {
-  id: string;
-  title: string;
-  type: "defense" | "offense" | "fixedContract";
-  effectText: string;
-  state: "available" | "active" | "cooldown" | "disabled";
-  cooldownRatio: number;
-};
-
 export type PublicEventState = {
   tokens: TimelineToken[];
   householdMultiplier: number;
@@ -199,6 +190,7 @@ export type PublicEventState = {
 export type MatchState = {
   seed: MatchSeed;
   demandSchedule: DemandScheduleStep[];
+  contractOffers: ContractOffer[];
   timeSeconds: number;
   isPaused: boolean;
   players: Record<PlayerId, PlayerState>;
@@ -213,8 +205,9 @@ export type PlayerCommand =
   | { type: "setWindEnabled"; playerId: PlayerId; enabled: boolean }
   | { type: "holdBreakerReset"; playerId: PlayerId; seconds: number }
   | { type: "buyUpgrade"; playerId: PlayerId; kind: UpgradeKind }
-  | { type: "playCard"; playerId: PlayerId; kind: CardKind }
   | { type: "acceptContract"; playerId: PlayerId; kind: ContractKind }
+  | { type: "declineContract"; offerId: string }
+  | { type: "forceAcceptContract"; playerId: PlayerId; kind: ContractKind }
   | { type: "setGodMode"; playerId: PlayerId; enabled: boolean }
   | { type: "pause" }
   | { type: "resume" };
@@ -277,7 +270,8 @@ export type DispatchConsoleState = {
   forecast: TimelineToken[];
   incidents: TimelineToken[];
   eventTrace: EventTracePoint[];
-  cards: DispatchCardState[];
+  contractOffer?: ContractOfferState;
+  activeContracts: ActiveContractState[];
 };
 
 export type ProductionConsoleState = DispatchConsoleState & {
@@ -303,6 +297,26 @@ export type ProductionConsoleState = DispatchConsoleState & {
   breakerResetProgress: number;
   plantStates: AssetOutputs["plantStates"];
   gameOverReason?: GameOverReason;
+};
+
+export type ContractOfferState = {
+  id: string;
+  kind: ContractKind;
+  title: string;
+  loadMW: number;
+  durationSeconds: number;
+  completionCashReward: number;
+  strikeScorePenalty: number;
+  remainingSeconds: number;
+  countdownRatio: number;
+};
+
+export type ActiveContractState = {
+  id: string;
+  kind: ContractKind;
+  title: string;
+  loadMW: number;
+  remainingSeconds: number;
 };
 
 export type FinalResult = {

@@ -1,6 +1,5 @@
 import { updateAssetOutputs } from "./assets";
 import { updateBreakerRisk, computeSupplyDemandMismatch } from "./breaker";
-import { applyCardCostAndCooldown, createIncomingAttack, opponentOf, tickCards } from "./cards";
 import { GAME_CONFIG } from "./config";
 import { acceptContract, tickContracts } from "./contracts";
 import { generateDemandSchedule } from "./demand";
@@ -19,13 +18,15 @@ import { computeRevenueTick } from "./revenue";
 import { buyUpgrade, tickUpgrades } from "./upgrades";
 import { forecastWeather } from "./weather";
 import type {
+  ActiveContractState,
   BreakerLifecycleState,
   BreakerReason,
   BreakerRiskSource,
   BreakerTripSummary,
-  CardKind,
+  ContractKind,
+  ContractOffer,
+  ContractOfferState,
   DerivedPlayerStats,
-  DispatchCardState,
   DispatchConsoleState,
   FinalResult,
   MatchState,
@@ -37,11 +38,20 @@ import type {
   ProductionConsoleState,
 } from "./types";
 
+function createInitialContractOffers(): ContractOffer[] {
+  return GAME_CONFIG.contracts.offerSchedule.map((offer) => ({
+    ...offer,
+    status: "pending",
+    remainingSeconds: GAME_CONFIG.contracts.offerWindowSeconds,
+  }));
+}
+
 export function createInitialMatchState(options: { seed?: MatchSeed } = {}): MatchState {
   const seed = options.seed ?? GAME_CONFIG.match.defaultSeed;
   return {
     seed,
     demandSchedule: generateDemandSchedule(seed),
+    contractOffers: createInitialContractOffers(),
     timeSeconds: 0,
     isPaused: false,
     gameOverReason: undefined,
@@ -63,12 +73,32 @@ function updatePlayer(state: MatchState, player: PlayerState): MatchState {
   };
 }
 
+function contractTitle(kind: ContractKind): string {
+  return kind === "business" ? "BUSINESS CONTRACT" : "DATA CONTRACT";
+}
+
+function updateContractOfferStatus(
+  state: MatchState,
+  offerId: string,
+  status: ContractOffer["status"],
+): MatchState {
+  return {
+    ...state,
+    contractOffers: state.contractOffers.map((offer) => (offer.id === offerId ? { ...offer, status } : offer)),
+  };
+}
+
 export function applyPlayerCommand(state: MatchState, command: PlayerCommand): MatchState {
   if (command.type === "pause") {
     return { ...state, isPaused: true };
   }
   if (command.type === "resume") {
     return { ...state, isPaused: false };
+  }
+
+  if (command.type === "declineContract") {
+    const offer = state.contractOffers.find((candidate) => candidate.id === command.offerId && candidate.status === "active");
+    return offer ? updateContractOfferStatus(state, offer.id, "declined") : state;
   }
 
   const player = state.players[command.playerId];
@@ -178,27 +208,22 @@ export function applyPlayerCommand(state: MatchState, command: PlayerCommand): M
   }
 
   if (command.type === "acceptContract") {
+    const offer = state.contractOffers.find((candidate) => candidate.kind === command.kind && candidate.status === "active");
+    if (!offer) {
+      return state;
+    }
+    return updateContractOfferStatus(
+      updatePlayer(state, acceptContract(player, command.kind, Math.floor(state.timeSeconds))),
+      offer.id,
+      "accepted",
+    );
+  }
+
+  if (command.type === "forceAcceptContract") {
     return updatePlayer(state, acceptContract(player, command.kind, Math.floor(state.timeSeconds)));
   }
 
-  const withCost = applyCardCostAndCooldown(player, command.kind);
-  if (withCost === player) {
-    return state;
-  }
-
-  const opponentId = opponentOf(command.playerId);
-  const opponent = state.players[opponentId];
-  return {
-    ...state,
-    players: {
-      ...state.players,
-      [command.playerId]: withCost,
-      [opponentId]: {
-        ...opponent,
-        incomingAttacks: [...opponent.incomingAttacks, createIncomingAttack(command.kind as Extract<CardKind, "cloudFront" | "windStorm">)],
-      },
-    },
-  };
+  return state;
 }
 
 const BREAKER_RESET_HOLD_SECONDS = 2;
@@ -266,7 +291,7 @@ function tickOnePlayer(
   rainActive: boolean,
   dt: number,
 ): PlayerState {
-  let next = tickCards(tickUpgrades(player, dt), dt);
+  let next = tickUpgrades(player, dt);
   next = {
     ...next,
     runtime: {
@@ -295,7 +320,6 @@ function tickOnePlayer(
     solarFactor,
     windKmh,
     rainActive,
-    incomingAttacks: next.incomingAttacks,
   });
 
   next = {
@@ -382,6 +406,39 @@ function tickOnePlayer(
   };
 }
 
+function tickContractOffers(
+  offers: ContractOffer[],
+  timeSeconds: number,
+  dt: number,
+  pauseActiveOffer: boolean,
+): ContractOffer[] {
+  return offers.map((offer) => {
+    if (offer.status === "pending" && timeSeconds >= offer.startsAtSeconds) {
+      return {
+        ...offer,
+        status: "active",
+        remainingSeconds: GAME_CONFIG.contracts.offerWindowSeconds,
+      };
+    }
+
+    if (offer.status !== "active" || pauseActiveOffer) {
+      return offer;
+    }
+
+    const remainingSeconds = offer.remainingSeconds - dt;
+    return remainingSeconds <= 0
+      ? {
+          ...offer,
+          status: "declined",
+          remainingSeconds: 0,
+        }
+      : {
+          ...offer,
+          remainingSeconds,
+        };
+  });
+}
+
 export function tickMatch(state: MatchState, dt = 1 / GAME_CONFIG.match.tickRateHz): MatchState {
   if (state.isPaused || isMatchOver(state)) {
     return state;
@@ -433,6 +490,7 @@ export function tickMatch(state: MatchState, dt = 1 / GAME_CONFIG.match.tickRate
   return {
     seed: state.seed,
     demandSchedule: state.demandSchedule,
+    contractOffers: tickContractOffers(state.contractOffers, nextTime, dt, player.runtime.breakerTrippedSeconds > 0),
     timeSeconds: nextTime,
     isPaused: false,
     gameOverReason: state.gameOverReason,
@@ -611,25 +669,27 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
       activeEventId,
     },
   };
-  const cardState = (
-    id: "cloudFront" | "windStorm",
-    title: string,
-    type: "defense" | "offense",
-    effectText: string,
-  ): DispatchCardState => {
-    const cooldown = player.cardCooldowns[id];
-    const maxCooldown = GAME_CONFIG.cards[id].cooldownSeconds;
-    const state: DispatchCardState["state"] =
-      cooldown > 0 ? "cooldown" : player.cash >= GAME_CONFIG.cards[id].cost ? "available" : "disabled";
-    return {
-      id,
-      title,
-      type,
-      effectText,
-      state,
-      cooldownRatio: Math.min(1, cooldown / maxCooldown),
-    };
-  };
+  const activeOffer = state.contractOffers.find((offer) => offer.status === "active");
+  const contractOffer: ContractOfferState | undefined = activeOffer
+    ? {
+        id: activeOffer.id,
+        kind: activeOffer.kind,
+        title: contractTitle(activeOffer.kind),
+        loadMW: GAME_CONFIG.contracts.types[activeOffer.kind].loadMW,
+        durationSeconds: GAME_CONFIG.contracts.types[activeOffer.kind].durationSeconds,
+        completionCashReward: GAME_CONFIG.contracts.types[activeOffer.kind].completionCashReward,
+        strikeScorePenalty: GAME_CONFIG.contracts.types[activeOffer.kind].strikeScorePenalty,
+        remainingSeconds: activeOffer.remainingSeconds,
+        countdownRatio: Math.max(0, Math.min(1, activeOffer.remainingSeconds / GAME_CONFIG.contracts.offerWindowSeconds)),
+      }
+    : undefined;
+  const activeContracts: ActiveContractState[] = player.activeContracts.map((contract) => ({
+    id: contract.id,
+    kind: contract.kind,
+    title: contractTitle(contract.kind),
+    loadMW: contract.loadMW,
+    remainingSeconds: contract.remainingSeconds,
+  }));
 
   return {
     cash: player.cash,
@@ -681,26 +741,8 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
       capacities: player.capacities,
       controls: player.controls,
     }),
-    cards: [
-      cardState("cloudFront", "CLOUD FRONT", "offense", "RIVAL SOLAR DOWN"),
-      cardState("windStorm", "WIND STORM", "offense", "RIVAL WIND CUTOUT"),
-      {
-        id: "business",
-        title: "BUSINESS CONTRACT",
-        type: "fixedContract",
-        effectText: "+15 MW / +35 CASH",
-        state: "available",
-        cooldownRatio: 0,
-      },
-      {
-        id: "dataCenter",
-        title: "DATA CONTRACT",
-        type: "fixedContract",
-        effectText: "+25 MW / +60 CASH",
-        state: "available",
-        cooldownRatio: 0,
-      },
-    ],
+    contractOffer,
+    activeContracts,
   };
 }
 

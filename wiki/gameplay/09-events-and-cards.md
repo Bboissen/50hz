@@ -3,8 +3,8 @@ title: "Events and Cards"
 type: "system"
 status: "draft"
 updated: "2026-06-17"
-tags: ["50hz", "events", "cards", "warnings", "shocks", "demo-queue"]
-summary: "Event phases, public event values, starter cards, design constraints, attack warnings, demo queue, economy, and chain reactions."
+tags: ["50hz", "events", "contracts", "warnings", "shocks", "demo-queue"]
+summary: "Event phases, public event values, fixed contract offers, demo queue, economy, and chain reactions."
 related: []
 ---
 
@@ -92,24 +92,11 @@ const PUBLIC_EVENTS = {
 };
 ```
 
-## Card types
+## Player-triggered offers
 
-Cards are player-triggered bonus/malus actions.
+The MVP has no playable attack or defense cards. Weather and city shocks remain scripted public events.
 
-| Type | Meaning |
-|---|---|
-| Attack | Creates stress for the AI opponent |
-| Contract | Shared fixed-load offer accepted by the first player to commit |
-
-## Starter card set
-
-| Card | Type | Cost | Cooldown | Effect |
-|---|---|---:|---:|---|
-| Cloud Front | Attack | 30 | 25s | Opponent solar factor -35% for 8s |
-| Wind Storm | Attack | 30 | 25s | Opponent wind speed forced above cut-out for 8s |
-| PR Campaign | Market/risk | 20 | 30s | Customer attraction +15% for 10s |
-| Business Contract | Contract | 0 | offer-based | +15 MW fixed load for 45s; reward if completed |
-| Data Center Contract | Contract | 0 | offer-based | +25 MW fixed load for 35s; high reward, massive strike penalty |
+Player-triggered actions for this system are fixed-contract offers only.
 
 ## Fixed contract offers
 
@@ -117,6 +104,9 @@ Fixed contracts are mutual offers visible to both players. The first player to a
 
 Rules:
 
+- each offer appears as a blocking contract modal with accept and decline actions,
+- the modal auto-declines after 5 seconds if the player does nothing,
+- breaker reset has higher priority; when reset is required, the contract countdown pauses and the breaker modal is shown instead,
 - accepted contracts cannot be cancelled,
 - contract load is constant for the full duration,
 - contract load is added on top of customer load,
@@ -130,14 +120,3 @@ Recommended MVP values:
 |---|---:|---:|---:|---:|
 | Business Contract | 15 MW | 45s | 35 cash | 70 score |
 | Data Center Contract | 25 MW | 35s | 60 cash | 140 score |
-
-
-## Warning for attacks
-
-Opponent attacks should usually show a short warning.
-
-```ts
-const ATTACK_WARNING_SECONDS = 2;
-```
-
-This creates a chance to switch screens and respond.
