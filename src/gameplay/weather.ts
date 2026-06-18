@@ -1,9 +1,16 @@
 import { GAME_CONFIG } from "./config";
 import { clamp } from "./math";
+import type { TimelineToken } from "./types";
+
+export type WeatherCondition = "sun" | "cloud" | "rain" | "wind" | "snow";
 
 export type WeatherSample = {
+  condition: WeatherCondition;
+  timeOfDayRatio: number;
   solarFactor: number;
   windKmh: number;
+  rainActive: boolean;
+  householdDemandMultiplier: number;
 };
 
 function hash01(input: string): number {
@@ -33,20 +40,101 @@ function seededGust(seed: string, timeSeconds: number): number {
   return from + (to - from) * ratio;
 }
 
+export function timeOfDayRatioAt(timeSeconds: number): number {
+  const cycleSeconds = GAME_CONFIG.weather.dayCycleSeconds;
+  return (((timeSeconds % cycleSeconds) + cycleSeconds) % cycleSeconds) / cycleSeconds;
+}
+
+export function solarFactorForTimeOfDay(timeOfDayRatio: number): number {
+  if (timeOfDayRatio > 0.5) {
+    return 0;
+  }
+  return Math.sin((timeOfDayRatio / 0.5) * Math.PI);
+}
+
+export function weatherConditionAt(timeSeconds: number): WeatherCondition {
+  const cycleSeconds = GAME_CONFIG.weather.dayCycleSeconds;
+  const cyclePosition = ((timeSeconds % cycleSeconds) + cycleSeconds) % cycleSeconds;
+  const segmentSeconds = cycleSeconds / 5;
+  if (cyclePosition < segmentSeconds) {
+    return "sun";
+  }
+  if (cyclePosition < segmentSeconds * 2) {
+    return "cloud";
+  }
+  if (cyclePosition < segmentSeconds * 3) {
+    return "rain";
+  }
+  if (cyclePosition < segmentSeconds * 4) {
+    return "wind";
+  }
+  return "snow";
+}
+
+function solarMultiplierForCondition(condition: WeatherCondition): number {
+  if (condition === "cloud") {
+    return 0.55;
+  }
+  if (condition === "rain") {
+    return 0.35;
+  }
+  if (condition === "snow") {
+    return 0.25;
+  }
+  if (condition === "wind") {
+    return 0.85;
+  }
+  return 1;
+}
+
+function windDeltaKmhForCondition(condition: WeatherCondition): number {
+  if (condition === "wind") {
+    return 18;
+  }
+  if (condition === "rain") {
+    return 4;
+  }
+  if (condition === "snow") {
+    return -5;
+  }
+  if (condition === "cloud") {
+    return -2;
+  }
+  return 0;
+}
+
 export function sampleWeather(seed: string, timeSeconds: number): WeatherSample {
   const renewable = GAME_CONFIG.assets.renewable;
-  const matchProgress = clamp(timeSeconds / GAME_CONFIG.match.durationSeconds, 0, 1);
-  const daylightCurve = Math.sin(matchProgress * Math.PI);
-  const solarFactor = clamp(0.1 + Math.pow(Math.max(0, daylightCurve), 1.35) * 0.9, 0, 1);
+  const condition = weatherConditionAt(timeSeconds);
+  const timeOfDayRatio = timeOfDayRatioAt(timeSeconds);
+  const solarFactor = solarFactorForTimeOfDay(timeOfDayRatio) * solarMultiplierForCondition(condition);
 
   const windKmh =
     renewable.windDefaultKmh +
     seededWave(seed, timeSeconds, "front", 95) * 7 +
     seededWave(seed, timeSeconds, "local", 31) * 4 +
-    seededGust(seed, timeSeconds) * 6;
+    seededGust(seed, timeSeconds) * 6 +
+    windDeltaKmhForCondition(condition);
 
   return {
-    solarFactor,
+    condition,
+    timeOfDayRatio,
+    solarFactor: clamp(solarFactor, 0, 1),
     windKmh: clamp(windKmh, renewable.windCutInKmh - 4, renewable.windCutOutKmh - 15),
+    rainActive: condition === "rain",
+    householdDemandMultiplier:
+      condition === "rain" || condition === "snow" ? GAME_CONFIG.weather.rainSnowHouseholdMultiplier : 1,
   };
+}
+
+export function forecastWeather(seed: string, timeSeconds: number): TimelineToken[] {
+  return GAME_CONFIG.weather.forecastOffsetsSeconds.map((offsetSeconds) => {
+    const sample = sampleWeather(seed, timeSeconds + offsetSeconds);
+    return {
+      id: sample.condition,
+      label: sample.condition.toUpperCase(),
+      phase: offsetSeconds === 0 ? "impact" : "warning",
+      remainingSeconds: offsetSeconds,
+    };
+  });
 }

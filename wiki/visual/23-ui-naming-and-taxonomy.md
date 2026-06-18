@@ -72,7 +72,7 @@ Event names should be concrete and slightly absurd.
 | Data Centers | Data Center Burst, Cloud Backup, AI Training Run, Streaming Surge |
 | Weather | Cloud Front, Cold Snap, Snowfall, Heatwave, High Wind |
 | Rival | Rival Audit, Cable Theft, PR Smear, Grid Poach |
-| Player tools | Demand Response, Transformer Boost, Emergency Crew, Load Shed |
+| Player tools | Transformer Boost, Emergency Crew, PR Campaign |
 
 ## Copy rules
 

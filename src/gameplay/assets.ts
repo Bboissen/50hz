@@ -91,7 +91,7 @@ export function updateAssetOutputs(args: {
     args.rainActive &&
     storedWaterMWh >= args.capacities.waterDamCapacityMWh * GAME_CONFIG.assets.waterDam.rainAutoDrainThreshold
   ) {
-    damOutputMW = args.capacities.waterDamMaxPowerMW;
+    damOutputMW = args.capacities.waterDamMaxPowerMW * GAME_CONFIG.assets.waterDam.rainAutoDrainPowerRatio;
   } else if (!gridDown && args.controls.waterDamMode === "fill") {
     const surplusMW = Math.max(0, baseProductionMW - args.currentDemandMW);
     const remainingStorageMWh = Math.max(0, args.capacities.waterDamCapacityMWh - storedWaterMWh);

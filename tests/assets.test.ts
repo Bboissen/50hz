@@ -130,4 +130,23 @@ describe("assets", () => {
 
     expect(result.outputs.deliveredSupplyMW).toBe(10);
   });
+
+  it("rain fills the dam and only auto-drains a small amount when full", () => {
+    const player = createInitialPlayerState("player");
+    const rainy = updateAssetOutputs({
+      capacities: player.capacities,
+      runtime: { ...player.runtime, storedWaterMWh: player.capacities.waterDamCapacityMWh },
+      controls: { ...player.controls, waterDamMode: "hold" },
+      currentDemandMW: 100,
+      dt: 1,
+      solarFactor: 0,
+      windKmh: 0,
+      rainActive: true,
+    });
+
+    expect(rainy.outputs.damOutputMW).toBeCloseTo(
+      player.capacities.waterDamMaxPowerMW * GAME_CONFIG.assets.waterDam.rainAutoDrainPowerRatio,
+    );
+    expect(rainy.outputs.damOutputMW).toBeLessThan(player.capacities.waterDamMaxPowerMW);
+  });
 });

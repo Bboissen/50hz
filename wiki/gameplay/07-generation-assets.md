@@ -217,22 +217,26 @@ Recommended weather factors:
 
 | Weather | Factor |
 |---|---:|
-| Clear | 1.00 |
-| Normal | 0.75 |
-| Cloud front | 0.30 |
-| Night/dim period, if used | 0.10 |
+| Sun | 1.00 |
+| Cloud | 0.55 |
+| Rain | 0.35 |
+| Snow | 0.25 |
+| Windy | 0.85 |
+| Night | 0.00 |
 
 Solar surplus can be used to manually fill the water dam if the dam is not full. Otherwise it can create overload risk unless curtailed.
 
-Prototype weather should make time of day visible within the short match. The solar factor follows a deterministic day curve:
+Prototype weather should make time of day visible within the short match. The time-of-day clock advances linearly and repeats every 36 simulation seconds. With the current `0.6x` simulation speed, that is one complete day/night cycle per real-world minute.
 
 ```txt
-match start = dim morning
-match middle = strongest sun
-match end = dim evening
+0% cycle = dawn
+25% cycle = noon
+50% cycle = dusk
+75% cycle = night
+100% cycle = next dawn
 ```
 
-This keeps solar readable as a changing supply source without adding real-world time or live weather dependencies.
+Solar output is exactly `0 MW` during night. Weather conditions then multiply only the daylight solar factor, so cloud/rain/snow cannot create nighttime trickle output.
 
 ## Renewable wind
 
@@ -310,6 +314,7 @@ const WATER_DAM_DRAIN_EFFICIENCY = 0.90;
 const WATER_DAM_STORAGE_SECONDS_PER_MWH = 20;
 const RAIN_FILL_MWH_PER_SECOND = 0.50;
 const RAIN_AUTODRAIN_THRESHOLD = 0.95;
+const RAIN_AUTODRAIN_POWER_RATIO = 0.25;
 ```
 
 Manual fill during overload / surplus:
@@ -347,9 +352,11 @@ If rain would overfill the dam, the dam auto-drains into energy production:
 
 ```ts
 if (rainActive && storedWaterMWh >= WATER_DAM_CAPACITY_MWH * RAIN_AUTODRAIN_THRESHOLD) {
-  damOutputMW = WATER_DAM_MAX_POWER_MW;
+  damOutputMW = WATER_DAM_MAX_POWER_MW * RAIN_AUTODRAIN_POWER_RATIO;
 }
 ```
+
+This auto-drain is intentionally small. Full-rain overflow should be visible as a pressure relief effect without replacing the player's manual drain control.
 
 Interpretation:
 

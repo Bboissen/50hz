@@ -178,16 +178,8 @@ class ForecastTape extends Container {
 
   public update(state: DispatchConsoleState): void {
     const y = this.bounds.y;
-    const cellW = 128;
-    const roll = -((state.timeSeconds * 24) % cellW);
     const tokens = state.forecast.length > 0 ? state.forecast : [{ id: "sun", label: "SUN", phase: "impact" as const, remainingSeconds: 0 }];
-    const phases = [
-      { label: "00:00", bg: 0x172042 },
-      { label: "06:00", bg: 0xbc7460 },
-      { label: "12:00", bg: 0x8dcde3 },
-      { label: "18:00", bg: 0x657ea1 },
-      { label: "24:00", bg: 0x151b3b },
-    ];
+    const cellW = (this.bounds.w - 28) / 4;
 
     this.dynamic.removeChildren();
     this.frame
@@ -203,24 +195,29 @@ class ForecastTape extends Container {
       .rect(this.bounds.x + 22, y + this.bounds.h - 26, this.bounds.w - 44, 4)
       .fill({ color: PIXEL.copperLight });
 
-    for (let i = -1; i < Math.ceil(this.bounds.w / cellW) + 2; i += 1) {
-      const x = this.bounds.x + 14 + roll + i * cellW;
-      const phase = phases[((i % phases.length) + phases.length) % phases.length];
-      const token = tokens[((i % tokens.length) + tokens.length) % tokens.length];
-      const visibleX = Math.max(x, this.bounds.x + 14);
-      const visibleW = Math.min(x + cellW, this.bounds.x + this.bounds.w - 14) - visibleX;
-      if (visibleW <= 0) {
-        continue;
-      }
-      this.frame.rect(visibleX, y + 16, visibleW, this.bounds.h - 46).fill({ color: phase.bg });
+    for (let index = 0; index < 4; index += 1) {
+      const x = this.bounds.x + 14 + index * cellW;
+      const token = tokens[index] ?? tokens[tokens.length - 1];
+      const isNow = index === 0;
+      const bg = weatherBackground(token.id);
+      this.frame.rect(x, y + 16, cellW, this.bounds.h - 46).fill({ color: bg });
       this.frame.rect(x, y + 16, 2, this.bounds.h - 46).fill({ color: 0xffffff, alpha: 0.18 });
-      drawWeatherIcon(this.frame, token.id || token.label, x + 42, y + 30, 3.7);
-      const label = makeLabel(phase.label, 15, PIXEL.cream);
-      label.position.set(x + 30, y + this.bounds.h - 31);
-      this.dynamic.addChild(label);
+      drawWeatherIcon(this.frame, token.id || token.label, x + cellW * 0.5 - 28, y + 30, 3.7);
+
+      const bucketLabel = makeLabel(isNow ? "NOW" : `+${Math.round(token.remainingSeconds)}s`, 14, PIXEL.cream, "center");
+      bucketLabel.position.set(x + 16, y + this.bounds.h - 31);
+      bucketLabel.style.wordWrap = true;
+      bucketLabel.style.wordWrapWidth = cellW - 32;
+      this.dynamic.addChild(bucketLabel);
+
+      const weatherLabel = makeLabel(token.label, 14, PIXEL.cream, "center");
+      weatherLabel.position.set(x + 8, y + 88);
+      weatherLabel.style.wordWrap = true;
+      weatherLabel.style.wordWrapWidth = cellW - 16;
+      this.dynamic.addChild(weatherLabel);
     }
 
-    const arrowX = this.bounds.x + this.bounds.w * 0.5;
+    const arrowX = this.bounds.x + 14 + cellW * 0.5;
     this.frame
       .moveTo(arrowX - 24, y - 2)
       .lineTo(arrowX + 24, y - 2)
@@ -233,6 +230,23 @@ class ForecastTape extends Container {
       .fill({ color: this.tokens.colors.amberWarn })
       .stroke({ color: PIXEL.black, width: 4 });
   }
+}
+
+function weatherBackground(id: string): number {
+  const key = id.toLowerCase();
+  if (key.includes("rain")) {
+    return 0x465d67;
+  }
+  if (key.includes("snow") || key.includes("cold")) {
+    return 0x607a8e;
+  }
+  if (key.includes("wind")) {
+    return 0x657ea1;
+  }
+  if (key.includes("cloud")) {
+    return 0x566375;
+  }
+  return 0x8dcde3;
 }
 
 class TopStatusStrip extends Container {

@@ -41,6 +41,8 @@ Public events affect both players.
 | Event | Effect | Lesson | Best response |
 |---|---|---|---|
 | Cloud front | Solar -60% | Renewable variability | Thermal + water dam |
+| Rain | Solar reduced, dam fills, household demand +3% | Weather links supply/storage/demand | Fill/drain dam and trim thermal |
+| Snow | Solar reduced, household demand +3% | Weather-driven demand | Nuclear pre-ramp + thermal/dam |
 | High wind | Wind inside valid range | Renewable opportunity | Fill dam or reduce thermal |
 | Wind storm | Wind above cut-out speed | Renewable loss | Thermal + dam |
 | Data center burst | Demand +35% | Digital infrastructure spikes | water dam + thermal |
@@ -78,6 +80,15 @@ const PUBLIC_EVENTS = {
     durationSeconds: 18,
     householdDemandMultiplier: 1.30,
   },
+  rain: {
+    householdDemandMultiplier: 1.03,
+    rainActive: true,
+    solarFactorMultiplier: 0.35,
+  },
+  snow: {
+    householdDemandMultiplier: 1.03,
+    solarFactorMultiplier: 0.25,
+  },
 };
 ```
 
@@ -96,7 +107,6 @@ Cards are player-triggered bonus/malus actions.
 |---|---|---:|---:|---|
 | Cloud Front | Attack | 30 | 25s | Opponent solar factor -35% for 8s |
 | Wind Storm | Attack | 30 | 25s | Opponent wind speed forced above cut-out for 8s |
-| Demand Response | Defense | 20 | 20s | Own customer demand -15% for 8s, reputation penalty |
 | PR Campaign | Market/risk | 20 | 30s | Customer attraction +15% for 10s |
 | Business Contract | Contract | 0 | offer-based | +15 MW fixed load for 45s; reward if completed |
 | Data Center Contract | Contract | 0 | offer-based | +25 MW fixed load for 35s; high reward, massive strike penalty |

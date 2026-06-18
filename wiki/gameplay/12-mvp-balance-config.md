@@ -23,6 +23,12 @@ export const GAME_CONFIG = {
     defaultSeed: 'vivatech-grid-duel-demo',
   },
 
+  weather: {
+    dayCycleSeconds: 36,
+    rainSnowHouseholdMultiplier: 1.03,
+    forecastOffsetsSeconds: [0, 15, 30, 45],
+  },
+
   demand: {
     baseTotalMW: 140,
     progressionSteps: 6,
@@ -83,8 +89,6 @@ export const GAME_CONFIG = {
     renewable: {
       solarPeakMW: 10,
       solarShare: 0.40,
-      solarDefaultFactor: 0.75,
-      solarCloudFactor: 0.30,
       windPeakMW: 15,
       windShare: 0.60,
       windCutInKmh: 12,
@@ -102,6 +106,7 @@ export const GAME_CONFIG = {
       storageSecondsPerMWh: 20,
       rainFillMWhPerSecond: 0.50,
       rainAutoDrainThreshold: 0.95,
+      rainAutoDrainPowerRatio: 0.25,
     },
   },
 

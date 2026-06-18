@@ -45,8 +45,8 @@ SUN       CLOUD     SNOW      WIND
 |---|---|---|
 | Sun | Warm sun disk | Solar/renewables improve |
 | Cloud | Grey cloud | Solar/renewables reduce |
-| Rain | Diagonal streaks | Optional hydro/storage flavor |
-| Snow / Cold | Snowflake + thermometer | Household demand increases |
+| Rain | Diagonal streaks | Solar down, dam fills, homes +3% |
+| Snow / Cold | Snowflake + thermometer | Solar down, homes +3% |
 | Wind | Wind lines/turbine | Wind production changes |
 
 ## Incident Queue
@@ -129,10 +129,8 @@ For a 1920×1080 canvas:
 
 | Card | Type | Effect shorthand | Target |
 |---|---|---|---|
-| Demand Response | Defensive | `-Load spike` | Any sector |
 | Transformer Boost | Defensive | `+Capacity short` | Grid |
 | Emergency Crew | Defensive | `-Trip risk` | Grid |
-| Load Shed | Emergency | `-Load / -Trust` | City |
 | PR Campaign | Market | `+Attraction` | Market |
 | Rival Audit | Offensive | `Rival +Cost` | Rival |
 | Business Contract | Fixed contract | `+15 MW / 45s` | Shared offer |
@@ -190,8 +188,8 @@ Incident Queue: +15s FOOTBALL FINAL
 -> token reaches NOW
 -> Homes sector pulses amber
 -> Grid Pressure rises
--> player uses Demand Response card
--> card stamps ACTIVE and cooldown starts
+-> player drains dam and raises thermal
+-> controls stamp ACTIVE and cooldowns continue
 ```
 
 ## PixiJS implementation notes
