@@ -126,7 +126,7 @@ export function createDebugPanel(options: DebugPanelOptions): DebugPanel {
         `${paused ? "PAUSED" : "RUNNING"}  t=${dispatch.timeSeconds.toFixed(1)}s`,
         `godMode=${dispatch.devGodMode ? "ON" : "OFF"}`,
         `cash=${dispatch.cash.toFixed(1)} score=${dispatch.score.toFixed(1)} strikes=${dispatch.strikes}`,
-        `eff=${(dispatch.playerEfficiency * 100).toFixed(0)}% rival=${(dispatch.rivalEfficiency * 100).toFixed(0)}%`,
+        `eff=${(dispatch.playerEfficiency * 100).toFixed(0)}%`,
         `price=${dispatch.playerTariffCents.toFixed(1)} rival=${dispatch.rivalTariffCents.toFixed(1)}`,
         `targetShare=${(dispatch.playerTargetMarketShare * 100).toFixed(1)}% subscribed=${(dispatch.playerSubscribedLoadShare * 100).toFixed(1)}%`,
         `demand=${dispatch.currentDemandMW.toFixed(1)} supply=${dispatch.generationMW.toFixed(1)} deltaMW=${(dispatch.generationMW - dispatch.currentDemandMW).toFixed(1)} deltaPercent=${(dispatch.supplyDemandMismatch * 100).toFixed(1)}%`,

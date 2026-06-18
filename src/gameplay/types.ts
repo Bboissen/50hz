@@ -139,6 +139,14 @@ export type TimelineToken = {
   label: string;
   phase: "warning" | "impact" | "recovery";
   remainingSeconds: number;
+  intensity?: number;
+};
+
+export type EventTracePoint = {
+  timeOffsetSeconds: number;
+  demandMW: number;
+  renewableSupplyMW: number;
+  eventIntensity: number;
 };
 
 export type PlantKey = "reactor" | "boiler" | "renewables" | "waterDam";
@@ -231,7 +239,6 @@ export type DispatchConsoleState = {
   strikes: number;
   timeSeconds: number;
   playerEfficiency: number;
-  rivalEfficiency: number;
   playerTariffCents: number;
   rivalTariffCents: number;
   playerSubscribedLoadShare: number;
@@ -269,6 +276,7 @@ export type DispatchConsoleState = {
   sectors: Record<SectorKey, SectorVisualState>;
   forecast: TimelineToken[];
   incidents: TimelineToken[];
+  eventTrace: EventTracePoint[];
   cards: DispatchCardState[];
 };
 

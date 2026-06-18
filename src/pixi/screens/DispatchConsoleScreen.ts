@@ -3,6 +3,7 @@ import { Container, Graphics, Text } from "pixi.js";
 import type {
   DispatchCardState,
   DispatchConsoleState,
+  EventTracePoint,
   PlantKey,
   PlantUpgradeState,
   PlayerCommand,
@@ -283,6 +284,115 @@ class TopStatusStrip extends Container {
   }
 }
 
+class EventScopePanel extends Container {
+  private readonly g = new Graphics();
+  private readonly labelLayer = new Container();
+
+  public constructor(private readonly bounds: Rect, private readonly tokens: DesignTokens) {
+    super();
+    this.addChild(this.g, this.labelLayer);
+  }
+
+  public update(state: DispatchConsoleState): void {
+    this.labelLayer.removeChildren();
+    const trace = state.eventTrace.length > 0 ? state.eventTrace : this.fallbackTrace(state);
+    const plot = {
+      x: this.bounds.x + 22,
+      y: this.bounds.y + 62,
+      w: this.bounds.w - 44,
+      h: this.bounds.h - 126,
+    };
+    const maxDemand = Math.max(1, ...trace.map((point) => point.demandMW));
+    const maxSupply = Math.max(1, ...trace.map((point) => point.renewableSupplyMW));
+    const demandScaleMax = Math.max(260, maxDemand * 1.08);
+    const supplyScaleMax = Math.max(35, maxSupply * 1.2);
+    const activeIncident = state.incidents[0];
+
+    this.g
+      .clear()
+      .rect(this.bounds.x, this.bounds.y, this.bounds.w, this.bounds.h)
+      .fill({ color: 0x101a13 })
+      .stroke({ color: PIXEL.black, width: 5 })
+      .rect(plot.x, plot.y, plot.w, plot.h)
+      .fill({ color: 0x071108 })
+      .stroke({ color: 0x4a694b, width: 2 });
+
+    for (let index = 1; index < 4; index += 1) {
+      const x = plot.x + (plot.w / 4) * index;
+      this.g.moveTo(x, plot.y).lineTo(x, plot.y + plot.h).stroke({ color: 0x32553a, width: 1, alpha: 0.55 });
+    }
+    for (let index = 1; index < 3; index += 1) {
+      const y = plot.y + (plot.h / 3) * index;
+      this.g.moveTo(plot.x, y).lineTo(plot.x + plot.w, y).stroke({ color: 0x32553a, width: 1, alpha: 0.45 });
+    }
+
+    this.drawTraceLine(trace, plot, demandScaleMax, (point) => point.demandMW, this.tokens.colors.amberWarn);
+    this.drawTraceLine(trace, plot, supplyScaleMax, (point) => point.renewableSupplyMW, this.tokens.colors.dataCyan);
+    this.drawIntensity(trace, plot);
+
+    this.g.rect(plot.x - 4, plot.y - 4, 8, plot.h + 8).fill({ color: PIXEL.cream });
+    addLabel(this.labelLayer, "FORECAST SCOPE", this.bounds.x + 20, this.bounds.y + 18, 18, PIXEL.cream);
+    addLabel(this.labelLayer, "DEMAND", this.bounds.x + 22, this.bounds.y + this.bounds.h - 48, 13, this.tokens.colors.amberWarn);
+    addLabel(this.labelLayer, "SUPPLY", this.bounds.x + 114, this.bounds.y + this.bounds.h - 48, 13, this.tokens.colors.dataCyan);
+    addLabel(
+      this.labelLayer,
+      activeIncident ? activeIncident.label : "INCIDENTS CLEAR",
+      this.bounds.x + 22,
+      this.bounds.y + this.bounds.h - 27,
+      12,
+      activeIncident ? this.tokens.colors.overloadRed : PIXEL.cream,
+    );
+
+    const current = trace[0];
+    addLabel(
+      this.labelLayer,
+      `${current.demandMW.toFixed(0)}MW / ${current.renewableSupplyMW.toFixed(0)}MW`,
+      this.bounds.x + this.bounds.w - 142,
+      this.bounds.y + 20,
+      13,
+      PIXEL.cream,
+    );
+  }
+
+  private fallbackTrace(state: DispatchConsoleState): EventTracePoint[] {
+    return [{ timeOffsetSeconds: 0, demandMW: state.cityDemandMW, renewableSupplyMW: state.generationMW, eventIntensity: 0 }];
+  }
+
+  private drawTraceLine(
+    trace: EventTracePoint[],
+    plot: Rect,
+    scaleMax: number,
+    valueForPoint: (point: EventTracePoint) => number,
+    color: number,
+  ): void {
+    trace.forEach((point, index) => {
+      const x = plot.x + (point.timeOffsetSeconds / 30) * plot.w;
+      const y = plot.y + plot.h - Math.min(1, valueForPoint(point) / scaleMax) * plot.h;
+      if (index === 0) {
+        this.g.moveTo(x, y);
+      } else {
+        this.g.lineTo(x, y);
+      }
+    });
+    this.g.stroke({ color, width: 3 });
+  }
+
+  private drawIntensity(trace: EventTracePoint[], plot: Rect): void {
+    if (!trace.some((point) => point.eventIntensity > 0)) {
+      return;
+    }
+    trace.forEach((point, index) => {
+      const x = plot.x + (point.timeOffsetSeconds / 30) * plot.w;
+      const height = point.eventIntensity * plot.h;
+      const y = plot.y + plot.h - height;
+      this.g.rect(x - 5, y, 10, height).fill({ color: this.tokens.colors.overloadRed, alpha: 0.14 });
+      if (index === 0 && point.eventIntensity > 0) {
+        this.g.rect(plot.x, plot.y, 8, plot.h).fill({ color: this.tokens.colors.overloadRed, alpha: 0.28 });
+      }
+    });
+  }
+}
+
 class ContractSplitInstrument extends Container {
   private readonly g = new Graphics();
   private readonly labelText = makeLabel("", 17, PIXEL.cream);
@@ -319,11 +429,16 @@ class DioramaViewport extends Container {
   private readonly g = new Graphics();
   private readonly labelLayer = new Container();
   private readonly split: ContractSplitInstrument;
+  private readonly forecastScope: EventScopePanel;
 
   public constructor(private readonly bounds: Rect, private readonly tokens: DesignTokens) {
     super();
     this.split = new ContractSplitInstrument(bounds, tokens);
-    this.addChild(this.g, this.labelLayer, this.split);
+    this.forecastScope = new EventScopePanel(
+      { x: this.bounds.x + this.bounds.w - 382, y: this.bounds.y + 48, w: 330, h: 286 },
+      tokens,
+    );
+    this.addChild(this.g, this.labelLayer, this.split, this.forecastScope);
   }
 
   public update(state: DispatchConsoleState): void {
@@ -332,7 +447,7 @@ class DioramaViewport extends Container {
     this.drawBackdrop(state.timeSeconds);
     this.drawCitySectors(state.sectors, pulse);
     this.drawPlayerPlantSide(this.bounds.x + 34, this.bounds.y + 66, state.plants);
-    this.drawRivalPlantSide(this.bounds.x + this.bounds.w - 332, this.bounds.y + 66, state.rivalEfficiency);
+    this.forecastScope.update(state);
     this.split.update(state);
   }
 
@@ -430,22 +545,6 @@ class DioramaViewport extends Container {
     });
   }
 
-  private drawRivalPlantSide(x: number, y: number, efficiency: number): void {
-    this.g.rect(x, y, 286, 244).fill({ color: 0x202923 }).stroke({ color: PIXEL.black, width: 5 });
-    const title = makeLabel("RIVAL", 18, PIXEL.cream);
-    title.position.set(x + 18, y + 16);
-    this.labelLayer.addChild(title);
-    const keys: PlantKey[] = ["reactor", "boiler", "renewables"];
-    keys.forEach((key, index) => {
-      const rowY = y + 48 + index * 46;
-      this.g.rect(x + 18, rowY, 250, 34).fill({ color: 0x2f382f }).stroke({ color: PIXEL.black, width: 2 });
-      drawTinyPlant(this.g, key, x + 26, rowY - 8, 1.8);
-      this.g.rect(x + 94, rowY + 11, Math.round(138 * Math.min(1, efficiency + index * 0.08)), 8).fill({
-        color: 0xb66b4d,
-        alpha: 0.65,
-      });
-    });
-  }
 }
 
 class PlantRack extends Container {

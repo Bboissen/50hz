@@ -3,21 +3,21 @@ import { updateBreakerRisk, computeSupplyDemandMismatch } from "./breaker";
 import { applyCardCostAndCooldown, createIncomingAttack, opponentOf, tickCards } from "./cards";
 import { GAME_CONFIG } from "./config";
 import { acceptContract, tickContracts } from "./contracts";
-import { computeDemand, demandLevelsAtTime, generateDemandSchedule } from "./demand";
+import { generateDemandSchedule } from "./demand";
 import {
   contractCapacityBasisMW,
   computeContractEfficiency,
   currentContractLoadMW,
   deterministicMaxCapacityMW,
 } from "./efficiency";
-import { getPublicEventState } from "./events";
+import { buildEventTrace, sampleEventEnvironment } from "./events";
 import { clamp, clamp01 } from "./math";
 import { priceFromEfficiency, updateSubscribedLoadShare } from "./market";
 import { createInitialPlayerState } from "./playerState";
 import { buildPlantUpgradeStates } from "./plants";
 import { computeRevenueTick } from "./revenue";
 import { buyUpgrade, tickUpgrades } from "./upgrades";
-import { forecastWeather, sampleWeather } from "./weather";
+import { forecastWeather } from "./weather";
 import type {
   BreakerLifecycleState,
   BreakerReason,
@@ -388,15 +388,12 @@ export function tickMatch(state: MatchState, dt = 1 / GAME_CONFIG.match.tickRate
   }
 
   const nextTime = state.timeSeconds + dt;
-  const publicEvents = getPublicEventState(nextTime);
-  const weather = sampleWeather(state.seed, nextTime);
-  const eventState = {
-    ...publicEvents,
-    householdMultiplier: publicEvents.householdMultiplier * weather.householdDemandMultiplier,
-  };
-  const demand = computeDemand(eventState, demandLevelsAtTime(state.demandSchedule, nextTime));
-  const solarFactor = weather.solarFactor * publicEvents.solarFactorMultiplier;
-  const windKmh = publicEvents.windKmhOverride ?? weather.windKmh;
+  const environment = sampleEventEnvironment({
+    seed: state.seed,
+    demandSchedule: state.demandSchedule,
+    timeSeconds: nextTime,
+  });
+  const { publicEvents, weather, demand, solarFactor, windKmh } = environment;
 
   let player = tickOnePlayer(state.players.player, demand.totalMW, solarFactor, windKmh, weather.rainActive, dt);
   let rival = tickOnePlayer(state.players.rival, demand.totalMW, solarFactor, windKmh, weather.rainActive, dt);
@@ -577,13 +574,12 @@ function breakerStatusText(player: PlayerState): string {
 export function selectDispatchConsoleState(state: MatchState): DispatchConsoleState {
   const player = state.players.player;
   const rival = state.players.rival;
-  const events = getPublicEventState(state.timeSeconds);
-  const weather = sampleWeather(state.seed, state.timeSeconds);
-  const eventState = {
-    ...events,
-    householdMultiplier: events.householdMultiplier * weather.householdDemandMultiplier,
-  };
-  const demand = computeDemand(eventState, demandLevelsAtTime(state.demandSchedule, state.timeSeconds));
+  const environment = sampleEventEnvironment({
+    seed: state.seed,
+    demandSchedule: state.demandSchedule,
+    timeSeconds: state.timeSeconds,
+  });
+  const demand = environment.demand;
   const deterministicMaxMW = deterministicMaxCapacityMW(player.capacities);
   const totalMaxMW = totalMaxCapacityForPlayer(player);
   const breakerLifecycleState = breakerLifecycle(player);
@@ -641,7 +637,6 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
     strikes: player.strikes,
     timeSeconds: state.timeSeconds,
     playerEfficiency: player.lastEfficiency,
-    rivalEfficiency: rival.lastEfficiency,
     playerTariffCents: player.lastPrice,
     rivalTariffCents: rival.lastPrice,
     playerSubscribedLoadShare: effectiveLoadShare,
@@ -679,6 +674,13 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
     sectors,
     forecast: forecastWeather(state.seed, state.timeSeconds),
     incidents: state.activeEvents,
+    eventTrace: buildEventTrace({
+      seed: state.seed,
+      demandSchedule: state.demandSchedule,
+      timeSeconds: state.timeSeconds,
+      capacities: player.capacities,
+      controls: player.controls,
+    }),
     cards: [
       cardState("cloudFront", "CLOUD FRONT", "offense", "RIVAL SOLAR DOWN"),
       cardState("windStorm", "WIND STORM", "offense", "RIVAL WIND CUTOUT"),
