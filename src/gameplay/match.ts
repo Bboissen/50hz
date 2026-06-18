@@ -211,19 +211,20 @@ function gridDownOutputsFrom(player: PlayerState): PlayerState["lastOutputs"] {
 
 function applyStrike(player: PlayerState, reason: BreakerReason): PlayerState {
   const contractPenalty = player.activeContracts.reduce((sum, contract) => sum + contract.strikeScorePenalty, 0);
+  const totalScorePenalty = GAME_CONFIG.strike.scorePenalty + contractPenalty;
   const tripSummary: BreakerTripSummary = {
     reason,
     cashPenalty: GAME_CONFIG.strike.cashPenalty,
     subscriberLossRatio: GAME_CONFIG.strike.subscriberLossRatio,
     strikeScorePenalty: GAME_CONFIG.strike.scorePenalty,
     contractScorePenalty: contractPenalty,
-    totalScorePenalty: GAME_CONFIG.strike.scorePenalty + contractPenalty,
+    totalScorePenalty,
   };
   return {
     ...player,
     strikes: player.strikes + 1,
     cash: player.cash - GAME_CONFIG.strike.cashPenalty,
-    score: player.score - contractPenalty,
+    score: player.score - totalScorePenalty,
     subscribedLoadShare: player.subscribedLoadShare * (1 - GAME_CONFIG.strike.subscriberLossRatio),
     runtime: {
       ...player.runtime,
@@ -248,11 +249,7 @@ function tickOnePlayer(
   rainActive: boolean,
   dt: number,
 ): PlayerState {
-  const startedGridDown = player.runtime.breakerTrippedSeconds > 0;
   let next = tickCards(tickUpgrades(player, dt), dt);
-  if (!startedGridDown) {
-    next = tickContracts(next, dt);
-  }
   next = {
     ...next,
     runtime: {
@@ -340,6 +337,8 @@ function tickOnePlayer(
       lastSupplyDemandMismatch: 0,
     };
   }
+
+  next = tickContracts(next, dt);
 
   return {
     ...next,

@@ -91,6 +91,9 @@ export class ScreenManager extends Container {
     if (this.active === screen) {
       return;
     }
+    if (this.active === "production") {
+      this.productionScreen.deactivate();
+    }
     this.active = screen;
     this.transition.trigger();
     this.syncVisibility();

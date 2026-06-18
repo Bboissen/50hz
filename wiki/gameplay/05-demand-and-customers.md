@@ -150,6 +150,7 @@ Rules:
 - fixed contract load is added on top of normal customer load,
 - contracts can push total load toward total max capacity, including renewable/dam assumptions,
 - any strike while a fixed contract is active applies the contract penalty.
+- a contract that would complete on the same tick as a breaker trip does not pay out; the strike resolves first while the contract is still active.
 
 ```ts
 const fixedContractLoadMW = activeFixedContracts.reduce((sum, c) => sum + c.loadMW, 0);

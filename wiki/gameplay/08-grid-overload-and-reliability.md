@@ -139,6 +139,7 @@ Recommended MVP strike:
 ```ts
 strikes += 1;
 cash -= 25;
+score -= 80;
 subscribedLoadShare *= 0.90;
 breakerTripSeconds = 8;
 gridShutdownReliefSeconds = 15;
@@ -148,6 +149,7 @@ Interpretation:
 
 - the player loses trust/customers,
 - cash is damaged,
+- score is penalized,
 - one sector or breaker requires attention,
 - fixed contracts apply their strike penalty if active.
 

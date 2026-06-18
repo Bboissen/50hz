@@ -122,6 +122,7 @@ describe("match", () => {
   it("prolonged underload trips the breaker and applies strike penalties", () => {
     let state = createInitialMatchState();
     const beforeCash = state.players.player.cash;
+    const beforeScore = state.players.player.score;
     const beforeShare = state.players.player.subscribedLoadShare;
     state = applyPlayerCommand(state, { type: "setNuclearTarget", playerId: "player", targetMW: 0 });
     state = applyPlayerCommand(state, { type: "setThermalThrottle", playerId: "player", throttle: 0 });
@@ -134,12 +135,14 @@ describe("match", () => {
     expect(player.cash).toBeLessThan(beforeCash);
     expect(player.subscribedLoadShare).toBeLessThan(beforeShare);
     expect(player.runtime.lastBreakerReason).toBe("underload");
+    expect(beforeScore - player.score).toBeCloseTo(GAME_CONFIG.strike.scorePenalty);
     state = tickMatch(state, 1);
     const waitingDispatch = selectDispatchConsoleState(state);
     expect(waitingDispatch.breakerLifecycle).toBe("awaiting-reset");
     expect(waitingDispatch.breakerResetRequired).toBe(true);
     expect(waitingDispatch.breakerStatusText).toContain("RESET REQUIRED");
     expect(waitingDispatch.lastBreakerTripSummary?.cashPenalty).toBe(GAME_CONFIG.strike.cashPenalty);
+    expect(waitingDispatch.lastBreakerTripSummary?.totalScorePenalty).toBe(GAME_CONFIG.strike.scorePenalty);
   });
 
   it("grid down zeroes plant supply, demand, and served contract split through plant state", () => {
@@ -292,6 +295,36 @@ describe("match", () => {
     expect(state.players.player.strikes).toBe(1);
     expect(state.players.player.runtime.lastBreakerReason).toBe("capacity-overload");
     expect(selectDispatchConsoleState(state).lastBreakerTripSummary?.contractScorePenalty).toBeGreaterThan(0);
+  });
+
+  it("does not complete and reward a contract on the same tick that trips the breaker", () => {
+    let state = createInitialMatchState();
+    state = applyPlayerCommand(state, { type: "acceptContract", playerId: "player", kind: "business" });
+    state = applyPlayerCommand(state, { type: "setNuclearTarget", playerId: "player", targetMW: 0 });
+    state = applyPlayerCommand(state, { type: "setThermalThrottle", playerId: "player", throttle: 0 });
+    state = applyPlayerCommand(state, { type: "setWindEnabled", playerId: "player", enabled: false });
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        player: {
+          ...state.players.player,
+          activeContracts: state.players.player.activeContracts.map((contract) => ({ ...contract, remainingSeconds: 0.1 })),
+        },
+      },
+    };
+    const before = state.players.player;
+    state = tickMatch(state, 2);
+
+    const player = state.players.player;
+    const expectedPenalty = GAME_CONFIG.strike.scorePenalty + GAME_CONFIG.contracts.business.strikeScorePenalty;
+
+    expect(player.strikes).toBe(1);
+    expect(player.activeContracts).toHaveLength(1);
+    expect(player.cash).toBeCloseTo(before.cash - GAME_CONFIG.strike.cashPenalty);
+    expect(player.score).toBeCloseTo(before.score - expectedPenalty);
+    expect(player.runtime.lastBreakerTripSummary?.contractScorePenalty).toBe(GAME_CONFIG.contracts.business.strikeScorePenalty);
+    expect(player.runtime.lastBreakerTripSummary?.totalScorePenalty).toBe(expectedPenalty);
   });
 
   it("production selector exposes manual control state", () => {

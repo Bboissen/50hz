@@ -67,11 +67,16 @@ export class ProductionConsoleScreen extends Container {
     this.latestState = state;
     const dt = Math.max(0, state.timeSeconds - this.lastTimeSeconds);
     this.lastTimeSeconds = state.timeSeconds;
-    if (this.resetHeld && state.breakerTrippedSeconds > 0 && dt > 0) {
+    if (this.visible && this.resetHeld && state.breakerTrippedSeconds > 0 && dt > 0) {
       this.sink({ type: "holdBreakerReset", playerId: "player", seconds: dt });
     }
 
     this.draw(state);
+  }
+
+  public deactivate(): void {
+    this.resetHeld = false;
+    this.draggingControl = undefined;
   }
 
   private addControls(): void {
