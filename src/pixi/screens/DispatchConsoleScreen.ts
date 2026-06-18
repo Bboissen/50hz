@@ -140,82 +140,172 @@ class ContractSplitInstrument extends Container {
 }
 
 class DioramaViewport extends Container {
-  private readonly g = new Graphics();
-  private readonly citySprites: Partial<Record<SectorKey, Sprite>> = {};
+  private readonly terrain = new Graphics();
+  private readonly overlay = new Graphics();
+  private readonly spriteLayer = new Container();
   private readonly labels: Record<SectorKey, Text>;
+  private readonly plantLabels: Text[];
   private readonly split: ContractSplitInstrument;
 
-  public constructor(private readonly bounds: Rect, private readonly tokens: DesignTokens, assets: AssetResolver) {
+  public constructor(private readonly bounds: Rect, private readonly tokens: DesignTokens, private readonly assets: AssetResolver) {
     super();
-    const sectorBounds: Record<SectorKey, Rect> = {
-      homes: { x: bounds.x + 30, y: bounds.y + 70, w: 600, h: 338 },
-      services: { x: bounds.x + 570, y: bounds.y + 52, w: 650, h: 366 },
-      dataCenters: { x: bounds.x + 1110, y: bounds.y + 72, w: 620, h: 350 },
-    };
-    const keys: Record<SectorKey, VisualAssetKey> = {
-      homes: "city_homes_slab",
-      services: "city_services_tower",
-      dataCenters: "city_data_bunker",
-    };
 
-    for (const sector of Object.keys(sectorBounds) as SectorKey[]) {
-      const sprite = fitSprite(assets.texture(keys[sector]), sectorBounds[sector], 1);
-      if (sprite) {
-        this.citySprites[sector] = sprite;
-        this.addChild(sprite);
-      }
-    }
+    this.addSceneAsset("plant_reactor", { x: bounds.x + 92, y: bounds.y + 62, w: 310, h: 174 });
+    this.addSceneAsset("plant_boiler", { x: bounds.x + 200, y: bounds.y + 254, w: 320, h: 180 });
+    this.addSceneAsset("city_homes_slab", { x: bounds.x + 560, y: bounds.y + 228, w: 335, h: 188 });
+    this.addSceneAsset("city_homes_slab", { x: bounds.x + 662, y: bounds.y + 122, w: 300, h: 169 }, 0.96);
+    this.addSceneAsset("city_services_tower", { x: bounds.x + 788, y: bounds.y + 74, w: 405, h: 228 });
+    this.addSceneAsset("city_data_bunker", { x: bounds.x + 904, y: bounds.y + 248, w: 360, h: 202 });
+    this.addSceneAsset("plant_water_dam", { x: bounds.x + 1320, y: bounds.y + 54, w: 384, h: 216 });
+    this.addSceneAsset("plant_solar", { x: bounds.x + 1242, y: bounds.y + 292, w: 300, h: 169 });
+    this.addSceneAsset("plant_wind_turbine", { x: bounds.x + 1476, y: bounds.y + 226, w: 280, h: 153 });
 
     this.labels = {
       homes: makeLabel("HOMES", 20, tokens.colors.inkBlack),
       services: makeLabel("SERVICES", 20, tokens.colors.inkBlack),
       dataCenters: makeLabel("DATA CENTERS", 20, tokens.colors.inkBlack),
     };
-    this.labels.homes.position.set(bounds.x + 150, bounds.y + 90);
-    this.labels.services.position.set(bounds.x + 710, bounds.y + 72);
-    this.labels.dataCenters.position.set(bounds.x + 1270, bounds.y + 92);
+    this.labels.homes.position.set(bounds.x + 612, bounds.y + 430);
+    this.labels.services.position.set(bounds.x + 900, bounds.y + 308);
+    this.labels.dataCenters.position.set(bounds.x + 964, bounds.y + 462);
+    this.plantLabels = [
+      this.makePlaque("NUCLEAR", bounds.x + 138, bounds.y + 236),
+      this.makePlaque("THERMAL", bounds.x + 258, bounds.y + 444),
+      this.makePlaque("HYDRO", bounds.x + 1430, bounds.y + 278),
+      this.makePlaque("SOLAR", bounds.x + 1322, bounds.y + 466),
+      this.makePlaque("WIND", bounds.x + 1578, bounds.y + 388),
+    ];
     this.split = new ContractSplitInstrument(bounds, tokens);
-    this.addChild(this.g, this.labels.homes, this.labels.services, this.labels.dataCenters, this.split);
+    this.addChild(this.terrain, this.spriteLayer, this.overlay, this.labels.homes, this.labels.services, this.labels.dataCenters, ...this.plantLabels, this.split);
   }
 
   public update(state: DispatchConsoleState): void {
-    const pulse = 0.55 + Math.sin(state.timeSeconds * 8) * 0.22;
-    this.g
+    this.drawTerrain(state.timeSeconds);
+    this.drawOverlays(state);
+    this.split.update(state);
+  }
+
+  private addSceneAsset(key: VisualAssetKey, bounds: Rect, alpha = 1): void {
+    const sprite = fitSprite(this.assets.texture(key), bounds, alpha);
+    if (sprite) {
+      this.spriteLayer.addChild(sprite);
+    }
+  }
+
+  private makePlaque(text: string, x: number, y: number): Text {
+    const label = makeLabel(text, 15, this.tokens.colors.inkBlack);
+    label.position.set(x, y);
+    return label;
+  }
+
+  private drawTerrain(timeSeconds: number): void {
+    const pulse = 0.55 + Math.sin(timeSeconds * 3) * 0.08;
+    const tileW = 136;
+    const tileH = 64;
+    const originX = this.bounds.x + this.bounds.w / 2 - 34;
+    const originY = this.bounds.y + 88;
+
+    this.terrain
       .clear()
       .roundRect(this.bounds.x, this.bounds.y, this.bounds.w, this.bounds.h, 22)
-      .fill({ color: 0x27291f })
+      .fill({ color: 0x151911 })
       .stroke({ color: this.tokens.colors.inkBlack, width: 12 })
       .roundRect(this.bounds.x + 24, this.bounds.y + 24, this.bounds.w - 48, this.bounds.h - 88, 16)
-      .fill({ color: 0x756b4e, alpha: 0.32 })
+      .fill({ color: 0x1e5bb7 })
       .stroke({ color: 0x0b0f0c, width: 8, alpha: 0.75 });
 
+    for (let row = 0; row < 8; row += 1) {
+      for (let col = 0; col < 13; col += 1) {
+        const cx = originX + (col - row) * (tileW / 2);
+        const cy = originY + (col + row) * (tileH / 2);
+        if (cx < this.bounds.x + 46 || cx > this.bounds.x + this.bounds.w - 46 || cy < this.bounds.y + 42 || cy > this.bounds.y + this.bounds.h - 112) {
+          continue;
+        }
+
+        const water = (row <= 1 && col >= 9) || (row >= 6 && col <= 2) || (row === 0 && col <= 1);
+        const road = row === 3 || col === 6 || col === 2 || col === 10;
+        const plantPad = (col <= 3 && row >= 2 && row <= 6) || (col >= 9 && row >= 1 && row <= 6);
+        const cityPad = col >= 4 && col <= 8 && row >= 2 && row <= 6;
+
+        if (water) {
+          this.drawIsoTile(cx, cy, tileW, tileH, 0x1b61c5, 0x123a77);
+          this.drawIsoTile(cx + 4, cy + 2, tileW - 22, tileH - 12, 0x2878e6, 0x123a77, 0.42 + pulse * 0.2);
+        } else if (road) {
+          this.drawIsoTile(cx, cy, tileW, tileH, 0x6d7273, 0x22282a);
+          this.drawRoadStripe(cx, cy, tileW, tileH, row === 3);
+        } else if (plantPad) {
+          this.drawIsoTile(cx, cy, tileW, tileH, 0x9b956d, 0x41412d);
+          this.drawIsoTile(cx, cy + 2, tileW - 22, tileH - 10, 0xb5aa7a, 0x41412d, 0.7);
+        } else if (cityPad) {
+          this.drawIsoTile(cx, cy, tileW, tileH, (row + col) % 2 === 0 ? 0x43aa42 : 0x2d8e38, 0x1b5f28);
+          this.drawIsoTile(cx, cy + 1, tileW - 28, tileH - 14, 0x74bd5a, 0x1b5f28, 0.36);
+        } else {
+          this.drawIsoTile(cx, cy, tileW, tileH, (row + col) % 2 === 0 ? 0x32a43e : 0x248235, 0x195c27);
+        }
+      }
+    }
+
+    this.terrain
+      .rect(this.bounds.x + 82, this.bounds.y + 64, 446, 12)
+      .fill({ color: 0xd4d0c2, alpha: 0.88 })
+      .stroke({ color: 0x14140e, width: 2 })
+      .rect(this.bounds.x + 1214, this.bounds.y + 86, 434, 12)
+      .fill({ color: 0xd4d0c2, alpha: 0.88 })
+      .stroke({ color: 0x14140e, width: 2 })
+      .rect(this.bounds.x + 496, this.bounds.y + 242, 836, 14)
+      .fill({ color: 0x35383a })
+      .stroke({ color: 0x111315, width: 2 });
+  }
+
+  private drawIsoTile(cx: number, cy: number, w: number, h: number, color: number, stroke: number, alpha = 1): void {
+    this.terrain
+      .moveTo(cx, cy - h / 2)
+      .lineTo(cx + w / 2, cy)
+      .lineTo(cx, cy + h / 2)
+      .lineTo(cx - w / 2, cy)
+      .closePath()
+      .fill({ color, alpha })
+      .stroke({ color: stroke, width: 2, alpha: 0.55 });
+  }
+
+  private drawRoadStripe(cx: number, cy: number, w: number, h: number, horizontal: boolean): void {
+    if (horizontal) {
+      this.terrain.moveTo(cx - w / 2 + 18, cy).lineTo(cx + w / 2 - 18, cy).stroke({ color: 0xe8e0bf, width: 3, alpha: 0.82 });
+      return;
+    }
+    this.terrain.moveTo(cx, cy - h / 2 + 10).lineTo(cx, cy + h / 2 - 10).stroke({ color: 0xe8e0bf, width: 3, alpha: 0.82 });
+  }
+
+  private drawOverlays(state: DispatchConsoleState): void {
+    const pulse = 0.55 + Math.sin(state.timeSeconds * 8) * 0.22;
+    this.overlay.clear();
+
     const overlays: Record<SectorKey, { x: number; y: number; state: SectorVisualState }> = {
-      homes: { x: this.bounds.x + 178, y: this.bounds.y + 424, state: state.sectors.homes },
-      services: { x: this.bounds.x + 770, y: this.bounds.y + 416, state: state.sectors.services },
-      dataCenters: { x: this.bounds.x + 1328, y: this.bounds.y + 430, state: state.sectors.dataCenters },
+      homes: { x: this.bounds.x + 640, y: this.bounds.y + 410, state: state.sectors.homes },
+      services: { x: this.bounds.x + 916, y: this.bounds.y + 292, state: state.sectors.services },
+      dataCenters: { x: this.bounds.x + 1000, y: this.bounds.y + 444, state: state.sectors.dataCenters },
     };
 
     for (const { x, y, state: sectorState } of Object.values(overlays)) {
       const lampColor = sectorState.isDemandCritical
-        ? this.tokens.colors.overloadRed
-        : sectorState.isSpiking
-          ? this.tokens.colors.amberWarn
-          : this.tokens.colors.phosphorGreen;
-      this.g.roundRect(x - 24, y - 24, 128, 54, 8).fill({ color: 0xd0c6a0 }).stroke({ color: this.tokens.colors.inkBlack, width: 3 });
+          ? this.tokens.colors.overloadRed
+          : sectorState.isSpiking
+            ? this.tokens.colors.amberWarn
+            : this.tokens.colors.phosphorGreen;
+      this.overlay.roundRect(x - 24, y - 24, 128, 54, 8).fill({ color: 0xd0c6a0 }).stroke({ color: this.tokens.colors.inkBlack, width: 3 });
       for (let lamp = 0; lamp < 3; lamp += 1) {
-        this.g.circle(x + lamp * 34, y, 11).fill({
+        this.overlay.circle(x + lamp * 34, y, 11).fill({
           color: lamp < sectorState.demandLevel ? lampColor : this.tokens.colors.smokeGrey,
           alpha: lamp < sectorState.demandLevel ? (sectorState.isSpiking ? pulse + 0.35 : 1) : 0.45,
         });
       }
       if (sectorState.isDemandCritical) {
-        this.g.roundRect(x - 34, y - 102, 154, 42, 6).fill({ color: this.tokens.colors.overloadRed }).stroke({
+        this.overlay.roundRect(x - 34, y - 102, 154, 42, 6).fill({ color: this.tokens.colors.overloadRed }).stroke({
           color: this.tokens.colors.inkBlack,
           width: 3,
         });
       }
     }
-    this.split.update(state);
   }
 }
 
@@ -269,7 +359,8 @@ class PlantRack extends Container {
 
 class VuGridPressureMeter extends Container {
   private readonly g = new Graphics();
-  private readonly needle = new Graphics();
+  private readonly capacityFaceLabel = makeLabel("CAPACITY", 14, 0x1f1a12);
+  private readonly balanceFaceLabel = makeLabel("BALANCE", 14, 0x1f1a12);
   private readonly readout: Text;
   private readonly trip: Text;
 
@@ -277,59 +368,83 @@ class VuGridPressureMeter extends Container {
     super();
     this.readout = makeLabel("", 18, tokens.colors.inkBlack);
     this.trip = makeLabel("TRIP", 34, tokens.colors.overloadRed);
-    this.needle.position.set(bounds.x + bounds.w / 2, bounds.y + 220);
-    this.needle.moveTo(-4, 0).lineTo(0, -152).lineTo(4, 0).closePath().fill({ color: tokens.colors.inkBlack });
-    this.readout.position.set(bounds.x + 44, bounds.y + 238);
-    this.trip.position.set(bounds.x + bounds.w - 138, bounds.y + 238);
-    this.addChild(this.g, this.needle, this.readout, this.trip);
+    this.capacityFaceLabel.position.set(bounds.x + 130, bounds.y + 80);
+    this.balanceFaceLabel.position.set(bounds.x + bounds.w - 226, bounds.y + 80);
+    this.readout.position.set(bounds.x + 44, bounds.y + 262);
+    this.trip.position.set(bounds.x + bounds.w - 128, bounds.y + 262);
+    this.addChild(this.g, this.capacityFaceLabel, this.balanceFaceLabel, this.readout, this.trip);
   }
 
   public update(state: DispatchConsoleState): void {
-    const cx = this.bounds.x + this.bounds.w / 2;
-    const cy = this.bounds.y + 220;
     const danger = state.capacityZone === "tripRisk" || state.capacityZone === "trip" || state.balanceZone.includes("severe");
     const blink = danger && Math.floor(state.timeSeconds * 4) % 2 === 0;
-    this.needle.rotation = -1.08 + Math.min(1.18, state.capacityUtilization) * 2.16 + (danger ? Math.sin(state.timeSeconds * 18) * 0.03 : 0);
     this.trip.visible = blink || state.capacityZone === "trip";
-    this.readout.text = `CAP ${(state.capacityUtilization * 100).toFixed(0)}%  ${state.capacityZone.toUpperCase()}\nBAL ${(state.supplyDemandMismatch * 100).toFixed(1)}%  ${state.balanceZone.toUpperCase()}`;
-
-    const balanceX = cx + Math.max(-1, Math.min(1, state.supplyDemandMismatch / 0.2)) * 210;
+    this.readout.text = `CAP ${(state.capacityUtilization * 100).toFixed(0)}%  ${state.capacityZone.toUpperCase()}    BAL ${(state.supplyDemandMismatch * 100).toFixed(1)}%  ${state.balanceZone.toUpperCase()}`;
     this.g
       .clear()
-      .roundRect(this.bounds.x + 18, this.bounds.y + 18, this.bounds.w - 36, this.bounds.h - 36, 26)
-      .fill({ color: this.tokens.colors.inkBlack })
-      .roundRect(this.bounds.x + 52, this.bounds.y + 52, this.bounds.w - 104, 202, 20)
-      .fill({ color: 0xf0dea8 })
-      .stroke({ color: 0x1b1710, width: 5 })
-      .arc(cx, cy, 150, Math.PI * 1.08, Math.PI * 1.92)
-      .stroke({ color: 0x1b1710, width: 3 })
-      .arc(cx, cy, 150, Math.PI * 1.68, Math.PI * 1.92)
-      .stroke({ color: this.tokens.colors.overloadRed, width: 14, alpha: 0.9 });
+      .roundRect(this.bounds.x + 18, this.bounds.y + 18, this.bounds.w - 36, this.bounds.h - 36, 14)
+      .fill({ color: 0x111417 })
+      .stroke({ color: 0x050607, width: 7 })
+      .rect(this.bounds.x + this.bounds.w / 2 - 6, this.bounds.y + 32, 12, 224)
+      .fill({ color: 0x070809 })
+      .roundRect(this.bounds.x + 34, this.bounds.y + 34, this.bounds.w / 2 - 50, 206, 4)
+      .fill({ color: 0xead9a8 })
+      .stroke({ color: 0x463e2d, width: 5 })
+      .roundRect(this.bounds.x + this.bounds.w / 2 + 18, this.bounds.y + 34, this.bounds.w / 2 - 52, 206, 4)
+      .fill({ color: 0xead9a8 })
+      .stroke({ color: 0x463e2d, width: 5 })
+      .rect(this.bounds.x + 44, this.bounds.y + 44, this.bounds.w / 2 - 70, 26)
+      .fill({ color: 0xffffff, alpha: 0.12 })
+      .rect(this.bounds.x + this.bounds.w / 2 + 28, this.bounds.y + 44, this.bounds.w / 2 - 72, 26)
+      .fill({ color: 0xffffff, alpha: 0.12 });
 
+    this.drawMeterFace(this.bounds.x + 178, this.bounds.y + 202, 126, Math.min(1.25, state.capacityUtilization) / 1.25, 0.72, danger ? Math.sin(state.timeSeconds * 18) * 0.015 : 0);
+    this.drawMeterFace(
+      this.bounds.x + this.bounds.w - 178,
+      this.bounds.y + 202,
+      126,
+      Math.max(0, Math.min(1, 0.5 + state.supplyDemandMismatch / 0.32)),
+      0.82,
+      danger ? Math.sin(state.timeSeconds * 20) * 0.018 : 0,
+    );
+
+    this.g
+      .circle(this.bounds.x + this.bounds.w - 72, this.bounds.y + 70, 20)
+      .fill({ color: blink ? this.tokens.colors.overloadRed : 0x3b1610 })
+      .stroke({ color: 0x1b1710, width: 3 })
+      .circle(this.bounds.x + 72, this.bounds.y + 70, 20)
+      .fill({ color: state.balanceZone === "lock" ? this.tokens.colors.phosphorGreen : 0x3b1610 })
+      .stroke({ color: 0x1b1710, width: 3 });
+  }
+
+  private drawMeterFace(cx: number, cy: number, radius: number, ratio: number, redStart: number, jitter: number): void {
+    const start = Math.PI * 1.08;
+    const sweep = Math.PI * 0.84;
+    this.g.arc(cx, cy, radius, start, start + sweep).stroke({ color: 0x201b13, width: 4 });
+    this.g.arc(cx, cy, radius, start + sweep * redStart, start + sweep).stroke({ color: this.tokens.colors.overloadRed, width: 12, alpha: 0.9 });
     for (let tick = 0; tick <= 12; tick += 1) {
-      const angle = Math.PI * 1.08 + (tick / 12) * Math.PI * 0.84;
-      const inner = 126;
-      const outer = tick % 3 === 0 ? 156 : 146;
+      const angle = start + (tick / 12) * sweep;
+      const inner = radius - (tick % 3 === 0 ? 34 : 24);
+      const outer = radius + 4;
       this.g.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner).lineTo(cx + Math.cos(angle) * outer, cy + Math.sin(angle) * outer).stroke({
-        color: 0x1b1710,
+        color: 0x201b13,
         width: tick % 3 === 0 ? 3 : 2,
       });
     }
 
+    const needle = start + Math.max(0, Math.min(1, ratio)) * sweep + jitter;
     this.g
-      .circle(cx, cy, 16)
-      .fill({ color: this.tokens.colors.inkBlack })
-      .rect(this.bounds.x + 110, this.bounds.y + 282, this.bounds.w - 220, 18)
-      .fill({ color: 0x1b1710 })
-      .rect(cx - 42, this.bounds.y + 282, 84, 18)
-      .fill({ color: this.tokens.colors.phosphorGreen, alpha: 0.65 })
-      .circle(balanceX, this.bounds.y + 291, 14)
-      .fill({ color: state.balanceZone === "lock" ? this.tokens.colors.phosphorGreen : blink ? this.tokens.colors.overloadRed : this.tokens.colors.amberWarn })
-      .circle(this.bounds.x + this.bounds.w - 76, this.bounds.y + 84, 24)
-      .fill({ color: blink ? this.tokens.colors.overloadRed : 0x3b1610 })
-      .stroke({ color: 0x1b1710, width: 3 })
-      .ellipse(cx + 70, this.bounds.y + 108, 190, 34)
-      .fill({ color: 0xffffff, alpha: 0.16 });
+      .moveTo(cx - 5, cy)
+      .lineTo(cx + Math.cos(needle) * (radius - 18), cy + Math.sin(needle) * (radius - 18))
+      .lineTo(cx + 5, cy)
+      .closePath()
+      .fill({ color: 0x14100b })
+      .circle(cx, cy, 13)
+      .fill({ color: 0x14100b })
+      .circle(cx, cy, 5)
+      .fill({ color: 0xd8c792 })
+      .rect(cx - 38, cy - 116, 76, 22)
+      .fill({ color: 0xead9a8, alpha: 0.88 });
   }
 }
 
