@@ -128,6 +128,24 @@ test("shows the start menu before the match begins", async ({ page }) => {
   await expect(page.getByText("SCREEN 2 / 3")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Read what is coming" })).toBeVisible();
   await expect(page.getByAltText("Incident warning for a football final demand spike")).toBeVisible();
+  await expect(page.locator(".game-menu__weather-tape-icon")).toHaveCount(6);
+  const weatherTutorialIcons = await page.locator(".game-menu__weather-tape-icon").evaluateAll((elements) =>
+    elements.map((element) => {
+      const image = element as HTMLImageElement;
+      return {
+        complete: image.complete,
+        naturalHeight: image.naturalHeight,
+        naturalWidth: image.naturalWidth,
+        src: image.currentSrc || image.src,
+      };
+    }),
+  );
+  for (const icon of weatherTutorialIcons) {
+    expect(icon.complete).toBe(true);
+    expect(icon.naturalHeight).toBeGreaterThan(0);
+    expect(icon.naturalWidth).toBeGreaterThan(0);
+    expect(icon.src).not.toContain("/assets/runtime/icons/weather/");
+  }
   await page.getByRole("button", { name: "Next" }).click();
   await expect(page.getByText("SCREEN 3 / 3")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Survive pressure" })).toBeVisible();

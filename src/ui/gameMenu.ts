@@ -1,5 +1,12 @@
 import type { FinalResult, MatchState } from "../gameplay/types";
 
+import cloudWeatherIconUrl from "../../assets/icons/weather/cloud.png?url";
+import moonWeatherIconUrl from "../../assets/icons/weather/moon.png?url";
+import rainWeatherIconUrl from "../../assets/icons/weather/rain.png?url";
+import snowWeatherIconUrl from "../../assets/icons/weather/snow.png?url";
+import sunWeatherIconUrl from "../../assets/icons/weather/sun.png?url";
+import windWeatherIconUrl from "../../assets/icons/weather/wind.png?url";
+
 export type GameMenuSummary = {
   headline: string;
   outcome: string;
@@ -47,13 +54,13 @@ const HOW_TO_PLAY_IMAGE_URLS = {
   worldCup: new URL("../../assets/runtime/how-to/worldcup.webp", import.meta.url).href,
 } as const;
 
-const WEATHER_TUTORIAL_ICON_URLS = {
-  cloud: "/assets/runtime/icons/weather/cloud.webp",
-  moon: "/assets/runtime/icons/weather/moon.webp",
-  rain: "/assets/runtime/icons/weather/rain.webp",
-  snow: "/assets/runtime/icons/weather/snow.webp",
-  sun: "/assets/runtime/icons/weather/sun.webp",
-  wind: "/assets/runtime/icons/weather/wind.webp",
+export const WEATHER_TUTORIAL_ICON_URLS = {
+  cloud: cloudWeatherIconUrl,
+  moon: moonWeatherIconUrl,
+  rain: rainWeatherIconUrl,
+  snow: snowWeatherIconUrl,
+  sun: sunWeatherIconUrl,
+  wind: windWeatherIconUrl,
 } as const;
 
 type WeatherTutorialIcon = keyof typeof WEATHER_TUTORIAL_ICON_URLS;

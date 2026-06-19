@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { computeFinalResult, createInitialMatchState } from "../src/gameplay/match";
-import { HOW_TO_PLAY_SLIDES, summarizeFinalResult } from "../src/ui/gameMenu";
+import { HOW_TO_PLAY_SLIDES, WEATHER_TUTORIAL_ICON_URLS, summarizeFinalResult } from "../src/ui/gameMenu";
 
 describe("game menu summaries", () => {
   it("formats the endgame result from final match state", () => {
@@ -62,5 +62,21 @@ describe("how to play slides", () => {
     expect(weatherPanel).toBeDefined();
     expect(weatherPanel?.visual).toBe("weatherTape");
     expect(weatherPanel?.images).toEqual([]);
+  });
+
+  it("loads weather tape icons from the authored icon pack", () => {
+    expect(Object.keys(WEATHER_TUTORIAL_ICON_URLS).sort()).toEqual([
+      "cloud",
+      "moon",
+      "rain",
+      "snow",
+      "sun",
+      "wind",
+    ]);
+
+    for (const [icon, url] of Object.entries(WEATHER_TUTORIAL_ICON_URLS)) {
+      expect(url, icon).toContain(`/assets/icons/weather/${icon}.png`);
+      expect(url, icon).not.toContain("/assets/runtime/icons/weather/");
+    }
   });
 });
