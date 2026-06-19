@@ -31,6 +31,11 @@ function recordingAssets(enabled: Partial<Record<PixiAssetKey, boolean>> = {}): 
         calls.push(key);
         return enabled[key] ? Texture.EMPTY : undefined;
       },
+      loadTexture: async (key: PixiAssetKey) => {
+        calls.push(key);
+        return enabled[key] ? Texture.EMPTY : undefined;
+      },
+      preload: async () => undefined,
       fontFamily: "Courier New, monospace",
     },
   };

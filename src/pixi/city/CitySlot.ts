@@ -1,4 +1,4 @@
-import { Container, Sprite, type Texture } from "pixi.js";
+import { Container, Sprite, Texture } from "pixi.js";
 
 import type { CityLevel, CitySlotConfig } from "./cityTypes";
 
@@ -9,7 +9,7 @@ export class CitySlot extends Container {
 
   public constructor(
     private readonly config: CitySlotConfig,
-    private readonly textures: Record<CityLevel, Texture>,
+    private readonly textures: Partial<Record<CityLevel, Texture>>,
   ) {
     super({ label: `city-slot-${config.id}` });
     this.position.set(config.x, config.y);
@@ -19,7 +19,7 @@ export class CitySlot extends Container {
     this.normalizedSize = normalizedTextureSize(textures);
 
     this.sprite = new Sprite({
-      texture: textures[this.currentLevel],
+      texture: textures[this.currentLevel] ?? Texture.EMPTY,
       label: `city-slot-${config.id}-sprite`,
     });
     this.sprite.anchor.set(0.5);
@@ -33,7 +33,20 @@ export class CitySlot extends Container {
       return;
     }
     this.currentLevel = level;
-    this.sprite.texture = this.textures[level];
+    const texture = this.textures[level];
+    if (!texture) {
+      return;
+    }
+    this.sprite.texture = texture;
+    this.normalizeSpriteSize();
+  }
+
+  public setTexture(level: CityLevel, texture: Texture): void {
+    this.textures[level] = texture;
+    if (this.currentLevel !== level) {
+      return;
+    }
+    this.sprite.texture = texture;
     this.normalizeSpriteSize();
   }
 
@@ -64,7 +77,7 @@ export class CitySlot extends Container {
   }
 }
 
-function normalizedTextureSize(textures: Record<CityLevel, Texture>): { width: number; height: number } {
+function normalizedTextureSize(textures: Partial<Record<CityLevel, Texture>>): { width: number; height: number } {
   return Object.values(textures).reduce(
     (size, texture) => ({
       width: Math.max(size.width, texture.width || 1),

@@ -108,7 +108,7 @@ async function startGame(page: Page): Promise<void> {
   await expect(page.locator(".game-menu")).toBeHidden();
 }
 
-test("shows the start menu before the match begins", async ({ page }) => {
+test("@smoke shows the start menu before the match begins", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.getByRole("heading", { name: "50Hz" })).toBeVisible();
@@ -160,7 +160,7 @@ test("shows the start menu before the match begins", async ({ page }) => {
   await expect(page.locator("canvas")).toBeVisible();
 });
 
-test("defers Pixi runtime and city assets until the player starts", async ({ page }) => {
+test("@smoke @startup defers Pixi runtime and city assets until the player starts", async ({ page }) => {
   const requestedPaths: string[] = [];
   page.on("request", (request) => {
     requestedPaths.push(new URL(request.url()).pathname);
@@ -180,7 +180,25 @@ test("defers Pixi runtime and city assets until the player starts", async ({ pag
   expect(requestedPaths.some((path) => path.includes("/assets/runtime/city/"))).toBe(true);
 });
 
-test("pauses the active game and keeps how to play in the pause overlay", async ({ page }) => {
+test("@startup renders the first gameplay frame without deferred city level assets", async ({ page }) => {
+  const blockedDeferredAssets: string[] = [];
+  await page.route(/\/assets\/runtime\/city\/.*level_[23]\.webp$/, (route) => {
+    blockedDeferredAssets.push(new URL(route.request().url()).pathname);
+    void route.abort();
+  });
+
+  await page.goto("/?play=1&seed=deferred-city-proof");
+
+  const canvas = page.locator("canvas");
+  await expect(canvas).toBeVisible();
+  await page.waitForTimeout(500);
+  const stats = await canvasPixelStats(page);
+  expect(stats.nonTransparentPixels).toBeGreaterThan(1920 * 1080 * 0.9);
+  expect(stats.distinctSampledColors).toBeGreaterThan(8);
+  expect(blockedDeferredAssets.length).toBeGreaterThan(0);
+});
+
+test("@gameplay pauses the active game and keeps how to play in the pause overlay", async ({ page }) => {
   await page.goto("/?dev=1&seed=pause-menu-proof");
 
   await expect(page.locator(".game-menu")).toBeHidden();
@@ -208,7 +226,7 @@ test("pauses the active game and keeps how to play in the pause overlay", async 
   await expect(page.getByRole("button", { name: "Start Game" })).toBeVisible();
 });
 
-test("city editor adjusts and exports the production city layout", async ({ page }) => {
+test("@visual city editor adjusts and exports the production city layout", async ({ page }) => {
   await page.goto("/?cityEditor=1");
   const editor = page.locator(".city-editor");
 
@@ -234,7 +252,9 @@ test("city editor adjusts and exports the production city layout", async ({ page
   await expect(editor).toHaveAttribute("data-x", String(startX));
 });
 
-test("captures the live control desk route through the compatibility ui param", async ({ page }) => {
+test("@visual captures the live control desk route through the compatibility ui param", async ({ page }) => {
+  test.setTimeout(60_000);
+
   await page.goto("/?ui=desk");
   await startGame(page);
   const canvas = page.locator("canvas");
@@ -285,7 +305,7 @@ test("captures the live control desk route through the compatibility ui param", 
   await expect(page.locator(".debug-panel")).toHaveCount(0);
 });
 
-test("serves the weather forecast tape icon assets", async ({ request }) => {
+test("@smoke serves the weather forecast tape icon assets", async ({ request }) => {
   for (const path of weatherIconPaths) {
     const response = await request.get(path);
     expect(response.ok(), path).toBe(true);
@@ -293,7 +313,7 @@ test("serves the weather forecast tape icon assets", async ({ request }) => {
   }
 });
 
-test("keeps the compatibility desk route live when the play flag is present", async ({ page }) => {
+test("@startup keeps the compatibility desk route live when the play flag is present", async ({ page }) => {
   await page.goto("/?ui=desk&play=1");
   const canvas = page.locator("canvas");
 
@@ -302,7 +322,7 @@ test("keeps the compatibility desk route live when the play flag is present", as
   await expect(page.locator(".debug-panel")).toHaveCount(0);
 });
 
-test("captures the clean control desk route on a mobile viewport", async ({ page }) => {
+test("@visual captures the clean control desk route on a mobile viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/?ui=desk&layoutDebug=1");
   await startGame(page);
@@ -317,7 +337,7 @@ test("captures the clean control desk route on a mobile viewport", async ({ page
   await saveProofScreenshotAndAssertSize(page, "control-desk-mobile.png", { width: 390, height: 844 });
 });
 
-test("captures the live desk route from the play flag", async ({ page }) => {
+test("@visual captures the live desk route from the play flag", async ({ page }) => {
   await page.goto("/?play=1");
   const canvas = page.locator("canvas");
 
@@ -331,7 +351,7 @@ test("captures the live desk route from the play flag", async ({ page }) => {
   await saveProofScreenshot(page, "control-desk-live-1920x1080.png");
 });
 
-test("completed upgrades change the city plant level in the desk viewport", async ({ page }) => {
+test("@visual completed upgrades change the city plant level in the desk viewport", async ({ page }) => {
   await page.goto("/?dev=1&seed=city-upgrade-proof");
   await startGame(page);
   await expect(page.locator("canvas")).toBeVisible();
@@ -354,7 +374,7 @@ test("completed upgrades change the city plant level in the desk viewport", asyn
   expect(Buffer.compare(cityBefore, cityAfter)).not.toBe(0);
 });
 
-test("dam drain command changes the water crop in the live city viewport", async ({ page }) => {
+test("@visual dam drain command changes the water crop in the live city viewport", async ({ page }) => {
   await page.goto("/?dev=1&seed=dam-water-proof");
   await startGame(page);
   await expect(page.locator("canvas")).toBeVisible();
@@ -371,7 +391,7 @@ test("dam drain command changes the water crop in the live city viewport", async
   expect(Buffer.compare(damCropBefore, damCropAfter)).not.toBe(0);
 });
 
-test("wind turbine crop animates while wind is connected and can be disconnected", async ({ page }) => {
+test("@visual wind turbine crop animates while wind is connected and can be disconnected", async ({ page }) => {
   await page.goto("/?dev=1&seed=wind-crop-proof");
   await startGame(page);
   await expect(page.locator("canvas")).toBeVisible();
@@ -389,7 +409,7 @@ test("wind turbine crop animates while wind is connected and can be disconnected
   await expect(readout).toContainText("wind=OFF");
 });
 
-test("debug controls drive the shared gameplay readout", async ({ page }) => {
+test("@gameplay debug controls drive the shared gameplay readout", async ({ page }) => {
   await page.goto("/?dev=1");
   await startGame(page);
   await expect(page.locator("canvas")).toBeVisible();
@@ -436,7 +456,7 @@ test("debug controls drive the shared gameplay readout", async ({ page }) => {
   await expect(readout).toContainText("dam=drain");
 });
 
-test("shows an endgame summary menu and returns to the main menu", async ({ page }) => {
+test("@gameplay shows an endgame summary menu and returns to the main menu", async ({ page }) => {
   test.setTimeout(45_000);
 
   await page.goto("/?dev=1&seed=endgame-menu-proof");
@@ -473,7 +493,7 @@ test("shows an endgame summary menu and returns to the main menu", async ({ page
   await expect(readout).toContainText("gameOver=none");
 });
 
-test("forces underload trip and manual reset through the breaker modal", async ({ page }) => {
+test("@gameplay forces underload trip and manual reset through the breaker modal", async ({ page }) => {
   await page.goto("/?dev=1");
   await startGame(page);
   await expect(page.locator("canvas")).toBeVisible();
@@ -506,7 +526,7 @@ test("forces underload trip and manual reset through the breaker modal", async (
   await expect(readout).toContainText("breakerStatus=NETWORK RESET COMPLETE");
 });
 
-test("forces overload trip through visible debug controls", async ({ page }) => {
+test("@gameplay forces overload trip through visible debug controls", async ({ page }) => {
   await page.goto("/?dev=1");
   await startGame(page);
   await expect(page.locator("canvas")).toBeVisible();
@@ -523,7 +543,7 @@ test("forces overload trip through visible debug controls", async ({ page }) => 
   await expect(readout).toContainText("breakerState=awaiting-reset");
 });
 
-test("forces a high-risk contract trip through visible debug controls", async ({ page }) => {
+test("@gameplay forces a high-risk contract trip through visible debug controls", async ({ page }) => {
   await page.goto("/?dev=1");
   await startGame(page);
   await expect(page.locator("canvas")).toBeVisible();

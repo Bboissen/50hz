@@ -9,6 +9,8 @@ import { ScreenManager } from "../src/pixi/screens/ScreenManager";
 
 const assets = {
   texture: () => undefined,
+  loadTexture: async () => undefined,
+  preload: async () => undefined,
   fontFamily: "Courier New, monospace",
 };
 

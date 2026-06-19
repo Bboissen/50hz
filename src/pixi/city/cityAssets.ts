@@ -18,6 +18,9 @@ export const CITY_SLOT_IDS = [
   "dam",
 ] as const satisfies readonly CitySlotId[];
 
+export const CITY_INITIAL_LEVEL = 1 as const satisfies CityLevel;
+export const CITY_DEFERRED_LEVELS = [2, 3] as const satisfies readonly CityLevel[];
+
 export type CityAssetKey =
   | "city_terrain"
   | "city_open_ai_sign"
@@ -67,6 +70,37 @@ export const CITY_ASSET_SOURCES: Record<CityAssetKey, string> = {
   city_dam_3: "/assets/city/power/dam/dam_level_3.png",
 };
 
+export const CITY_INITIAL_ASSET_KEYS: readonly CityAssetKey[] = [
+  "city_terrain",
+  "city_open_ai_sign",
+  "city_dam_upstream_top_mask",
+  "city_dam_upstream_side_mask",
+  "city_dam_downstream_mask",
+  "city_wind_turbine_1",
+  "city_wind_turbine_2",
+  "city_wind_turbine_3",
+  "city_wind_turbine_4",
+  "city_wind_turbine_5",
+  "city_wind_turbine_6",
+  "city_wind_turbine_7",
+  "city_wind_turbine_8",
+  ...CITY_SLOT_IDS.map((slotId) => `city_${slotId}_${CITY_INITIAL_LEVEL}` as const),
+];
+
+export const CITY_DEFERRED_LEVEL_ASSETS: readonly {
+  key: CityAssetKey;
+  slotId: CitySlotId;
+  level: CityLevel;
+}[] = CITY_SLOT_IDS.flatMap((slotId) =>
+  CITY_DEFERRED_LEVELS.map((level) => ({
+    key: `city_${slotId}_${level}` as CityAssetKey,
+    slotId,
+    level,
+  })),
+);
+
+export const CITY_DEFERRED_ASSET_KEYS: readonly CityAssetKey[] = CITY_DEFERRED_LEVEL_ASSETS.map((asset) => asset.key);
+
 export function citySceneTexturesFromResolver(assets: AssetResolver): CitySceneTextures | undefined {
   const terrain = assets.texture("city_terrain");
   const openAiSign = assets.texture("city_open_ai_sign");
@@ -83,15 +117,19 @@ export function citySceneTexturesFromResolver(assets: AssetResolver): CitySceneT
     return undefined;
   }
 
-  const slots = {} as Record<CitySlotId, Record<CityLevel, Texture>>;
+  const slots = {} as Record<CitySlotId, Partial<Record<CityLevel, Texture>>>;
   for (const slotId of CITY_SLOT_IDS) {
-    const textures = {} as Record<CityLevel, Texture>;
-    for (const level of CITY_LEVELS) {
+    const textures = {} as Partial<Record<CityLevel, Texture>>;
+    const initialTexture = assets.texture(`city_${slotId}_${CITY_INITIAL_LEVEL}`);
+    if (!initialTexture) {
+      return undefined;
+    }
+    textures[CITY_INITIAL_LEVEL] = initialTexture;
+    for (const level of CITY_DEFERRED_LEVELS) {
       const texture = assets.texture(`city_${slotId}_${level}`);
-      if (!texture) {
-        return undefined;
+      if (texture) {
+        textures[level] = texture;
       }
-      textures[level] = texture;
     }
     slots[slotId] = textures;
   }
@@ -109,4 +147,14 @@ export function citySceneTexturesFromResolver(assets: AssetResolver): CitySceneT
     windFrames: windFrames as Texture[],
     slots,
   };
+}
+
+export function preloadDeferredCityTextures(assets: AssetResolver, scene: { setSlotTexture: (slotId: CitySlotId, level: CityLevel, texture: Texture) => void }): void {
+  for (const asset of CITY_DEFERRED_LEVEL_ASSETS) {
+    void assets.loadTexture(asset.key).then((texture) => {
+      if (texture) {
+        scene.setSlotTexture(asset.slotId, asset.level, texture);
+      }
+    });
+  }
 }
