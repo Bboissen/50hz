@@ -84,6 +84,28 @@ function sectorDemandMW(sector: DemandSectorKey, level: DemandLevel): number {
   return levelsMW[level - 1];
 }
 
+function scheduledSectorDemandMW(sector: DemandSectorKey, schedule: DemandScheduleStep[], timeSeconds: number): number {
+  let currentMW = sectorDemandMW(sector, 1);
+  const sectorSteps = schedule
+    .filter((step) => step.sector === sector)
+    .sort((a, b) => a.timeSeconds - b.timeSeconds);
+
+  for (const step of sectorSteps) {
+    const targetMW = sectorDemandMW(sector, step.level);
+    const rampSeconds = GAME_CONFIG.demand.progressionRampSeconds;
+    const progress = rampSeconds <= 0 ? (timeSeconds >= step.timeSeconds ? 1 : 0) : (timeSeconds - step.timeSeconds) / rampSeconds;
+    if (progress <= 0) {
+      break;
+    }
+    if (progress < 1) {
+      return currentMW + (targetMW - currentMW) * progress;
+    }
+    currentMW = targetMW;
+  }
+
+  return currentMW;
+}
+
 export function computeDemand(
   eventState: PublicEventState,
   levels: Record<DemandSectorKey, DemandLevel> = BASE_DEMAND_LEVELS,
@@ -91,6 +113,25 @@ export function computeDemand(
   const householdsMW = sectorDemandMW("households", levels.households) * eventState.householdMultiplier;
   const businessMW = sectorDemandMW("business", levels.business) * eventState.businessMultiplier;
   const dataCentersMW = sectorDemandMW("dataCenters", levels.dataCenters) * eventState.dataCenterMultiplier;
+
+  return {
+    householdsMW,
+    businessMW,
+    dataCentersMW,
+    totalMW: householdsMW + businessMW + dataCentersMW,
+    levels,
+  };
+}
+
+export function computeScheduledDemand(
+  eventState: PublicEventState,
+  schedule: DemandScheduleStep[],
+  timeSeconds: number,
+): DemandBreakdown {
+  const levels = demandLevelsAtTime(schedule, timeSeconds);
+  const householdsMW = scheduledSectorDemandMW("households", schedule, timeSeconds) * eventState.householdMultiplier;
+  const businessMW = scheduledSectorDemandMW("business", schedule, timeSeconds) * eventState.businessMultiplier;
+  const dataCentersMW = scheduledSectorDemandMW("dataCenters", schedule, timeSeconds) * eventState.dataCenterMultiplier;
 
   return {
     householdsMW,

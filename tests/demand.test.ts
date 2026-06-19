@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { computeDemand, demandLevelsAtTime, generateDemandSchedule } from "../src/gameplay/demand";
+import { GAME_CONFIG } from "../src/gameplay/config";
+import { computeDemand, computeScheduledDemand, demandLevelsAtTime, generateDemandSchedule } from "../src/gameplay/demand";
 import { getPublicEventState } from "../src/gameplay/events";
 import { createInitialMatchState } from "../src/gameplay/match";
 
@@ -63,5 +64,18 @@ describe("demand progression", () => {
 
     expect(demandLevelsAtTime(schedule, 0)).toEqual({ households: 1, business: 1, dataCenters: 1 });
     expect(demandLevelsAtTime(schedule, 290)).toEqual({ households: 3, business: 3, dataCenters: 3 });
+  });
+
+  it("ramps scheduled MW between physical demand levels", () => {
+    const schedule = [{ id: "households-level-2", sector: "households" as const, level: 2 as const, timeSeconds: 10 }];
+    const before = computeScheduledDemand(getPublicEventState(0), schedule, 10);
+    const middle = computeScheduledDemand(getPublicEventState(0), schedule, 10 + GAME_CONFIG.demand.progressionRampSeconds / 2);
+    const after = computeScheduledDemand(getPublicEventState(0), schedule, 10 + GAME_CONFIG.demand.progressionRampSeconds);
+
+    expect(before).toMatchObject({ householdsMW: 80, totalMW: 140, levels: { households: 2 } });
+    expect(middle.householdsMW).toBe(90);
+    expect(middle.totalMW).toBe(150);
+    expect(after.householdsMW).toBe(100);
+    expect(after.totalMW).toBe(160);
   });
 });

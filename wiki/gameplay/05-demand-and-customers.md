@@ -53,6 +53,7 @@ Rules:
 - a sector cannot reach level 3 before it reaches level 2,
 - slots are linearly spaced from about `40s` to `270s`,
 - each slot receives seeded `+/-10s` jitter.
+- the physical level changes at the scheduled slot, but the MW change ramps over about `12s` so baseline growth is readable and does not stack as an instant cliff with event impacts.
 
 Example shape:
 
@@ -65,6 +66,8 @@ Example shape:
 ~3:44 second sector reaches level 3
 ~4:30 final sector reaches level 3 = 260 MW
 ```
+
+The forecast should show the ramping MW pressure before it arrives. Event spikes can still be dangerous, but baseline sector growth should give the player a short response window instead of causing an instant reset by itself.
 
 ## Player customer load
 

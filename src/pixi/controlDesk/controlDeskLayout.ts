@@ -75,8 +75,6 @@ export type ControlDeskLayout = {
   text: Record<
     | "cash"
     | "score"
-    | "tariff"
-    | "rivalTariff"
     | "load"
     | "generation"
     | "incidents"
@@ -191,8 +189,6 @@ export const CONTROL_DESK_LAYOUT: ControlDeskLayout = {
   text: {
     cash: { x: 38, y: 14, fontSize: 24, maxWidth: 126 },
     score: { x: 40, y: 41, fontSize: 19, maxWidth: 146 },
-    tariff: { x: 172, y: 14, fontSize: 19, maxWidth: 153 },
-    rivalTariff: { x: 171, y: 37, fontSize: 19, maxWidth: 153 },
     incidents: { x: 922, y: 14, fontSize: 21, maxWidth: 293 },
     city: { x: 1306, y: 23, fontSize: 22, maxWidth: 614 },
     load: { x: 1008, y: 866, fontSize: 23, maxWidth: 525 },

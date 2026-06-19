@@ -442,6 +442,19 @@ describe("match", () => {
     expect(trace.map((point) => point.demandMW)).toEqual(baselineTrace.map((point) => point.demandMW));
   });
 
+  it("marks forecast points with projected breaker risk", () => {
+    let state = createInitialMatchState();
+    state = applyPlayerCommand(state, { type: "setNuclearTarget", playerId: "player", targetMW: 0 });
+    state = applyPlayerCommand(state, { type: "setThermalThrottle", playerId: "player", throttle: 0 });
+    state = applyPlayerCommand(state, { type: "setWindEnabled", playerId: "player", enabled: false });
+    state = tickMatch(state, 0.1);
+
+    const trace = buildForecastTraceFromMatchState(state);
+
+    expect(trace.some((point) => point.breakerRiskSource === "balance")).toBe(true);
+    expect(trace.some((point) => point.breakerWouldTrip)).toBe(true);
+  });
+
   it("unaffordable breaker reset ends the match", () => {
     let state = forceUnderloadTrip();
     state = {
