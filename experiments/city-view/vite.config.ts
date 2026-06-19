@@ -7,7 +7,7 @@ export default defineConfig({
   root: experimentRoot,
   publicDir: false,
   server: {
-    host: "0.0.0.0",
+    host: "127.0.0.1",
     port: 5178,
     strictPort: true,
     fs: {
@@ -19,4 +19,3 @@ export default defineConfig({
     emptyOutDir: true,
   },
 });
-
