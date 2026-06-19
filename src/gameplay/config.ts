@@ -99,7 +99,7 @@ export const GAME_CONFIG = {
     capacityOverloadBreakerSeconds: 3,
     capacityOverloadRecoverySeconds: 1,
     breakerTripSeconds: 8,
-    gridShutdownReliefSeconds: 15,
+    gridShutdownReliefSeconds: 5,
     resetCost: 35,
   },
   strike: {

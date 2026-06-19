@@ -142,7 +142,7 @@ cash -= 25;
 score -= 80;
 subscribedLoadShare *= 0.90;
 breakerTripSeconds = 8;
-gridShutdownReliefSeconds = 15;
+gridShutdownReliefSeconds = 5;
 ```
 
 Interpretation:

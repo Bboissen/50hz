@@ -292,12 +292,12 @@ describe("ControlDeskScreen", () => {
     const { resolver } = recordingAssets();
     const screen = new ControlDeskScreen(resolver, () => undefined);
 
-    screen.update({ ...productionState(), gridShutdownReliefSeconds: 10 });
+    screen.update({ ...productionState(), gridShutdownReliefSeconds: 4 });
 
     expect(screen.debugSafetyNetCooldownState()).toMatchObject({
       visible: true,
-      text: "Reset safety net - 10s left to match the demand",
-      barRatio: 10 / 15,
+      text: "Reset safety net - 4s left to match the demand",
+      barRatio: 4 / 5,
     });
     expect(screen.topStatusLayer.children.map((child) => child.label)).toContain("SafetyNetCooldown");
     expect(screen.debugInstrumentChildLabels()).not.toContain("SafetyNetCooldown");

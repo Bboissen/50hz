@@ -225,7 +225,7 @@ describe("match", () => {
     state = applyPlayerCommand(state, { type: "setNuclearTarget", playerId: "player", targetMW: 0 });
     state = applyPlayerCommand(state, { type: "setThermalThrottle", playerId: "player", throttle: 0 });
     state = applyPlayerCommand(state, { type: "setWindEnabled", playerId: "player", enabled: false });
-    state = tickMatch(state, 10);
+    state = tickMatch(state, GAME_CONFIG.breaker.gridShutdownReliefSeconds - 1);
 
     const dispatch = selectDispatchConsoleState(state);
 
@@ -354,7 +354,7 @@ describe("match", () => {
     state = applyPlayerCommand(state, { type: "setWindEnabled", playerId: "player", enabled: false });
     state = applyPlayerCommand(state, { type: "holdBreakerReset", playerId: "player", seconds: 2.1 });
     const strikesAfterReset = state.players.player.strikes;
-    state = tickMatch(state, 10);
+    state = tickMatch(state, GAME_CONFIG.breaker.gridShutdownReliefSeconds - 1);
 
     const production = selectProductionConsoleState(state);
     expect(production.isGridDown).toBe(false);
