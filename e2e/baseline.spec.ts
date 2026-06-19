@@ -160,24 +160,29 @@ test("@smoke shows the start menu before the match begins", async ({ page }) => 
   await expect(page.locator("canvas")).toBeVisible();
 });
 
-test("@smoke @startup defers Pixi runtime and city assets until the player starts", async ({ page }) => {
+test("@smoke @startup preloads the runtime behind the menu and falls back to loading on slow start", async ({ page }) => {
   const requestedPaths: string[] = [];
   page.on("request", (request) => {
     requestedPaths.push(new URL(request.url()).pathname);
+  });
+  await page.route(/\/src\/gameRuntime\.ts(\?.*)?$/, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    await route.continue();
   });
 
   await page.goto("/");
 
   await expect(page.getByRole("button", { name: "Start Game" })).toBeVisible();
   await expect(page.locator("canvas")).toHaveCount(0);
-  expect(requestedPaths.some((path) => path.includes("/src/gameRuntime.ts"))).toBe(false);
-  expect(requestedPaths.some((path) => path.includes("/assets/runtime/city/"))).toBe(false);
+  await expect.poll(() => requestedPaths.some((path) => path.includes("/src/gameRuntime.ts"))).toBe(true);
 
   await page.getByRole("button", { name: "Start Game" }).click();
 
+  await expect(page.getByRole("heading", { name: "Loading" })).toBeVisible();
+  await expect(page.locator(".game-menu")).toBeVisible();
+  await expect(page.locator("canvas")).toHaveCount(0);
+  await expect(page.locator(".game-menu")).toBeHidden();
   await expect(page.locator("canvas")).toBeVisible();
-  expect(requestedPaths.some((path) => path.includes("/src/gameRuntime.ts"))).toBe(true);
-  expect(requestedPaths.some((path) => path.includes("/assets/runtime/city/"))).toBe(true);
 });
 
 test("@startup renders the first gameplay frame without deferred city level assets", async ({ page }) => {

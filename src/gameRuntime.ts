@@ -12,7 +12,7 @@ import {
   tickMatch,
 } from "./gameplay/match";
 import type { MatchState, PlayerCommand } from "./gameplay/types";
-import { createAssetResolver } from "./pixi/assets";
+import { createAssetResolver, type AssetResolver } from "./pixi/assets";
 import { createPixiApp } from "./pixi/createPixiApp";
 import { ScreenManager } from "./pixi/screens/ScreenManager";
 import { createCityEditor } from "./ui/cityEditor";
@@ -27,7 +27,21 @@ export type GameRuntime = {
   returnToMainMenu: () => void;
 };
 
-export async function startGameRuntime(root: HTMLElement, gameMenu: GameMenu): Promise<GameRuntime> {
+export type GameRuntimeWarmup = {
+  assets: AssetResolver;
+};
+
+export async function preloadGameRuntime(): Promise<GameRuntimeWarmup> {
+  return {
+    assets: await createAssetResolver(),
+  };
+}
+
+export async function startGameRuntime(
+  root: HTMLElement,
+  gameMenu: GameMenu,
+  warmup?: GameRuntimeWarmup,
+): Promise<GameRuntime> {
   const searchParams = new URLSearchParams(window.location.search);
   const matchSeed = searchParams.get("seed") ?? undefined;
   const devMode = searchParams.get("dev") === "1";
@@ -36,8 +50,9 @@ export async function startGameRuntime(root: HTMLElement, gameMenu: GameMenu): P
   const editorMode = cityEditorMode || layoutEditorMode;
   let state: MatchState = createInitialMatchState({ seed: matchSeed });
   let phase: "menu" | "playing" | "ended" | "editing" = editorMode ? "editing" : "playing";
-  const app = await createPixiApp(root);
-  const assets = await createAssetResolver();
+  const appPromise = createPixiApp(root);
+  const assetsPromise = warmup?.assets ?? createAssetResolver();
+  const [app, assets] = await Promise.all([appPromise, assetsPromise]);
   let accumulator = 0;
   let lastDocumentPhase = "";
 

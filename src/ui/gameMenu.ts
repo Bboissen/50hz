@@ -20,6 +20,7 @@ export type GameMenuSummary = {
 export type GameMenu = {
   showStart: () => void;
   showPause: () => void;
+  showLoading: () => void;
   showEnd: (result: FinalResult, state: MatchState) => void;
   hide: () => void;
 };
@@ -205,7 +206,7 @@ export function createGameMenu(options: {
   overlay.appendChild(panel);
 
   document.body.appendChild(overlay);
-  let panelMode: "start" | "pause" | "howto" | "end" = "start";
+  let panelMode: "start" | "pause" | "loading" | "howto" | "end" = "start";
   let howToReturnMode: "start" | "pause" = "start";
   let howToSlideIndex = 0;
 
@@ -218,7 +219,7 @@ export function createGameMenu(options: {
     return button;
   };
 
-  const setPanelMode = (mode: "start" | "pause" | "howto" | "end"): void => {
+  const setPanelMode = (mode: "start" | "pause" | "loading" | "howto" | "end"): void => {
     panelMode = mode;
     panel.className = `game-menu__panel game-menu__panel--${mode}`;
   };
@@ -422,6 +423,13 @@ export function createGameMenu(options: {
     overlay.classList.add("is-visible");
   };
 
+  const renderLoading = (): void => {
+    panel.replaceChildren();
+    setPanelMode("loading");
+    appendTopFrame("", "Loading", "PREPARING INITIAL GAME STATE");
+    overlay.classList.add("is-visible");
+  };
+
   const renderHowToPlay = (): void => {
     panel.replaceChildren();
     setPanelMode("howto");
@@ -516,6 +524,7 @@ export function createGameMenu(options: {
   return {
     showStart: renderStart,
     showPause: renderPause,
+    showLoading: renderLoading,
     showEnd: renderEnd,
     hide: () => {
       overlay.classList.remove("is-visible");
