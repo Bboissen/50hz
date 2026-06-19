@@ -16,7 +16,7 @@
 @font-face {
   font-family: "Metadannye";
   src: url("../assets/fonts/Metadannye-Export.ttf") format("truetype");
-  font-display: swap;
+  font-display: block;
 }
 
 * {
