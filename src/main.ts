@@ -32,9 +32,11 @@ async function bootstrap(): Promise<void> {
   const matchSeed = searchParams.get("seed") ?? undefined;
   const devMode = searchParams.get("dev") === "1";
   const cityEditorMode = searchParams.get("cityEditor") === "1";
-  const autoStart = searchParams.get("play") === "1" || devMode || cityEditorMode;
+  const layoutEditorMode = devMode && searchParams.get("layoutEdit") === "1";
+  const editorMode = cityEditorMode || layoutEditorMode;
+  const autoStart = searchParams.get("play") === "1" || devMode || editorMode;
   let state: MatchState = createInitialMatchState({ seed: matchSeed });
-  let phase: "menu" | "playing" | "ended" | "editing" = cityEditorMode ? "editing" : autoStart ? "playing" : "menu";
+  let phase: "menu" | "playing" | "ended" | "editing" = editorMode ? "editing" : autoStart ? "playing" : "menu";
   const app = await createPixiApp(root);
   const assets = await createAssetResolver();
   let accumulator = 0;
@@ -52,7 +54,7 @@ async function bootstrap(): Promise<void> {
         onReset: () => {
           state = createInitialMatchState({ seed: matchSeed });
           accumulator = 0;
-          phase = cityEditorMode ? "editing" : "playing";
+          phase = editorMode ? "editing" : "playing";
         },
       })
     : undefined;
@@ -69,7 +71,7 @@ async function bootstrap(): Promise<void> {
   if (editorScene) {
     createCityEditor({ scene: editorScene });
   }
-  if (devMode && searchParams.get("layoutEdit") === "1") {
+  if (layoutEditorMode) {
     const layoutEditor = createLayoutEditor({ targets: screenManager.createLayoutEditorTargets() });
     root.appendChild(layoutEditor.element);
   }
@@ -77,7 +79,7 @@ async function bootstrap(): Promise<void> {
   const resetMatch = (): void => {
     state = createInitialMatchState({ seed: matchSeed });
     accumulator = 0;
-    phase = "playing";
+    phase = editorMode ? "editing" : "playing";
     gameMenu.hide();
   };
   const gameMenu = createGameMenu({

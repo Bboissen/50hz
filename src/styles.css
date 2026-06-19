@@ -252,13 +252,14 @@ canvas {
 
 .layout-editor {
   position: absolute;
-  left: 16px;
-  bottom: 16px;
+  left: 50%;
+  top: 50%;
   z-index: 16;
   display: grid;
   width: min(360px, calc(100vw - 32px));
   gap: 8px;
   padding: 12px;
+  transform: translate(-50%, -50%);
   color: #c8b982;
   background: rgba(16, 23, 17, 0.9);
   border: 1px solid rgba(255, 212, 71, 0.62);
