@@ -4,7 +4,13 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Assets } from "pixi.js";
 
-import { createAssetResolver, PIXI_ASSET_SOURCES, type PixiAssetKey } from "../src/pixi/assets";
+import {
+  createAssetResolver,
+  PIXI_ASSET_SOURCES,
+  PIXI_RUNTIME_ASSET_URLS,
+  runtimeAssetPathForSource,
+  type PixiAssetKey,
+} from "../src/pixi/assets";
 import { CONTROL_DESK_ASSET_SOURCES } from "../src/pixi/controlDesk/controlDeskAssets";
 import { WEATHER_ICON_ASSET_SOURCES } from "../src/pixi/controlDesk/weatherIconAssets";
 
@@ -72,6 +78,17 @@ describe("createAssetResolver", () => {
       const source = PIXI_ASSET_SOURCES[key];
       expect(source, key).toBeDefined();
       expect(existsSync(publicPathToRepoPath(source!)), key).toBe(true);
+    }
+  });
+
+  it("declares generated runtime files for all Pixi asset sources", () => {
+    for (const [key, source] of Object.entries(PIXI_ASSET_SOURCES)) {
+      const runtimePath = runtimeAssetPathForSource(source);
+      const runtimeUrl = PIXI_RUNTIME_ASSET_URLS[key as PixiAssetKey];
+
+      expect(existsSync(publicPathToRepoPath(runtimePath)), key).toBe(true);
+      expect(runtimeUrl, key).toBeDefined();
+      expect(runtimeUrl, key).not.toBe(source);
     }
   });
 

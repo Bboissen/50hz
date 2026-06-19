@@ -5,11 +5,11 @@ import sharp from "sharp";
 
 const proofScreenshotDir = ".artifacts/ui-migration";
 const weatherIconPaths = [
-  "/assets/icons/weather/sun.png",
-  "/assets/icons/weather/cloud.png",
-  "/assets/icons/weather/rain.png",
-  "/assets/icons/weather/wind.png",
-  "/assets/icons/weather/snow.png",
+  "/assets/runtime/icons/weather/sun.webp",
+  "/assets/runtime/icons/weather/cloud.webp",
+  "/assets/runtime/icons/weather/rain.webp",
+  "/assets/runtime/icons/weather/wind.webp",
+  "/assets/runtime/icons/weather/snow.webp",
 ];
 
 async function saveProofScreenshot(page: Page, name: string): Promise<string> {
@@ -175,7 +175,7 @@ test("serves the weather forecast tape icon assets", async ({ request }) => {
   for (const path of weatherIconPaths) {
     const response = await request.get(path);
     expect(response.ok(), path).toBe(true);
-    expect(response.headers()["content-type"]).toContain("image/png");
+    expect(response.headers()["content-type"]).toContain("image/webp");
   }
 });
 

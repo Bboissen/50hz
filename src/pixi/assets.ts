@@ -20,11 +20,33 @@ export const PIXI_ASSET_SOURCES: Partial<Record<PixiAssetKey, string>> = {
   ...WEATHER_ICON_ASSET_SOURCES,
 };
 
+const PIXI_RUNTIME_ASSET_MODULES = import.meta.glob("../../assets/runtime/**/*.webp", {
+  eager: true,
+  import: "default",
+  query: "?url",
+}) as Record<string, string>;
+
+export function runtimeAssetPathForSource(source: string): string {
+  return source.replace(/^\/assets\//, "/assets/runtime/").replace(/\.png$/, ".webp");
+}
+
+function runtimeAssetGlobKey(source: string): string {
+  const runtimePath = runtimeAssetPathForSource(source);
+  return `../..${runtimePath}`;
+}
+
+export const PIXI_RUNTIME_ASSET_URLS: Partial<Record<PixiAssetKey, string>> = Object.fromEntries(
+  Object.entries(PIXI_ASSET_SOURCES).map(([key, source]) => [
+    key,
+    PIXI_RUNTIME_ASSET_MODULES[runtimeAssetGlobKey(source)] ?? source,
+  ]),
+) as Partial<Record<PixiAssetKey, string>>;
+
 export async function createAssetResolver(): Promise<AssetResolver> {
   const textures = new Map<PixiAssetKey, Texture>();
 
   await Promise.all(
-    Object.entries(PIXI_ASSET_SOURCES).map(async ([key, src]) => {
+    Object.entries(PIXI_RUNTIME_ASSET_URLS).map(async ([key, src]) => {
       try {
         const texture = await Assets.load<Texture>({ src, data: { scaleMode: "nearest" } });
         texture.source.scaleMode = "nearest";

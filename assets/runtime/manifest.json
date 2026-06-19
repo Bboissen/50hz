@@ -1,0 +1,231 @@
+{
+  "format": "webp",
+  "quality": 85,
+  "alphaQuality": 90,
+  "assets": [
+    {
+      "source": "/assets/city/background.png",
+      "runtime": "/assets/runtime/city/background.webp"
+    },
+    {
+      "source": "/assets/city/buildings/business/business_level_1.png",
+      "runtime": "/assets/runtime/city/buildings/business/business_level_1.webp"
+    },
+    {
+      "source": "/assets/city/buildings/business/business_level_2.png",
+      "runtime": "/assets/runtime/city/buildings/business/business_level_2.webp"
+    },
+    {
+      "source": "/assets/city/buildings/business/business_level_3.png",
+      "runtime": "/assets/runtime/city/buildings/business/business_level_3.webp"
+    },
+    {
+      "source": "/assets/city/buildings/datacenter/datacenter_level_1.png",
+      "runtime": "/assets/runtime/city/buildings/datacenter/datacenter_level_1.webp"
+    },
+    {
+      "source": "/assets/city/buildings/datacenter/datacenter_level_2.png",
+      "runtime": "/assets/runtime/city/buildings/datacenter/datacenter_level_2.webp"
+    },
+    {
+      "source": "/assets/city/buildings/datacenter/datacenter_level_3.png",
+      "runtime": "/assets/runtime/city/buildings/datacenter/datacenter_level_3.webp"
+    },
+    {
+      "source": "/assets/city/buildings/household/house_level_1.png",
+      "runtime": "/assets/runtime/city/buildings/household/house_level_1.webp"
+    },
+    {
+      "source": "/assets/city/buildings/household/house_level_2.png",
+      "runtime": "/assets/runtime/city/buildings/household/house_level_2.webp"
+    },
+    {
+      "source": "/assets/city/buildings/household/house_level_3.png",
+      "runtime": "/assets/runtime/city/buildings/household/house_level_3.webp"
+    },
+    {
+      "source": "/assets/city/openAI.png",
+      "runtime": "/assets/runtime/city/openAI.webp"
+    },
+    {
+      "source": "/assets/city/power/dam/dam_level_1.png",
+      "runtime": "/assets/runtime/city/power/dam/dam_level_1.webp"
+    },
+    {
+      "source": "/assets/city/power/dam/dam_level_2.png",
+      "runtime": "/assets/runtime/city/power/dam/dam_level_2.webp"
+    },
+    {
+      "source": "/assets/city/power/dam/dam_level_3.png",
+      "runtime": "/assets/runtime/city/power/dam/dam_level_3.webp"
+    },
+    {
+      "source": "/assets/city/power/dam/mask_2.png",
+      "runtime": "/assets/runtime/city/power/dam/mask_2.webp"
+    },
+    {
+      "source": "/assets/city/power/dam/mask_3.png",
+      "runtime": "/assets/runtime/city/power/dam/mask_3.webp"
+    },
+    {
+      "source": "/assets/city/power/dam/upstream_top_mask.png",
+      "runtime": "/assets/runtime/city/power/dam/upstream_top_mask.webp"
+    },
+    {
+      "source": "/assets/city/power/nuclear/nuclear_level_1.png",
+      "runtime": "/assets/runtime/city/power/nuclear/nuclear_level_1.webp"
+    },
+    {
+      "source": "/assets/city/power/nuclear/nuclear_level_2.png",
+      "runtime": "/assets/runtime/city/power/nuclear/nuclear_level_2.webp"
+    },
+    {
+      "source": "/assets/city/power/nuclear/nuclear_level_3.png",
+      "runtime": "/assets/runtime/city/power/nuclear/nuclear_level_3.webp"
+    },
+    {
+      "source": "/assets/city/power/solar/solar_level_1.png",
+      "runtime": "/assets/runtime/city/power/solar/solar_level_1.webp"
+    },
+    {
+      "source": "/assets/city/power/solar/solar_level_2.png",
+      "runtime": "/assets/runtime/city/power/solar/solar_level_2.webp"
+    },
+    {
+      "source": "/assets/city/power/solar/solar_level_3.png",
+      "runtime": "/assets/runtime/city/power/solar/solar_level_3.webp"
+    },
+    {
+      "source": "/assets/city/power/thermal/thermal_level_1.png",
+      "runtime": "/assets/runtime/city/power/thermal/thermal_level_1.webp"
+    },
+    {
+      "source": "/assets/city/power/thermal/thermal_level_2.png",
+      "runtime": "/assets/runtime/city/power/thermal/thermal_level_2.webp"
+    },
+    {
+      "source": "/assets/city/power/thermal/thermal_level_3.png",
+      "runtime": "/assets/runtime/city/power/thermal/thermal_level_3.webp"
+    },
+    {
+      "source": "/assets/city/power/wind/turbine_1.png",
+      "runtime": "/assets/runtime/city/power/wind/turbine_1.webp"
+    },
+    {
+      "source": "/assets/city/power/wind/turbine_2.png",
+      "runtime": "/assets/runtime/city/power/wind/turbine_2.webp"
+    },
+    {
+      "source": "/assets/city/power/wind/turbine_3.png",
+      "runtime": "/assets/runtime/city/power/wind/turbine_3.webp"
+    },
+    {
+      "source": "/assets/city/power/wind/turbine_4.png",
+      "runtime": "/assets/runtime/city/power/wind/turbine_4.webp"
+    },
+    {
+      "source": "/assets/city/power/wind/turbine_5.png",
+      "runtime": "/assets/runtime/city/power/wind/turbine_5.webp"
+    },
+    {
+      "source": "/assets/city/power/wind/turbine_6.png",
+      "runtime": "/assets/runtime/city/power/wind/turbine_6.webp"
+    },
+    {
+      "source": "/assets/city/power/wind/turbine_7.png",
+      "runtime": "/assets/runtime/city/power/wind/turbine_7.webp"
+    },
+    {
+      "source": "/assets/city/power/wind/turbine_8.png",
+      "runtime": "/assets/runtime/city/power/wind/turbine_8.webp"
+    },
+    {
+      "source": "/assets/city/power/wind/wind_level_1.png",
+      "runtime": "/assets/runtime/city/power/wind/wind_level_1.webp"
+    },
+    {
+      "source": "/assets/city/power/wind/wind_level_2.png",
+      "runtime": "/assets/runtime/city/power/wind/wind_level_2.webp"
+    },
+    {
+      "source": "/assets/city/power/wind/wind_level_3.png",
+      "runtime": "/assets/runtime/city/power/wind/wind_level_3.webp"
+    },
+    {
+      "source": "/assets/icons/weather/cloud.png",
+      "runtime": "/assets/runtime/icons/weather/cloud.webp"
+    },
+    {
+      "source": "/assets/icons/weather/rain.png",
+      "runtime": "/assets/runtime/icons/weather/rain.webp"
+    },
+    {
+      "source": "/assets/icons/weather/snow.png",
+      "runtime": "/assets/runtime/icons/weather/snow.webp"
+    },
+    {
+      "source": "/assets/icons/weather/sun.png",
+      "runtime": "/assets/runtime/icons/weather/sun.webp"
+    },
+    {
+      "source": "/assets/icons/weather/wind.png",
+      "runtime": "/assets/runtime/icons/weather/wind.webp"
+    },
+    {
+      "source": "/assets/ui/background/empty_background_1920.runtime.png",
+      "runtime": "/assets/runtime/ui/background/empty_background_1920.runtime.webp"
+    },
+    {
+      "source": "/assets/ui/components/Knob/knob.png",
+      "runtime": "/assets/runtime/ui/components/Knob/knob.webp"
+    },
+    {
+      "source": "/assets/ui/components/Knob/rotary_knob_center.png",
+      "runtime": "/assets/runtime/ui/components/Knob/rotary_knob_center.webp"
+    },
+    {
+      "source": "/assets/ui/components/Knob/rotary_knob_left.png",
+      "runtime": "/assets/runtime/ui/components/Knob/rotary_knob_left.webp"
+    },
+    {
+      "source": "/assets/ui/components/Knob/rotary_knob_right.png",
+      "runtime": "/assets/runtime/ui/components/Knob/rotary_knob_right.webp"
+    },
+    {
+      "source": "/assets/ui/components/Led/blue_led.png",
+      "runtime": "/assets/runtime/ui/components/Led/blue_led.webp"
+    },
+    {
+      "source": "/assets/ui/components/Led/empty_10-level.png",
+      "runtime": "/assets/runtime/ui/components/Led/empty_10-level.webp"
+    },
+    {
+      "source": "/assets/ui/components/Led/empty_3-level.png",
+      "runtime": "/assets/runtime/ui/components/Led/empty_3-level.webp"
+    },
+    {
+      "source": "/assets/ui/components/Led/green_led.png",
+      "runtime": "/assets/runtime/ui/components/Led/green_led.webp"
+    },
+    {
+      "source": "/assets/ui/components/Led/orange_led.png",
+      "runtime": "/assets/runtime/ui/components/Led/orange_led.webp"
+    },
+    {
+      "source": "/assets/ui/components/Led/red_led.png",
+      "runtime": "/assets/runtime/ui/components/Led/red_led.webp"
+    },
+    {
+      "source": "/assets/ui/components/gauge/needle.png",
+      "runtime": "/assets/runtime/ui/components/gauge/needle.webp"
+    },
+    {
+      "source": "/assets/ui/components/upgrade.png",
+      "runtime": "/assets/runtime/ui/components/upgrade.webp"
+    },
+    {
+      "source": "/assets/ui/full_clean.png",
+      "runtime": "/assets/runtime/ui/full_clean.webp"
+    }
+  ]
+}
