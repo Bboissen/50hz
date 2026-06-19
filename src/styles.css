@@ -126,7 +126,8 @@ canvas {
   padding: clamp(10px, 1.4vw, 18px);
 }
 
-.game-menu__panel--pause {
+.game-menu__panel--pause,
+.game-menu__panel--loading {
   grid-template-rows: auto auto 1fr;
   width: min(620px, 100%);
   min-height: auto;
