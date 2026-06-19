@@ -81,7 +81,6 @@ export class ModeRotarySwitch<Mode extends string> extends Container {
 
   public dragTo(global: { x: number }): void {
     if (this.dragStartX === undefined) {
-      this.beginDrag(global);
       return;
     }
     const deltaX = global.x - this.dragStartX;

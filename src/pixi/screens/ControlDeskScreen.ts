@@ -157,7 +157,7 @@ export class ControlDeskScreen extends Container {
     this.latestState = state;
     this.capacityNeedle.update(state.capacityUtilization);
     this.supplyDeltaNeedle.update(state.supplyDemandMismatch);
-    this.reactorStrip.update(state.nuclearCapacityMW === 0 ? 0 : state.nuclearOutputMW / state.nuclearCapacityMW);
+    this.reactorStrip.update(state.nuclearCapacityMW === 0 ? 0 : state.nuclearTargetMW / state.nuclearCapacityMW);
     this.boilerStrip.update(state.thermalThrottle);
     if (state.windEnabled || this.windAvailableMW === 0) {
       this.windAvailableMW = state.windEnabled ? state.windOutputMW : state.windPeakMW * this.windResourceRatio;
@@ -186,8 +186,8 @@ export class ControlDeskScreen extends Container {
     this.readouts
       .get("share")
       ?.update(`SHARE YOU ${(state.playerSubscribedLoadShare * 100).toFixed(0)}% RIVAL ${((1 - state.playerSubscribedLoadShare) * 100).toFixed(0)}%`);
-    this.readouts.get("reactor")?.update(`REACT ${state.nuclearOutputMW.toFixed(0)} MW`);
-    this.readouts.get("boiler")?.update(`BOILER ${state.thermalOutputMW.toFixed(0)} MW`);
+    this.readouts.get("reactor")?.update(`REACT ${state.nuclearTargetMW.toFixed(0)} MW`);
+    this.readouts.get("boiler")?.update(`BOILER ${(state.thermalCapacityMW * state.thermalThrottle).toFixed(0)} MW`);
     this.readouts.get("wind")?.update(`WIND ${state.windEnabled ? "GRID" : "OFF"} ${this.windAvailableMW.toFixed(0)} MW`);
     this.readouts.get("solar")?.update(`SOLAR ${state.solarOutputMW.toFixed(0)} MW`);
     this.readouts.get("dam")?.update(`DAM ${state.waterDamMode.toUpperCase()} ${Math.max(state.damOutputMW, state.damAbsorbMW).toFixed(0)} MW`);
@@ -229,6 +229,10 @@ export class ControlDeskScreen extends Container {
 
   public debugWindLedCount(): number {
     return this.windStrip.debugActiveCount();
+  }
+
+  public debugReactorLedCount(): number {
+    return this.reactorStrip.debugActiveCount();
   }
 
   public debugReadoutText(key: ReadoutKey): string | undefined {

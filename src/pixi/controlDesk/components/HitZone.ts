@@ -17,18 +17,34 @@ export class HitZone extends Container {
     this.eventMode = "static";
     this.cursor = "pointer";
     const handlers = typeof callbacks === "function" ? { tap: callbacks } : callbacks;
+    let isPressed = false;
     if (handlers.tap) {
       this.on("pointertap", handlers.tap);
     }
     if (handlers.down) {
-      this.on("pointerdown", handlers.down);
+      this.on("pointerdown", (event) => {
+        isPressed = true;
+        handlers.down?.(event);
+      });
     }
     if (handlers.move) {
-      this.on("globalpointermove", handlers.move);
+      this.on("globalpointermove", (event) => {
+        if (!isPressed) {
+          return;
+        }
+        handlers.move?.(event);
+      });
     }
     if (handlers.up) {
-      this.on("pointerup", handlers.up);
-      this.on("pointerupoutside", handlers.up);
+      const endPress = (event: FederatedPointerEvent): void => {
+        if (!isPressed) {
+          return;
+        }
+        isPressed = false;
+        handlers.up?.(event);
+      };
+      this.on("pointerup", endPress);
+      this.on("pointerupoutside", endPress);
     }
 
     if ("r" in shape) {

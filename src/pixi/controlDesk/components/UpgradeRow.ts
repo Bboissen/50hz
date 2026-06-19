@@ -69,7 +69,7 @@ export class UpgradeRow extends Container {
   public update(state: PlantUpgradeState): void {
     this.state = state;
     const displayedLevel = Math.max(state.level, state.purchasedLevel);
-    this.labelNode.text = `${state.shortLabel} L${displayedLevel} ${compactCapacityLabel(state.capacityLabel)}`;
+    this.labelNode.text = `${state.shortLabel} L${displayedLevel} ${state.statusText}`;
     this.strip.update(displayedLevel / state.maxLevel, "green");
     if (this.arrow) {
       this.arrow.alpha = state.isMaxed ? 0.28 : 1;
@@ -95,11 +95,4 @@ export class UpgradeRow extends Container {
   public debugArrowAlpha(): number | undefined {
     return this.arrow?.alpha;
   }
-}
-
-function compactCapacityLabel(capacityLabel: string): string {
-  return capacityLabel
-    .replace(" peak", "")
-    .replace(/\s*\/\s*\d+\s*MW$/, "")
-    .replace(/\s+/g, "");
 }

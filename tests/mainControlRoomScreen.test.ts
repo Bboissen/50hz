@@ -9,6 +9,7 @@ import { Backplate } from "../src/pixi/controlDesk/components/Backplate";
 import { GaugeNeedle } from "../src/pixi/controlDesk/components/GaugeNeedle";
 import { HitZone } from "../src/pixi/controlDesk/components/HitZone";
 import { ModeRotarySwitch } from "../src/pixi/controlDesk/components/ModeRotarySwitch";
+import { RotaryKnob } from "../src/pixi/controlDesk/components/RotaryKnob";
 import { SpriteLedStrip } from "../src/pixi/controlDesk/components/SpriteLedStrip";
 import { TextReadout } from "../src/pixi/controlDesk/components/TextReadout";
 import { UpgradeRow } from "../src/pixi/controlDesk/components/UpgradeRow";
@@ -101,16 +102,34 @@ describe("ControlDeskScreen", () => {
 
     screen.update(state);
     screen.hitZoneLayer.children[0]?.emit("pointerdown", { global: new Point(1588, 136) } as never);
-    screen.hitZoneLayer.children[0]?.emit("globalpointermove", { global: new Point(1570, 118) } as never);
-    screen.hitZoneLayer.children[0]?.emit("pointerup", { global: new Point(1570, 118) } as never);
+    screen.hitZoneLayer.children[0]?.emit("globalpointermove", { global: new Point(1550, 170) } as never);
+    screen.hitZoneLayer.children[0]?.emit("pointerup", { global: new Point(1550, 170) } as never);
     screen.hitZoneLayer.children[1]?.emit("pointerdown", { global: new Point(1767, 136) } as never);
-    screen.hitZoneLayer.children[1]?.emit("globalpointermove", { global: new Point(1749, 154) } as never);
-    screen.hitZoneLayer.children[1]?.emit("pointerup", { global: new Point(1749, 154) } as never);
+    screen.hitZoneLayer.children[1]?.emit("globalpointermove", { global: new Point(1800, 96) } as never);
+    screen.hitZoneLayer.children[1]?.emit("pointerup", { global: new Point(1800, 96) } as never);
 
     const nuclearCommand = commands.find((command) => command.type === "setNuclearTarget");
     const thermalCommand = commands.find((command) => command.type === "setThermalThrottle");
     expect(nuclearCommand?.targetMW).toBeLessThan(state.nuclearTargetMW);
     expect(thermalCommand?.throttle).toBeGreaterThan(state.thermalThrottle);
+  });
+
+  it("ignores transparent switch hover movement until the pointer is pressed", () => {
+    const commands: PlayerCommand[] = [];
+    const { resolver } = recordingAssets({ knob: true, rotary_left: true, rotary_center: true, rotary_right: true });
+    const screen = new ControlDeskScreen(resolver, (command) => commands.push(command));
+
+    screen.update(productionState());
+    screen.hitZoneLayer.children[2]?.emit("globalpointermove", { global: new Point(1200, 136) } as never);
+    screen.hitZoneLayer.children[2]?.emit("globalpointermove", { global: new Point(1000, 136) } as never);
+
+    expect(commands).toEqual([]);
+
+    screen.hitZoneLayer.children[2]?.emit("pointerdown", { global: new Point(1200, 136) } as never);
+    screen.hitZoneLayer.children[2]?.emit("globalpointermove", { global: new Point(1000, 136) } as never);
+    screen.hitZoneLayer.children[2]?.emit("pointerup", { global: new Point(1000, 136) } as never);
+
+    expect(commands).toContainEqual({ type: "setWindEnabled", playerId: "player", enabled: false });
   });
 
   it("cycles wind and water-dam commands from transparent switch taps", () => {
@@ -198,6 +217,24 @@ describe("ControlDeskScreen", () => {
     expect(screen.debugReadoutText("dam")).toMatch(/MW$/);
   });
 
+  it("shows commanded reactor and boiler values instead of stale output values", () => {
+    const { resolver } = recordingAssets({ led_empty_10: true, led_green: true });
+    const screen = new ControlDeskScreen(resolver, () => undefined);
+    const state = {
+      ...productionState(),
+      nuclearTargetMW: 20,
+      nuclearOutputMW: 35,
+      thermalThrottle: 0.75,
+      thermalOutputMW: 17,
+    };
+
+    screen.update(state);
+
+    expect(screen.debugReadoutText("reactor")).toBe("REACT 20 MW");
+    expect(screen.debugReadoutText("boiler")).toBe("BOILER 34 MW");
+    expect(screen.debugReactorLedCount()).toBe(6);
+  });
+
   it("keeps wind resource LEDs stable when the switch disconnects wind from the grid", () => {
     const { resolver } = recordingAssets({ led_empty_10: true, led_green: true });
     const screen = new ControlDeskScreen(resolver, () => undefined);
@@ -228,7 +265,7 @@ describe("ControlDeskScreen", () => {
     expect(stripPositions).toEqual(Object.values(CONTROL_DESK_LAYOUT.ledStrips).map((strip) => ({ x: strip.x, y: strip.y })));
   });
 
-  it("keeps upgrade row labels compact enough for the authored rack", () => {
+  it("keeps upgrade row labels compact enough for the authored rack while showing costs", () => {
     const { resolver } = recordingAssets();
     const screen = new ControlDeskScreen(resolver, () => undefined);
 
@@ -237,10 +274,19 @@ describe("ControlDeskScreen", () => {
     const rowLabels = screen.instrumentOverlayLayer.children
       .filter((child): child is UpgradeRow => child instanceof UpgradeRow)
       .map((child) => child.debugLabelText());
-    expect(rowLabels).toContain("DAM L1 20MWh");
+    expect(rowLabels).toContain("DAM L1 €50");
+    expect(rowLabels).toContain("REACTOR L1 €85");
+    expect(rowLabels).toContain("BOILER L1 €40");
+    expect(rowLabels.every((label) => /€\d+|BUILD \d+s|MAX/.test(label))).toBe(true);
     expect(rowLabels.every((label) => !label.includes("/"))).toBe(true);
+    expect(rowLabels.every((label) => label.length <= 15)).toBe(true);
     expect(CONTROL_DESK_LAYOUT.upgradeRows.at(-1)?.label.y).toBeLessThanOrEqual(900);
     expect(CONTROL_DESK_LAYOUT.upgradeRows.at(-1)?.hitZone.y).toBeLessThanOrEqual(870);
+  });
+
+  it("keeps reactor and boiler readout boxes wide enough for MW labels", () => {
+    expect(CONTROL_DESK_LAYOUT.text.reactor.maxWidth).toBeGreaterThanOrEqual(186);
+    expect(CONTROL_DESK_LAYOUT.text.boiler.maxWidth).toBeGreaterThanOrEqual(210);
   });
 
   it("uses black text for desk labels and green LEDs for upgrade levels", () => {
@@ -403,6 +449,25 @@ describe("control desk sprite components", () => {
     expect(gauge.debugNeedleRotation()).not.toBe(firstRotation);
   });
 
+  it("maps knob drags to predictable up-right increase and down-left decrease gestures", () => {
+    const deltas: number[] = [];
+    const knob = new RotaryKnob(Texture.EMPTY, CONTROL_DESK_LAYOUT.knobs.boiler, (deltaRatio) => deltas.push(deltaRatio));
+
+    knob.update(0.5);
+    knob.adjustToGlobalPoint({ x: 1800, y: 96 });
+
+    expect(deltas).toEqual([]);
+
+    knob.beginAdjustment({ x: 1767, y: 136 });
+    knob.adjustToGlobalPoint({ x: 1800, y: 96 });
+    knob.endAdjustment();
+    knob.beginAdjustment({ x: 1767, y: 136 });
+    knob.adjustToGlobalPoint({ x: 1730, y: 176 });
+
+    expect(deltas[0]).toBeGreaterThan(0);
+    expect(deltas[1]).toBeLessThan(0);
+  });
+
   it("keeps the dam rotary centered across all modes", () => {
     const dam = new ModeRotarySwitch(
       [
@@ -428,6 +493,33 @@ describe("control desk sprite components", () => {
     expect(drainTransform.rotation).not.toBe(fillTransform.rotation);
   });
 
+  it("does not start rotary switch drags from movement alone", () => {
+    const commands: string[] = [];
+    const dam = new ModeRotarySwitch(
+      [
+        { mode: "fill", label: "FILL", texture: Texture.EMPTY, rotation: -0.42, labelX: CONTROL_DESK_LAYOUT.knobs.dam.center.x - 76 },
+        { mode: "hold", label: "HOLD", texture: Texture.EMPTY, rotation: 0, labelX: CONTROL_DESK_LAYOUT.knobs.dam.center.x },
+        { mode: "drain", label: "DRAIN", texture: Texture.EMPTY, rotation: 0.42, labelX: CONTROL_DESK_LAYOUT.knobs.dam.center.x + 82 },
+      ],
+      CONTROL_DESK_LAYOUT.knobs.dam,
+      "Courier New, monospace",
+      (mode) => commands.push(mode),
+    );
+
+    dam.update("hold");
+    dam.dragTo({ x: 900 });
+    dam.dragTo({ x: 940 });
+
+    expect(dam.debugSelectedMode()).toBe("hold");
+    expect(commands).toEqual([]);
+
+    dam.beginDrag({ x: 900 });
+    dam.dragTo({ x: 940 });
+
+    expect(dam.debugSelectedMode()).toBe("drain");
+    expect(commands).toEqual(["drain"]);
+  });
+
   it("updates text readouts only when rendered text changes", () => {
     const readout = new TextReadout(CONTROL_DESK_LAYOUT.text.cash, "Courier New, monospace");
 
@@ -451,6 +543,27 @@ describe("control desk sprite components", () => {
     expect(circleZone.children).toHaveLength(0);
     expect(rectZone.hitArea).toBeInstanceOf(Rectangle);
     expect(circleZone.hitArea).toBeInstanceOf(Circle);
+  });
+
+  it("forwards hit-zone global movement only during an active press", () => {
+    const events: string[] = [];
+    const zone = new HitZone(
+      CONTROL_DESK_LAYOUT.hitZones.wind,
+      {
+        down: () => events.push("down"),
+        move: () => events.push("move"),
+        up: () => events.push("up"),
+      },
+      false,
+    );
+
+    zone.emit("globalpointermove", { global: new Point(10, 10) } as never);
+    zone.emit("pointerdown", { global: new Point(10, 10) } as never);
+    zone.emit("globalpointermove", { global: new Point(20, 10) } as never);
+    zone.emit("pointerup", { global: new Point(20, 10) } as never);
+    zone.emit("globalpointermove", { global: new Point(30, 10) } as never);
+
+    expect(events).toEqual(["down", "move", "up"]);
   });
 
   it("draws hit zone outlines only for layout debug", () => {

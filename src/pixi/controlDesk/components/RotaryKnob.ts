@@ -4,7 +4,8 @@ import type { RotaryLayout } from "../controlDeskLayout";
 
 export class RotaryKnob extends Container {
   private normalized = 0;
-  private lastDragAngle?: number;
+  private dragStartGlobal?: { x: number; y: number };
+  private dragStartNormalized = 0;
 
   public constructor(
     texture: Texture | undefined,
@@ -44,30 +45,29 @@ export class RotaryKnob extends Container {
   }
 
   public beginAdjustment(global: { x: number; y: number }): void {
-    const local = this.toLocal(global);
-    this.lastDragAngle = Math.atan2(local.y, local.x);
+    this.dragStartGlobal = { x: global.x, y: global.y };
+    this.dragStartNormalized = this.normalized;
   }
 
   public adjustToGlobalPoint(global: { x: number; y: number }): void {
-    if (this.lastDragAngle === undefined) {
+    if (!this.dragStartGlobal) {
       return;
     }
-    const local = this.toLocal(global);
-    const angle = Math.atan2(local.y, local.x);
-    const delta = wrapAngle(angle - this.lastDragAngle);
-    if (Math.abs(delta) < 0.02) {
+    const verticalDelta = this.dragStartGlobal.y - global.y;
+    const horizontalDelta = global.x - this.dragStartGlobal.x;
+    const targetNormalized = clamp01(this.dragStartNormalized + (verticalDelta + horizontalDelta * 0.35) / 180);
+    const delta = targetNormalized - this.normalized;
+    if (Math.abs(delta) < 0.005) {
       return;
     }
-    this.lastDragAngle = angle;
-    this.applyAdjustment(delta / (this.layout.maxAngle - this.layout.minAngle));
+    this.applyAdjustment(delta);
   }
 
   public endAdjustment(): void {
-    this.lastDragAngle = undefined;
+    this.dragStartGlobal = undefined;
   }
 
   public debugSetFromLocalPoint(x: number, y: number): void {
-    this.lastDragAngle = 0;
     const angle = Math.atan2(y, x);
     this.applyAdjustment(wrapAngle(angle) / (this.layout.maxAngle - this.layout.minAngle));
     this.endAdjustment();
@@ -91,4 +91,8 @@ function wrapAngle(angle: number): number {
     return angle + Math.PI * 2;
   }
   return angle;
+}
+
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
 }
