@@ -87,7 +87,7 @@ async function bootstrap(): Promise<void> {
   };
   const renderCurrentFrame = (frameDt: number): void => {
     updateDocumentPhase();
-    if (phase === "playing") {
+    if (phase === "playing" && !state.isPaused) {
       accumulator += frameDt * GAME_CONFIG.match.simulationSpeed;
       while (accumulator >= fixedDt) {
         for (const command of chooseBotCommands(state.players.rival)) {
@@ -113,7 +113,7 @@ async function bootstrap(): Promise<void> {
       result,
       match: state,
       isMatchOver: matchOver,
-      dt: phase === "editing" ? 0 : frameDt,
+      dt: phase === "editing" || state.isPaused ? 0 : frameDt,
     });
     debugPanel?.update(dispatchState, productionState, state.isPaused);
   };
@@ -124,6 +124,26 @@ async function bootstrap(): Promise<void> {
     gameMenu.hide();
     Ticker.system.start();
     app.start();
+  };
+  const continueMatch = (): void => {
+    if (phase !== "playing") {
+      return;
+    }
+    state = applyPlayerCommand(state, { type: "resume" });
+    gameMenu.hide();
+    Ticker.system.start();
+    app.start();
+  };
+  const pauseMatch = (): void => {
+    if (phase !== "playing" || isMatchOver(state)) {
+      return;
+    }
+    state = applyPlayerCommand(state, { type: "pause" });
+    renderCurrentFrame(0);
+    gameMenu.showPause();
+    app.render();
+    app.stop();
+    Ticker.system.stop();
   };
   const returnToMainMenu = (): void => {
     state = createInitialMatchState({ seed: matchSeed });
@@ -137,8 +157,26 @@ async function bootstrap(): Promise<void> {
   };
   const gameMenu = createGameMenu({
     onPlay: resetMatch,
+    onContinue: continueMatch,
     onReplay: resetMatch,
     onMainMenu: returnToMainMenu,
+  });
+  window.addEventListener("keydown", (event) => {
+    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) {
+      return;
+    }
+    if (event.key !== "Escape" && event.code !== "KeyP") {
+      return;
+    }
+    if (phase !== "playing" || isMatchOver(state)) {
+      return;
+    }
+    event.preventDefault();
+    if (state.isPaused) {
+      continueMatch();
+      return;
+    }
+    pauseMatch();
   });
   if (!autoStart) {
     gameMenu.showStart();
@@ -171,7 +209,7 @@ async function bootstrap(): Promise<void> {
       Ticker.system.stop();
       return;
     }
-    if (phase === "playing" || phase === "editing") {
+    if ((phase === "playing" && !state.isPaused) || phase === "editing") {
       Ticker.system.start();
       app.start();
     } else {

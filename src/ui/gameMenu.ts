@@ -12,11 +12,160 @@ export type GameMenuSummary = {
 
 export type GameMenu = {
   showStart: () => void;
+  showPause: () => void;
   showEnd: (result: FinalResult, state: MatchState) => void;
   hide: () => void;
 };
 
-export function createGameMenu(options: { onPlay: () => void; onReplay: () => void; onMainMenu: () => void }): GameMenu {
+export type HowToPlayImage = {
+  src: string;
+  alt: string;
+  size: "wide" | "medium" | "tall" | "strip";
+};
+
+export type HowToPlayPanel = {
+  title: string;
+  copy: string[];
+  images: HowToPlayImage[];
+};
+
+export type HowToPlaySlide = {
+  title: string;
+  panels: HowToPlayPanel[];
+};
+
+const HOW_TO_PLAY_IMAGE_URLS = {
+  contracts: new URL("../../How_to_illustrations/contracts.png", import.meta.url).href,
+  demandForecast: new URL("../../How_to_illustrations/demand_forecast.png", import.meta.url).href,
+  gauges: new URL("../../How_to_illustrations/gauges.png", import.meta.url).href,
+  productionPanel: new URL("../../How_to_illustrations/production_panel.png", import.meta.url).href,
+  reset: new URL("../../How_to_illustrations/reset.png", import.meta.url).href,
+  upgrades: new URL("../../How_to_illustrations/upgrades.png", import.meta.url).href,
+  weatherTimeline: new URL("../../How_to_illustrations/weather_timeline.png", import.meta.url).href,
+  worldCup: new URL("../../How_to_illustrations/worldcup.png", import.meta.url).href,
+} as const;
+
+export const HOW_TO_PLAY_SLIDES: HowToPlaySlide[] = [
+  {
+    title: "Balance the city",
+    panels: [
+      {
+        title: "Goal",
+        copy: ["Keep generation close to city load in real time. The gauges show supply, load, and the MW gap."],
+        images: [
+          {
+            src: HOW_TO_PLAY_IMAGE_URLS.gauges,
+            alt: "Two analog gauges showing generation, load, and the power delta",
+            size: "wide",
+          },
+        ],
+      },
+      {
+        title: "Grow capacity",
+        copy: ["Upgrade reactor, boiler, renewables, and dam capacity as the city grows."],
+        images: [
+          {
+            src: HOW_TO_PLAY_IMAGE_URLS.upgrades,
+            alt: "Upgrade rack listing reactor, boiler, renewable, and dam levels",
+            size: "medium",
+          },
+        ],
+      },
+      {
+        title: "Match demand",
+        copy: [
+          "Use the production controls to match demand. Nuclear is slow, boiler is fast, renewables follow weather, and the dam buffers peaks.",
+        ],
+        images: [
+          {
+            src: HOW_TO_PLAY_IMAGE_URLS.productionPanel,
+            alt: "Production panel with reactor, boiler, wind, solar, and dam controls",
+            size: "tall",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Read what is coming",
+    panels: [
+      {
+        title: "Demand forecast",
+        copy: [
+          "Watch the load forecast before demand jumps. Public events, like a football final, can push many homes onto the grid at once.",
+        ],
+        images: [
+          {
+            src: HOW_TO_PLAY_IMAGE_URLS.demandForecast,
+            alt: "Demand forecast monitor showing the load curve for the next 30 seconds",
+            size: "medium",
+          },
+          {
+            src: HOW_TO_PLAY_IMAGE_URLS.worldCup,
+            alt: "Incident warning for a football final demand spike",
+            size: "strip",
+          },
+        ],
+      },
+      {
+        title: "Weather tape",
+        copy: [
+          "Watch the weather tape. Sun boosts solar, rain fills the dam, wind powers turbines in its safe range, and cold raises demand.",
+        ],
+        images: [
+          {
+            src: HOW_TO_PLAY_IMAGE_URLS.weatherTimeline,
+            alt: "Weather timeline showing rain, wind, snow, and sun segments",
+            size: "wide",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Survive pressure",
+    panels: [
+      {
+        title: "Breaker reset",
+        copy: ["If the grid trips, reconnect it from the breaker reset panel. Keep enough cash to pay the reset cost."],
+        images: [
+          {
+            src: HOW_TO_PLAY_IMAGE_URLS.reset,
+            alt: "Breaker reset panel with an armed switch, fuse hold button, and reset progress",
+            size: "wide",
+          },
+        ],
+      },
+      {
+        title: "Contracts",
+        copy: ["Contracts add fixed company demand on top of city load. They pay better, but a strike is expensive."],
+        images: [
+          {
+            src: HOW_TO_PLAY_IMAGE_URLS.contracts,
+            alt: "Business contract offer showing load, reward, strike penalty, accept, and decline",
+            size: "wide",
+          },
+        ],
+      },
+      {
+        title: "Operator tips",
+        copy: [
+          "Do not upgrade too early; unused capacity still costs money.",
+          "Nuclear changes slowly, thermal reacts fast, renewables are weather-driven.",
+          "Higher efficiency lowers your price and improves your score.",
+        ],
+        images: [],
+      },
+    ],
+  },
+];
+
+export function createGameMenu(options: {
+  onPlay: () => void;
+  onContinue: () => void;
+  onReplay: () => void;
+  onMainMenu: () => void;
+}): GameMenu {
   const overlay = document.createElement("section");
   overlay.className = "game-menu";
   overlay.setAttribute("aria-live", "polite");
@@ -26,6 +175,9 @@ export function createGameMenu(options: { onPlay: () => void; onReplay: () => vo
   overlay.appendChild(panel);
 
   document.body.appendChild(overlay);
+  let panelMode: "start" | "pause" | "howto" | "end" = "start";
+  let howToReturnMode: "start" | "pause" = "start";
+  let howToSlideIndex = 0;
 
   const setButton = (label: string, onClick: () => void): HTMLButtonElement => {
     const button = document.createElement("button");
@@ -36,7 +188,8 @@ export function createGameMenu(options: { onPlay: () => void; onReplay: () => vo
     return button;
   };
 
-  const setPanelMode = (mode: "start" | "howto" | "end"): void => {
+  const setPanelMode = (mode: "start" | "pause" | "howto" | "end"): void => {
+    panelMode = mode;
     panel.className = `game-menu__panel game-menu__panel--${mode}`;
   };
 
@@ -92,6 +245,53 @@ export function createGameMenu(options: { onPlay: () => void; onReplay: () => vo
     return link;
   };
 
+  const renderHowToPanel = (tutorialPanel: HowToPlayPanel): HTMLElement => {
+    const card = document.createElement("article");
+    card.className = tutorialPanel.images.length > 0 ? "game-menu__howto-card" : "game-menu__howto-card game-menu__howto-card--tips";
+
+    const heading = document.createElement("h3");
+    heading.textContent = tutorialPanel.title;
+
+    const copy = document.createElement("div");
+    copy.className = "game-menu__howto-copy";
+    if (tutorialPanel.images.length === 0) {
+      const tips = document.createElement("ul");
+      tips.className = "game-menu__howto-tip-list";
+      for (const paragraph of tutorialPanel.copy) {
+        const item = document.createElement("li");
+        item.textContent = paragraph;
+        tips.appendChild(item);
+      }
+      copy.appendChild(tips);
+    } else {
+      for (const paragraph of tutorialPanel.copy) {
+        const text = document.createElement("p");
+        text.textContent = paragraph;
+        copy.appendChild(text);
+      }
+    }
+
+    card.append(heading, copy);
+
+    if (tutorialPanel.images.length > 0) {
+      const media = document.createElement("div");
+      media.className = "game-menu__howto-media";
+      for (const image of tutorialPanel.images) {
+        const figure = document.createElement("figure");
+        figure.className = `game-menu__howto-figure game-menu__howto-figure--${image.size}`;
+        const element = document.createElement("img");
+        element.src = image.src;
+        element.alt = image.alt;
+        element.decoding = "async";
+        figure.appendChild(element);
+        media.appendChild(figure);
+      }
+      card.appendChild(media);
+    }
+
+    return card;
+  };
+
   const renderStart = (): void => {
     panel.replaceChildren();
     setPanelMode("start");
@@ -99,43 +299,106 @@ export function createGameMenu(options: { onPlay: () => void; onReplay: () => vo
 
     const actions = document.createElement("div");
     actions.className = "game-menu__actions";
-    actions.append(setButton("Start Game", options.onPlay), setButton("How to Play", renderHowToPlay));
+    actions.append(
+      setButton("Start Game", options.onPlay),
+      setButton("How to Play", () => {
+        howToReturnMode = "start";
+        howToSlideIndex = 0;
+        renderHowToPlay();
+      }),
+    );
 
     panel.append(renderPixelPlant(), actions, renderGithubLink());
+    overlay.classList.add("is-visible");
+  };
+
+  const renderPause = (): void => {
+    panel.replaceChildren();
+    setPanelMode("pause");
+    appendTopFrame("", "Paused", "GRID HOLD");
+
+    const pauseBody = document.createElement("div");
+    pauseBody.className = "game-menu__pause";
+
+    const status = document.createElement("p");
+    status.className = "game-menu__pause-status";
+    status.textContent = "Simulation stopped. Resume when ready.";
+
+    const actions = document.createElement("div");
+    actions.className = "game-menu__actions game-menu__actions--pause";
+    const howTo = setButton("How to Play", () => {
+      howToReturnMode = "pause";
+      howToSlideIndex = 0;
+      renderHowToPlay();
+    });
+    actions.append(howTo, setButton("Continue", options.onContinue), setButton("Restart", options.onReplay), setButton("Quit", options.onMainMenu));
+
+    pauseBody.append(status, actions);
+    panel.appendChild(pauseBody);
     overlay.classList.add("is-visible");
   };
 
   const renderHowToPlay = (): void => {
     panel.replaceChildren();
     setPanelMode("howto");
-    appendTopFrame("", "How to Play", "THREE RULES BEFORE GRID LOAD");
+    const slide = HOW_TO_PLAY_SLIDES[howToSlideIndex];
+    appendTopFrame("", "How to Play", `SCREEN ${howToSlideIndex + 1} / ${HOW_TO_PLAY_SLIDES.length}`);
 
-    const steps = document.createElement("div");
-    steps.className = "game-menu__steps";
-    for (const [index, title, text] of [
-      ["01", "Balance Load", "Match generation to city load with reactor, boiler, wind, and dam controls."],
-      ["02", "Win Demand", "High efficiency lowers tariff, attracts customers, and grows revenue."],
-      ["03", "Survive Pressure", "Contracts and breaker trips are manual emergencies. React before the grid goes dark."],
-    ] as const) {
-      const step = document.createElement("article");
-      step.className = "game-menu__step";
-      const number = document.createElement("span");
-      number.className = "game-menu__step-number";
-      number.textContent = index;
-      const heading = document.createElement("h2");
-      heading.textContent = title;
-      const copy = document.createElement("p");
-      copy.textContent = text;
-      step.append(number, heading, copy);
-      steps.appendChild(step);
+    const tutorial = document.createElement("div");
+    tutorial.className = "game-menu__howto";
+
+    const header = document.createElement("div");
+    header.className = "game-menu__howto-header";
+    const slideNumber = document.createElement("span");
+    slideNumber.className = "game-menu__howto-number";
+    slideNumber.textContent = String(howToSlideIndex + 1).padStart(2, "0");
+    const heading = document.createElement("h2");
+    heading.textContent = slide.title;
+    header.append(slideNumber, heading);
+
+    const panels = document.createElement("div");
+    panels.className = `game-menu__howto-grid game-menu__howto-grid--${slide.panels.length}`;
+    for (const tutorialPanel of slide.panels) {
+      panels.appendChild(renderHowToPanel(tutorialPanel));
     }
 
-    const actions = document.createElement("div");
-    actions.className = "game-menu__actions game-menu__actions--split";
-    actions.append(setButton("Back", renderStart), setButton("Start Game", options.onPlay));
+    tutorial.append(header, panels);
 
-    panel.append(steps, actions);
+    const actions = document.createElement("div");
+    actions.className = "game-menu__actions game-menu__actions--tutorial";
+    const previous = setButton("Previous", () => {
+      howToSlideIndex = Math.max(0, howToSlideIndex - 1);
+      renderHowToPlay();
+    });
+    previous.disabled = howToSlideIndex === 0;
+    const next = setButton("Next", () => {
+      howToSlideIndex = Math.min(HOW_TO_PLAY_SLIDES.length - 1, howToSlideIndex + 1);
+      renderHowToPlay();
+    });
+    next.disabled = howToSlideIndex === HOW_TO_PLAY_SLIDES.length - 1;
+    const returnAction = howToReturnMode === "pause" ? renderPause : renderStart;
+    const playActionLabel = howToReturnMode === "pause" ? "Continue" : "Start Game";
+    const playAction = howToReturnMode === "pause" ? options.onContinue : options.onPlay;
+    actions.append(setButton("Back", returnAction), previous, next, setButton(playActionLabel, playAction));
+
+    panel.append(tutorial, actions);
   };
+
+  window.addEventListener("keydown", (event) => {
+    if (panelMode !== "howto" || !overlay.classList.contains("is-visible")) {
+      return;
+    }
+    if (event.key === "ArrowLeft" && howToSlideIndex > 0) {
+      event.preventDefault();
+      howToSlideIndex -= 1;
+      renderHowToPlay();
+    }
+    if (event.key === "ArrowRight" && howToSlideIndex < HOW_TO_PLAY_SLIDES.length - 1) {
+      event.preventDefault();
+      howToSlideIndex += 1;
+      renderHowToPlay();
+    }
+  });
 
   const renderEnd = (result: FinalResult, state: MatchState): void => {
     const summary = summarizeFinalResult(result, state);
@@ -168,8 +431,11 @@ export function createGameMenu(options: { onPlay: () => void; onReplay: () => vo
 
   return {
     showStart: renderStart,
+    showPause: renderPause,
     showEnd: renderEnd,
-    hide: () => overlay.classList.remove("is-visible"),
+    hide: () => {
+      overlay.classList.remove("is-visible");
+    },
   };
 }
 

@@ -125,9 +125,22 @@ canvas {
   align-items: start;
 }
 
+.game-menu__panel--pause {
+  grid-template-rows: auto auto 1fr;
+  width: min(620px, 100%);
+  min-height: auto;
+}
+
 .game-menu__panel--howto,
 .game-menu__panel--end {
   gap: clamp(16px, 2vw, 26px);
+}
+
+.game-menu__panel--howto {
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  width: min(1480px, 100%);
+  height: min(900px, calc(100vh - 28px));
+  min-height: 0;
 }
 
 .game-menu__topline,
@@ -166,6 +179,15 @@ canvas {
   letter-spacing: 0;
   text-align: center;
   text-transform: uppercase;
+}
+
+.game-menu__panel--howto .game-menu__title {
+  margin-top: 0;
+  font-size: clamp(38px, 5vw, 76px);
+}
+
+.game-menu__panel--howto .game-menu__status {
+  font-size: clamp(13px, 1.5vw, 20px);
 }
 
 .game-menu__pixel-plant {
@@ -299,6 +321,11 @@ canvas {
   width: min(680px, 100%);
 }
 
+.game-menu__actions--pause {
+  width: min(420px, 100%);
+  margin-top: clamp(18px, 3vw, 34px);
+}
+
 .game-menu__button {
   width: 100%;
   min-height: 58px;
@@ -351,41 +378,202 @@ canvas {
   filter: drop-shadow(0 0 6px rgba(126, 166, 255, 0.36));
 }
 
-.game-menu__steps {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(12px, 2vw, 24px);
-  margin-top: 8px;
-}
-
-.game-menu__step {
+.game-menu__pause {
   position: relative;
-  min-height: 210px;
-  padding: 24px;
-  background: rgba(4, 20, 8, 0.72);
-  border: 1px solid rgba(164, 173, 104, 0.34);
-  box-shadow: inset 0 0 10px rgba(164, 173, 104, 0.045);
+  z-index: 1;
+  display: grid;
+  align-content: center;
+  min-height: 320px;
 }
 
-.game-menu__step-number {
+.game-menu__pause-status {
+  margin: clamp(14px, 2vw, 24px) auto 0;
+  color: #ffffff;
+  font: 400 clamp(16px, 2vw, 22px) / 1.2 "Metadannye", "Courier New", monospace;
+  letter-spacing: 0;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.game-menu__howto {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+  gap: clamp(12px, 1.6vw, 22px);
+}
+
+.game-menu__howto-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: clamp(10px, 1.5vw, 20px);
+  text-align: center;
+}
+
+.game-menu__howto-number {
   color: var(--amber-warn);
-  font-size: 18px;
+  font-size: clamp(16px, 2vw, 26px);
+  line-height: 1;
 }
 
-.game-menu__step h2 {
-  margin: 12px 0 8px;
-  color: var(--phosphor-green);
-  font-size: clamp(22px, 3vw, 36px);
+.game-menu__howto-header h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(26px, 3.4vw, 48px);
   line-height: 0.95;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.22);
+}
+
+.game-menu__howto-grid {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  gap: clamp(12px, 1.5vw, 20px);
+}
+
+.game-menu__howto-grid--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.game-menu__howto-grid--3 {
+  grid-template-columns: 1.05fr 0.92fr 1fr;
+}
+
+.game-menu__howto-card {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  padding: clamp(14px, 1.5vw, 22px);
+  background:
+    linear-gradient(rgba(5, 17, 8, 0.88), rgba(4, 12, 6, 0.94)),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 6px);
+  border: 1px solid rgba(164, 173, 104, 0.45);
+  box-shadow:
+    inset 0 0 0 3px rgba(0, 0, 0, 0.28),
+    inset 0 0 16px rgba(164, 173, 104, 0.06);
+}
+
+.game-menu__howto-card--tips {
+  grid-template-rows: auto 1fr;
+}
+
+.game-menu__howto-card h3 {
+  margin: 0 0 10px;
+  color: var(--amber-warn);
+  font-size: clamp(18px, 2vw, 28px);
+  line-height: 1;
   letter-spacing: 0;
   text-transform: uppercase;
 }
 
-.game-menu__step p {
+.game-menu__howto-copy {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.game-menu__howto-copy p {
   margin: 0;
-  color: rgba(200, 185, 130, 0.94);
-  font: 400 15px/1.35 "Courier New", monospace;
-  text-transform: uppercase;
+  color: #ffffff;
+  font: 500 clamp(18px, 1.28vw, 22px) / 1.35 Roboto, "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: 0;
+  text-shadow: 0 0 4px rgba(255, 255, 255, 0.12);
+}
+
+.game-menu__howto-tip-list {
+  display: grid;
+  gap: 16px;
+  margin: 2px 0 0;
+  padding: 0;
+  color: #ffffff;
+  font: 500 clamp(18px, 1.28vw, 22px) / 1.35 Roboto, "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: 0;
+  list-style: none;
+  text-shadow: 0 0 4px rgba(255, 255, 255, 0.12);
+}
+
+.game-menu__howto-tip-list li {
+  position: relative;
+  padding-left: 24px;
+}
+
+.game-menu__howto-tip-list li::before {
+  position: absolute;
+  left: 0;
+  color: var(--amber-warn);
+  content: "-";
+}
+
+.game-menu__howto-media {
+  display: grid;
+  min-height: 0;
+  margin-top: 12px;
+  gap: 10px;
+  align-items: center;
+  overflow: hidden;
+}
+
+.game-menu__howto-figure {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  place-items: center;
+}
+
+.game-menu__howto-figure img {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  max-height: min(30vh, 300px);
+  object-fit: contain;
+  border: 2px solid rgba(0, 0, 0, 0.55);
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.38),
+    0 0 0 1px rgba(164, 173, 104, 0.16);
+  image-rendering: pixelated;
+}
+
+.game-menu__howto-figure--tall img {
+  width: auto;
+  max-height: min(31vh, 320px);
+}
+
+.game-menu__howto-figure--medium img {
+  max-height: min(28vh, 285px);
+}
+
+.game-menu__howto-figure--strip img {
+  max-height: 72px;
+}
+
+.game-menu__actions--tutorial {
+  position: relative;
+  z-index: 1;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: min(920px, 100%);
+  margin-top: 0;
+}
+
+.game-menu__button:disabled {
+  color: rgba(164, 173, 104, 0.32);
+  background: rgba(4, 20, 8, 0.42);
+  border-color: rgba(164, 173, 104, 0.24);
+  cursor: default;
+  text-shadow: none;
+}
+
+.game-menu__button:disabled:hover,
+.game-menu__button:disabled:focus-visible {
+  color: rgba(164, 173, 104, 0.32);
+  background: rgba(4, 20, 8, 0.42);
 }
 
 .game-menu__stats {
@@ -432,6 +620,11 @@ canvas {
     border-radius: 16px;
   }
 
+  .game-menu__panel--howto {
+    height: auto;
+    min-height: calc(100vh - 20px);
+  }
+
   .game-menu__topline {
     font-size: 11px;
   }
@@ -440,15 +633,25 @@ canvas {
     height: 150px;
   }
 
-  .game-menu__steps {
+  .game-menu__howto-grid,
+  .game-menu__howto-grid--2,
+  .game-menu__howto-grid--3 {
     grid-template-columns: 1fr;
   }
 
-  .game-menu__step {
+  .game-menu__howto-card {
     min-height: auto;
   }
 
-  .game-menu__actions--split {
+  .game-menu__howto-figure img,
+  .game-menu__howto-figure--tall img,
+  .game-menu__howto-figure--medium img {
+    width: 100%;
+    max-height: none;
+  }
+
+  .game-menu__actions--split,
+  .game-menu__actions--tutorial {
     grid-template-columns: 1fr;
   }
 

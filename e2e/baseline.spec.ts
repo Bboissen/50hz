@@ -97,15 +97,54 @@ test("shows the start menu before the match begins", async ({ page }) => {
   );
   await page.getByRole("button", { name: "How to Play" }).click();
   await expect(page.getByRole("heading", { name: "How to Play" })).toBeVisible();
-  await expect(page.locator(".game-menu__step")).toHaveCount(3);
-  await expect(page.getByText("Balance Load")).toBeVisible();
-  await expect(page.getByText("Win Demand")).toBeVisible();
-  await expect(page.getByText("Survive Pressure")).toBeVisible();
+  await expect(page.getByText("SCREEN 1 / 3")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Balance the city" })).toBeVisible();
+  await expect(page.getByAltText("Two analog gauges showing generation, load, and the power delta")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Previous" })).toBeDisabled();
+  await page.getByRole("button", { name: "Next" }).click();
+  await expect(page.getByText("SCREEN 2 / 3")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Read what is coming" })).toBeVisible();
+  await expect(page.getByAltText("Incident warning for a football final demand spike")).toBeVisible();
+  await page.getByRole("button", { name: "Next" }).click();
+  await expect(page.getByText("SCREEN 3 / 3")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Survive pressure" })).toBeVisible();
+  await expect(page.getByAltText("Business contract offer showing load, reward, strike penalty, accept, and decline")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Next" })).toBeDisabled();
+  await page.getByRole("button", { name: "Previous" }).click();
+  await expect(page.getByRole("heading", { name: "Read what is coming" })).toBeVisible();
   await page.getByRole("button", { name: "Back" }).click();
   await expect(page.getByRole("heading", { name: "50Hz" })).toBeVisible();
   await page.getByRole("button", { name: "Start Game" }).click();
   await expect(page.locator(".game-menu")).toBeHidden();
   await expect(page.locator("canvas")).toBeVisible();
+});
+
+test("pauses the active game and keeps how to play in the pause overlay", async ({ page }) => {
+  await page.goto("/?dev=1&seed=pause-menu-proof");
+
+  await expect(page.locator(".game-menu")).toBeHidden();
+  await expect(page.locator(".debug-readout")).toContainText("RUNNING");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("heading", { name: "Paused" })).toBeVisible();
+  await expect(page.locator(".debug-readout")).toContainText("PAUSED");
+  await page.getByRole("button", { name: "How to Play" }).click();
+  await expect(page.getByRole("heading", { name: "How to Play" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Balance the city" })).toBeVisible();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.locator(".game-menu")).toBeHidden();
+  await expect(page.locator(".debug-readout")).toContainText("RUNNING");
+
+  await page.keyboard.press("KeyP");
+  await expect(page.getByRole("heading", { name: "Paused" })).toBeVisible();
+  await page.getByRole("button", { name: "Restart" }).click();
+  await expect(page.locator(".game-menu")).toBeHidden();
+  await expect(page.locator(".debug-readout")).toContainText("RUNNING");
+
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("heading", { name: "Paused" })).toBeVisible();
+  await page.getByRole("button", { name: "Quit" }).click();
+  await expect(page.getByRole("heading", { name: "50Hz" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start Game" })).toBeVisible();
 });
 
 test("city editor adjusts and exports the production city layout", async ({ page }) => {
