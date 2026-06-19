@@ -1,4 +1,4 @@
-import { Container, Graphics, Sprite } from "pixi.js";
+import { Container, Graphics, Sprite, Text } from "pixi.js";
 
 import { GAME_CONFIG } from "../../gameplay/config";
 import type { PlayerCommand, ProductionConsoleState, WaterDamMode } from "../../gameplay/types";
@@ -72,6 +72,10 @@ export class ControlDeskScreen extends Container {
   private readonly damRotary: ModeRotarySwitch<WaterDamMode>;
   private readonly forecastTape?: ForecastTape;
   private readonly demandMonitor: DemandForecastMonitor;
+  private readonly safetyNetCooldown = new Container({ label: "SafetyNetCooldown" });
+  private readonly safetyNetCooldownBar = new Graphics({ label: "SafetyNetCooldownBar" });
+  private readonly safetyNetCooldownLabel: Text;
+  private safetyNetCooldownRatio = 0;
   private readonly upgradeRows: UpgradeRow[];
   private readonly readouts = new Map<ReadoutKey, TextReadout>();
   private readonly cityScene?: CityScene;
@@ -165,6 +169,17 @@ export class ControlDeskScreen extends Container {
       this.forecastTape = new ForecastTape(this.layout.forecast.plot, weatherIconTextures);
     }
     this.demandMonitor = new DemandForecastMonitor(this.layout.demandMonitor, assets.fontFamily);
+    this.safetyNetCooldownLabel = new Text({
+      text: "",
+      style: {
+        fontFamily: assets.fontFamily,
+        fontSize: 22,
+        fill: 0x101711,
+        fontWeight: "700",
+      },
+    });
+    this.safetyNetCooldownLabel.position.set(876, 740);
+    this.safetyNetCooldown.addChild(this.safetyNetCooldownBar, this.safetyNetCooldownLabel);
     this.upgradeRows = this.layout.upgradeRows.map(
       (row) => new UpgradeRow(row, assets, sink, assets.fontFamily, options.showLayoutDebug === true),
     );
@@ -182,6 +197,7 @@ export class ControlDeskScreen extends Container {
       this.windSwitch,
       this.damRotary,
       this.demandMonitor,
+      this.safetyNetCooldown,
       ...this.upgradeRows,
     );
 
@@ -225,6 +241,7 @@ export class ControlDeskScreen extends Container {
     this.windSwitch.update(state.windEnabled ? "on" : "off");
     this.damRotary.update(state.waterDamMode);
     this.forecastTape?.update({ seed: state.matchSeed, timeSeconds: state.timeSeconds });
+    this.updateSafetyNetCooldown(state.gridShutdownReliefSeconds);
     this.demandMonitor.update({
       eventTrace: state.eventTrace,
       generationMW: state.generationMW,
@@ -284,6 +301,14 @@ export class ControlDeskScreen extends Container {
 
   public debugDemandForecastMonitorState(): DemandForecastMonitorDebugState | undefined {
     return this.demandMonitor.debugState();
+  }
+
+  public debugSafetyNetCooldownState(): { visible: boolean; text: string; barRatio: number } {
+    return {
+      visible: this.safetyNetCooldown.visible,
+      text: this.safetyNetCooldownLabel.text,
+      barRatio: this.safetyNetCooldownRatio,
+    };
   }
 
   public debugWindLedCount(): number {
@@ -432,6 +457,30 @@ export class ControlDeskScreen extends Container {
         showDebug,
       ),
     );
+  }
+
+  private updateSafetyNetCooldown(secondsRemaining: number): void {
+    const remaining = Math.max(0, secondsRemaining);
+    this.safetyNetCooldown.visible = remaining > 0;
+    if (remaining <= 0) {
+      this.safetyNetCooldownRatio = 0;
+      this.safetyNetCooldownBar.clear();
+      this.safetyNetCooldownLabel.text = "";
+      return;
+    }
+
+    const ratio = Math.min(1, remaining / GAME_CONFIG.breaker.gridShutdownReliefSeconds);
+    this.safetyNetCooldownRatio = ratio;
+    this.safetyNetCooldownBar
+      .clear()
+      .roundRect(846, 728, 342, 54, 7)
+      .fill({ color: 0x6fcad1, alpha: 0.92 })
+      .stroke({ color: 0x101711, alpha: 0.78, width: 3 })
+      .roundRect(862, 764, 310, 8, 3)
+      .fill({ color: 0x101711, alpha: 0.28 })
+      .roundRect(862, 764, 310 * ratio, 8, 3)
+      .fill({ color: 0x101711, alpha: 0.95 });
+    this.safetyNetCooldownLabel.text = `SAFETY NET ${Math.ceil(remaining)}s`;
   }
 
   private addReferenceOverlay(): void {

@@ -243,6 +243,9 @@ describe("ControlDeskScreen", () => {
 
     screen.hitZoneLayer.children[2]?.emit("pointerdown", { global: deskGlobalPoint({ x: 1200, y: 136 }) } as never);
     screen.hitZoneLayer.children[2]?.emit("globalpointermove", { global: deskGlobalPoint({ x: 1000, y: 136 }) } as never);
+
+    expect(commands).toEqual([]);
+
     screen.hitZoneLayer.children[2]?.emit("pointerup", { global: deskGlobalPoint({ x: 1000, y: 136 }) } as never);
 
     expect(commands).toContainEqual({ type: "setWindEnabled", playerId: "player", enabled: false });
@@ -282,6 +285,27 @@ describe("ControlDeskScreen", () => {
 
     expect(commands).toContainEqual({ type: "setWindEnabled", playerId: "player", enabled: false });
     expect(commands).toContainEqual({ type: "setWaterDamMode", playerId: "player", mode: "drain" });
+  });
+
+  it("shows the post-reset safety net cooldown meter", () => {
+    const { resolver } = recordingAssets();
+    const screen = new ControlDeskScreen(resolver, () => undefined);
+
+    screen.update({ ...productionState(), gridShutdownReliefSeconds: 10 });
+
+    expect(screen.debugSafetyNetCooldownState()).toMatchObject({
+      visible: true,
+      text: "SAFETY NET 10s",
+      barRatio: 10 / 15,
+    });
+
+    screen.update({ ...productionState(), gridShutdownReliefSeconds: 0 });
+
+    expect(screen.debugSafetyNetCooldownState()).toMatchObject({
+      visible: false,
+      text: "",
+      barRatio: 0,
+    });
   });
 
   it("keeps knob drags stable when the whole desk is moved and resized", () => {
@@ -768,17 +792,46 @@ describe("control desk sprite components", () => {
     );
 
     dam.update("hold");
-    dam.dragTo({ x: 900 });
-    dam.dragTo({ x: 940 });
+    dam.dragTo({ x: CONTROL_DESK_LAYOUT.knobs.dam.center.x });
+    dam.dragTo({ x: CONTROL_DESK_LAYOUT.knobs.dam.center.x + 82 });
 
     expect(dam.debugSelectedMode()).toBe("hold");
     expect(commands).toEqual([]);
 
-    dam.beginDrag({ x: 900 });
-    dam.dragTo({ x: 940 });
+    dam.beginDrag({ x: CONTROL_DESK_LAYOUT.knobs.dam.center.x });
+    dam.dragTo({ x: CONTROL_DESK_LAYOUT.knobs.dam.center.x + 82 });
 
     expect(dam.debugSelectedMode()).toBe("drain");
+    expect(commands).toEqual([]);
+
+    dam.endDrag();
+
     expect(commands).toEqual(["drain"]);
+  });
+
+  it("can preview and commit the middle dam rotary slot on release", () => {
+    const commands: string[] = [];
+    const dam = new ModeRotarySwitch(
+      [
+        { mode: "fill", label: "FILL", texture: Texture.EMPTY, rotation: -0.42, labelX: CONTROL_DESK_LAYOUT.knobs.dam.center.x - 76 },
+        { mode: "hold", label: "HOLD", texture: Texture.EMPTY, rotation: 0, labelX: CONTROL_DESK_LAYOUT.knobs.dam.center.x },
+        { mode: "drain", label: "DRAIN", texture: Texture.EMPTY, rotation: 0.42, labelX: CONTROL_DESK_LAYOUT.knobs.dam.center.x + 82 },
+      ],
+      CONTROL_DESK_LAYOUT.knobs.dam,
+      "Courier New, monospace",
+      (mode) => commands.push(mode),
+    );
+
+    dam.update("drain");
+    dam.beginDrag({ x: CONTROL_DESK_LAYOUT.knobs.dam.center.x + 82 });
+    dam.dragTo({ x: CONTROL_DESK_LAYOUT.knobs.dam.center.x });
+
+    expect(dam.debugSelectedMode()).toBe("hold");
+    expect(commands).toEqual([]);
+
+    dam.endDrag();
+
+    expect(commands).toEqual(["hold"]);
   });
 
   it("updates text readouts only when rendered text changes", () => {
