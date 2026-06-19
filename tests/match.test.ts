@@ -407,21 +407,16 @@ describe("match", () => {
     expect(dispatch.eventTrace[0]?.demandMW).toBe(70);
   });
 
-  it("builds the production forecast from the same simulated match path", () => {
+  it("builds the production forecast from deterministic known demand", () => {
     const state = createInitialMatchState();
     const trace = buildForecastTraceFromMatchState(state);
-    const current = tickMatch({ ...state, isPaused: false }, 0);
-    let advanced = current;
-    for (let elapsed = 0; elapsed < 5; elapsed += 1 / GAME_CONFIG.match.tickRateHz) {
-      advanced = tickMatch(advanced, Math.min(1 / GAME_CONFIG.match.tickRateHz, 5 - elapsed));
-    }
 
-    expect(trace[0]?.demandMW).toBeCloseTo(current.players.player.lastCurrentDemandMW);
-    expect(trace[1]?.demandMW).toBeCloseTo(advanced.players.player.lastCurrentDemandMW);
-    expect(trace[1]?.supplyDemandMismatch).toBeCloseTo(advanced.players.player.lastSupplyDemandMismatch);
+    expect(trace.map((point) => point.timeOffsetSeconds)).toEqual([0, 5, 10, 15, 20, 25, 30]);
+    expect(trace[0]?.demandMW).toBe(70);
+    expect(trace.at(-1)?.demandMW).toBeCloseTo(71.2);
   });
 
-  it("forecasts customer-share load drift under unchanged player controls", () => {
+  it("does not make the forecast jump from previewed market-share drift", () => {
     const base = createInitialMatchState();
     const state = {
       ...base,
@@ -442,30 +437,9 @@ describe("match", () => {
       },
     };
     const trace = buildForecastTraceFromMatchState(state);
+    const baselineTrace = buildForecastTraceFromMatchState(base);
 
-    expect(trace.at(-1)?.demandMW).toBeGreaterThan(trace[0]!.demandMW);
-  });
-
-  it("marks forecast breaker risk for capacity pressure even when balance is not the source", () => {
-    let state = createInitialMatchState();
-    state = {
-      ...state,
-      players: {
-        ...state.players,
-        player: {
-          ...state.players.player,
-          capacities: {
-            ...state.players.player.capacities,
-            gridCapacityMW: 90,
-          },
-        },
-      },
-    };
-    state = applyPlayerCommand(state, { type: "forceAcceptContract", playerId: "player", kind: "business" });
-    state = applyPlayerCommand(state, { type: "forceAcceptContract", playerId: "player", kind: "dataCenter" });
-    const trace = buildForecastTraceFromMatchState(state);
-
-    expect(trace.some((point) => point.breakerRiskSource === "capacity" || point.breakerWouldTrip)).toBe(true);
+    expect(trace.map((point) => point.demandMW)).toEqual(baselineTrace.map((point) => point.demandMW));
   });
 
   it("unaffordable breaker reset ends the match", () => {

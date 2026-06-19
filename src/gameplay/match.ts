@@ -9,7 +9,7 @@ import {
   currentContractLoadMW,
   deterministicMaxCapacityMW,
 } from "./efficiency";
-import { forecastEventQueue, sampleEventEnvironment } from "./events";
+import { buildEventTrace, forecastEventQueue, sampleEventEnvironment } from "./events";
 import { clamp, clamp01 } from "./math";
 import { priceFromEfficiency, updateSubscribedLoadShare } from "./market";
 import { createInitialPlayerState } from "./playerState";
@@ -17,7 +17,6 @@ import { buildPlantUpgradeStates } from "./plants";
 import { computeRevenueTick } from "./revenue";
 import { buyUpgrade, tickUpgrades } from "./upgrades";
 import { forecastWeather } from "./weather";
-import { chooseBotCommands } from "./bot";
 import type {
   ActiveContractState,
   BreakerLifecycleState,
@@ -529,41 +528,21 @@ export function buildForecastTraceFromMatchState(
   horizonSeconds = FORECAST_TRACE_HORIZON_SECONDS,
   stepSeconds = FORECAST_TRACE_STEP_SECONDS,
 ): EventTracePoint[] {
-  const fixedDt = 1 / GAME_CONFIG.match.tickRateHz;
-  const trace: EventTracePoint[] = [];
-  let preview = tickMatch({ ...state, isPaused: false }, 0);
-  let elapsedSeconds = 0;
-
-  trace.push(eventTracePointFromMatchState(preview, 0));
-
-  for (let targetSeconds = stepSeconds; targetSeconds <= horizonSeconds; targetSeconds += stepSeconds) {
-    while (elapsedSeconds < targetSeconds - 0.000_001 && !isMatchOver(preview)) {
-      const dt = Math.min(fixedDt, targetSeconds - elapsedSeconds);
-      for (const command of chooseBotCommands(preview.players.rival)) {
-        preview = applyPlayerCommand(preview, command);
-      }
-      preview = tickMatch(preview, dt);
-      elapsedSeconds += dt;
-    }
-    trace.push(eventTracePointFromMatchState(preview, targetSeconds));
-  }
-
-  return trace;
-}
-
-function eventTracePointFromMatchState(state: MatchState, timeOffsetSeconds: number): EventTracePoint {
   const player = state.players.player;
-  return {
-    timeOffsetSeconds,
-    demandMW: player.lastCurrentDemandMW,
-    renewableSupplyMW: player.lastOutputs.solarOutputMW + player.lastOutputs.windOutputMW,
-    eventIntensity: Math.max(0, ...state.activeEvents.map((event) => event.intensity ?? 0)),
-    supplyDemandMismatch: player.lastSupplyDemandMismatch,
-    capacityUtilization: player.lastCapacityUtilization,
-    breakerRiskSource: breakerRiskSource(player),
-    breakerTimer: Math.max(player.runtime.balanceBreakerTimer, player.runtime.capacityOverloadTimer),
-    breakerWouldTrip: player.runtime.breakerTrippedSeconds > 0 || state.gameOverReason === "player-reset-bankrupt",
-  };
+  const fixedLoadMW = player.activeContracts.reduce((sum, contract) => sum + contract.loadMW, 0);
+  return buildEventTrace({
+    seed: state.seed,
+    demandSchedule: state.demandSchedule,
+    timeSeconds: state.timeSeconds,
+    capacities: player.capacities,
+    controls: player.controls,
+    subscribedLoadShare: player.subscribedLoadShare,
+    fixedLoadMW,
+  }).filter(
+    (point) =>
+      point.timeOffsetSeconds <= horizonSeconds &&
+      Math.abs(point.timeOffsetSeconds / stepSeconds - Math.round(point.timeOffsetSeconds / stepSeconds)) < 0.000_001,
+  );
 }
 
 export function selectPlayerDerivedStats(state: MatchState, playerId: PlayerId): DerivedPlayerStats {

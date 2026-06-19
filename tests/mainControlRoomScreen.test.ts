@@ -444,6 +444,26 @@ describe("ControlDeskScreen", () => {
     expect(screen.debugDemandForecastMonitorState()?.riskMarkers.map((marker) => marker.level)).toEqual(["warning", "trip"]);
   });
 
+  it("plots current generation on the forecast line when live supply matches live load", () => {
+    const { resolver } = recordingAssets();
+    const screen = new ControlDeskScreen(resolver, () => undefined);
+
+    screen.update({
+      ...productionState(),
+      currentDemandMW: 100,
+      generationMW: 100,
+      eventTrace: [
+        { timeOffsetSeconds: 0, demandMW: 100, renewableSupplyMW: 0, eventIntensity: 0 },
+        { timeOffsetSeconds: 15, demandMW: 112, renewableSupplyMW: 0, eventIntensity: 0 },
+        { timeOffsetSeconds: 30, demandMW: 124, renewableSupplyMW: 0, eventIntensity: 0 },
+      ],
+    });
+
+    const monitor = screen.debugDemandForecastMonitorState();
+
+    expect(monitor?.supplyPoint).toEqual(monitor?.demandPoints[0]);
+  });
+
   it("recycles forecast tape tiles while keeping stable slot indices", () => {
     const seed = "forecast-recycle-proof";
     const tape = new ForecastTape(CONTROL_DESK_LAYOUT.forecast.plot, emptyWeatherIconTextures());

@@ -18,8 +18,6 @@ export type DemandForecastMonitorDebugState = {
   riskMarkers: Array<{ point: Point; level: "warning" | "trip" }>;
 };
 
-const SUPPLY_MARKER_RATIO = 0.14;
-
 export class DemandForecastMonitor extends Container {
   private readonly frame = new Graphics({ label: "DemandForecastMonitorFrame" });
   private readonly plotLayer = new Graphics({ label: "DemandForecastMonitorPlot" });
@@ -76,7 +74,7 @@ export class DemandForecastMonitor extends Container {
       const level = riskLevelForTracePoint(point);
       return level ? [{ point: demandPoints[index]!, level }] : [];
     });
-    const markerX = this.plot.x + this.plot.w * SUPPLY_MARKER_RATIO;
+    const markerX = demandPoints[0]?.x ?? this.plot.x;
     const supplyPoint = { x: markerX, y: this.yForMW(state.generationMW, scaleMin, scaleMax) };
     const safeRange = {
       minY: this.yForMW(safeMinMW, scaleMin, scaleMax),
