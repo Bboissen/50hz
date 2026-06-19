@@ -1,5 +1,5 @@
 import { windFactor } from "./assets";
-import { computeDemand, demandLevelsAtTime } from "./demand";
+import { computeScheduledDemand } from "./demand";
 import { sampleWeather, type WeatherSample } from "./weather";
 import type { AssetCapacities, DemandBreakdown, DemandScheduleStep, EventTracePoint, GenerationControls, PublicEventState, TimelineToken } from "./types";
 
@@ -191,7 +191,7 @@ export function sampleEventEnvironment(args: {
     ...publicEvents,
     householdMultiplier: publicEvents.householdMultiplier * weather.householdDemandMultiplier,
   };
-  const demand = computeDemand(eventState, demandLevelsAtTime(args.demandSchedule, args.timeSeconds));
+  const demand = computeScheduledDemand(eventState, args.demandSchedule, args.timeSeconds);
 
   return {
     publicEvents,

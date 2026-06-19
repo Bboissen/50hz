@@ -530,7 +530,7 @@ export function buildForecastTraceFromMatchState(
 ): EventTracePoint[] {
   const player = state.players.player;
   const fixedLoadMW = player.activeContracts.reduce((sum, contract) => sum + contract.loadMW, 0);
-  return buildEventTrace({
+  const trace = buildEventTrace({
     seed: state.seed,
     demandSchedule: state.demandSchedule,
     timeSeconds: state.timeSeconds,
@@ -543,6 +543,53 @@ export function buildForecastTraceFromMatchState(
       point.timeOffsetSeconds <= horizonSeconds &&
       Math.abs(point.timeOffsetSeconds / stepSeconds - Math.round(point.timeOffsetSeconds / stepSeconds)) < 0.000_001,
   );
+
+  let capacityOverloadTimer = player.runtime.capacityOverloadTimer;
+  let balanceBreakerTimer = player.runtime.balanceBreakerTimer;
+  let previousOffsetSeconds = 0;
+
+  return trace.map((point) => {
+    const dt = Math.max(0, point.timeOffsetSeconds - previousOffsetSeconds);
+    previousOffsetSeconds = point.timeOffsetSeconds;
+    const basisMW = contractCapacityBasisMW({
+      capacities: player.capacities,
+      activeContracts: player.activeContracts,
+      currentRenewableOutputMW: point.renewableSupplyMW,
+    });
+    const capacityUtilization = point.demandMW / Math.max(basisMW, 1);
+    const supplyDemandMismatch = computeSupplyDemandMismatch(player.lastOutputs.rawProductionMW, point.demandMW);
+    const breaker =
+      player.runtime.breakerTrippedSeconds > 0
+        ? {
+            capacityOverloadTimer,
+            balanceBreakerTimer,
+            tripped: true,
+          }
+        : updateBreakerRisk({
+            capacityUtilization,
+            supplyDemandMismatch,
+            capacityOverloadTimer,
+            balanceBreakerTimer,
+            dt,
+          });
+    capacityOverloadTimer = breaker.capacityOverloadTimer;
+    balanceBreakerTimer = breaker.balanceBreakerTimer;
+    const breakerRiskSource: BreakerRiskSource =
+      capacityUtilization > 1
+        ? "capacity"
+        : Math.abs(supplyDemandMismatch) > GAME_CONFIG.breaker.safeBalanceBand
+          ? "balance"
+          : "none";
+
+    return {
+      ...point,
+      supplyDemandMismatch,
+      capacityUtilization,
+      breakerRiskSource,
+      breakerTimer: Math.max(capacityOverloadTimer, balanceBreakerTimer),
+      breakerWouldTrip: breaker.tripped,
+    };
+  });
 }
 
 export function selectPlayerDerivedStats(state: MatchState, playerId: PlayerId): DerivedPlayerStats {

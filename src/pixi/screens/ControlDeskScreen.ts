@@ -260,8 +260,6 @@ export class ControlDeskScreen extends Container {
 
     this.readouts.get("cash")?.update(`CASH ${Math.floor(state.cash)}`);
     this.readouts.get("score")?.update(`SCORE ${Math.floor(state.score)}`);
-    this.readouts.get("tariff")?.update(`TARIFF ${state.playerTariffCents.toFixed(1)}c`);
-    this.readouts.get("rivalTariff")?.update(`RIVAL ${state.rivalTariffCents.toFixed(1)}c`);
     this.readouts.get("incidents")?.update(formatIncidentReadout(state));
     this.readouts.get("city")?.update(formatCityReadout(state));
     this.readouts.get("load")?.update(formatDemandForecastReadout(state));
@@ -605,7 +603,7 @@ export class ControlDeskScreen extends Container {
   }
 }
 
-const TOP_STATUS_READOUT_KEYS = new Set<ReadoutKey>(["cash", "score", "tariff", "rivalTariff", "incidents", "city"]);
+const TOP_STATUS_READOUT_KEYS = new Set<ReadoutKey>(["cash", "score", "incidents", "city"]);
 const SAFETY_NET_COOLDOWN_LAYOUT: Rect = {
   x: DESK_VIEWPORT.x + DESK_VIEWPORT.w / 2 - 385,
   y: CONTROL_DESK_LAYOUT.deskTransform.y + (DESK_VIEWPORT.y + DESK_VIEWPORT.h) * CONTROL_DESK_LAYOUT.deskTransform.scaleY - 58,

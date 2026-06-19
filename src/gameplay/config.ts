@@ -16,6 +16,7 @@ export const GAME_CONFIG = {
     progressionStartSeconds: 40,
     progressionEndSeconds: 270,
     progressionJitterSeconds: 10,
+    progressionRampSeconds: 12,
     sectors: {
       householdsMW: [80, 100, 120],
       businessMW: [15, 35, 55],
