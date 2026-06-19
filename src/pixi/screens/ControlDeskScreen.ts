@@ -2,9 +2,14 @@ import { Container, Graphics, Sprite } from "pixi.js";
 
 import type { PlayerCommand, ProductionConsoleState, WaterDamMode } from "../../gameplay/types";
 import type { AssetResolver } from "../assets";
+import { CityScene } from "../city/CityScene";
+import { citySceneTexturesFromResolver } from "../city/cityAssets";
+import { cityViewStateFromProductionState, selectDamWaterVisualState, selectWindFarmVisualState } from "../city/cityState";
+import type { CitySectorOverlayState, CitySectorSlotId, CitySlotId } from "../city/cityTypes";
+import type { DamWaterVisualState } from "../city/DamWaterObject";
 import { CONTROL_DESK_LAYOUT, type CircleLayout, type ControlDeskLayout, type Point, type Rect } from "../controlDesk/controlDeskLayout";
 import { Backplate } from "../controlDesk/components/Backplate";
-import { ForecastOscilloscope } from "../controlDesk/components/ForecastOscilloscope";
+import { ForecastTape, type ForecastTapeDebugState } from "../controlDesk/components/ForecastTape";
 import { GaugeNeedle } from "../controlDesk/components/GaugeNeedle";
 import { HitZone } from "../controlDesk/components/HitZone";
 import { ModeRotarySwitch } from "../controlDesk/components/ModeRotarySwitch";
@@ -12,6 +17,7 @@ import { RotaryKnob } from "../controlDesk/components/RotaryKnob";
 import { SpriteLedStrip } from "../controlDesk/components/SpriteLedStrip";
 import { TextReadout } from "../controlDesk/components/TextReadout";
 import { UpgradeRow } from "../controlDesk/components/UpgradeRow";
+import { weatherIconTexturesFromResolver } from "../controlDesk/weatherIconAssets";
 
 export type ControlDeskScreenOptions = {
   layout?: ControlDeskLayout;
@@ -23,6 +29,7 @@ type ReadoutKey = keyof ControlDeskLayout["text"];
 type WindSwitchMode = "off" | "on";
 
 export class ControlDeskScreen extends Container {
+  public readonly worldViewportLayer = new Container({ label: "WorldViewportLayer" });
   public readonly deskBackplateLayer = new Container({ label: "DeskBackplateLayer" });
   public readonly staticTextLayer = new Container({ label: "StaticTextLayer" });
   public readonly instrumentOverlayLayer = new Container({ label: "InstrumentOverlayLayer" });
@@ -42,12 +49,11 @@ export class ControlDeskScreen extends Container {
   private readonly boilerKnob: RotaryKnob;
   private readonly windSwitch: ModeRotarySwitch<WindSwitchMode>;
   private readonly damRotary: ModeRotarySwitch<WaterDamMode>;
-  private readonly forecast: ForecastOscilloscope;
+  private readonly forecastTape?: ForecastTape;
   private readonly upgradeRows: UpgradeRow[];
   private readonly readouts = new Map<ReadoutKey, TextReadout>();
+  private readonly cityScene?: CityScene;
   private latestState?: ProductionConsoleState;
-  private windResourceRatio = 0.72;
-  private windAvailableMW = 0;
 
   public constructor(
     private readonly assets: AssetResolver,
@@ -63,8 +69,14 @@ export class ControlDeskScreen extends Container {
     this.alignmentDebugLayer.eventMode = "none";
     this.alignmentDebugLayer.interactiveChildren = false;
 
+    const cityTextures = citySceneTexturesFromResolver(assets);
+    if (cityTextures) {
+      this.cityScene = new CityScene(cityTextures);
+      this.worldViewportLayer.addChild(this.cityScene);
+    }
     this.deskBackplateLayer.addChild(new Backplate(assets.texture("desk_background"), this.layout.backplate));
     this.addChild(
+      this.worldViewportLayer,
       this.deskBackplateLayer,
       this.staticTextLayer,
       this.instrumentOverlayLayer,
@@ -117,7 +129,10 @@ export class ControlDeskScreen extends Container {
       assets.fontFamily,
       (mode) => this.sink({ type: "setWaterDamMode", playerId: "player", mode }),
     );
-    this.forecast = new ForecastOscilloscope(this.layout.forecast.plot);
+    const weatherIconTextures = weatherIconTexturesFromResolver(assets);
+    if (weatherIconTextures) {
+      this.forecastTape = new ForecastTape(this.layout.forecast.plot, weatherIconTextures);
+    }
     this.upgradeRows = this.layout.upgradeRows.map(
       (row) => new UpgradeRow(row, assets, sink, assets.fontFamily, options.showLayoutDebug === true),
     );
@@ -134,7 +149,7 @@ export class ControlDeskScreen extends Container {
       this.boilerKnob,
       this.windSwitch,
       this.damRotary,
-      this.forecast,
+      ...(this.forecastTape ? [this.forecastTape] : []),
       ...this.upgradeRows,
     );
 
@@ -155,22 +170,21 @@ export class ControlDeskScreen extends Container {
 
   public update(state: ProductionConsoleState): void {
     this.latestState = state;
+    this.cityScene?.setViewState(cityViewStateFromProductionState(state));
+    this.cityScene?.setDamWaterVisualState(selectDamWaterVisualState(state));
+    this.cityScene?.setWindFarmVisualState(selectWindFarmVisualState(state));
     this.capacityNeedle.update(state.capacityUtilization);
     this.supplyDeltaNeedle.update(state.supplyDemandMismatch);
     this.reactorStrip.update(state.nuclearCapacityMW === 0 ? 0 : state.nuclearTargetMW / state.nuclearCapacityMW);
     this.boilerStrip.update(state.thermalThrottle);
-    if (state.windEnabled || this.windAvailableMW === 0) {
-      this.windAvailableMW = state.windEnabled ? state.windOutputMW : state.windPeakMW * this.windResourceRatio;
-      this.windResourceRatio = state.windPeakMW === 0 ? 0 : clamp(this.windAvailableMW / state.windPeakMW, 0, 1);
-    }
-    this.windStrip.update(this.windResourceRatio, "green");
-    this.solarStrip.update(state.solarPeakMW === 0 ? 0 : state.solarOutputMW / state.solarPeakMW, "green");
+    this.windStrip.update(state.windPeakMW === 0 ? 0 : state.windPotentialMW / state.windPeakMW, "green");
+    this.solarStrip.update(state.solarFactor, "green");
     this.damStrip.update(state.storedWaterMWh / Math.max(1, state.waterDamCapacityMWh), "blue");
     this.reactorKnob.update(state.nuclearCapacityMW === 0 ? 0 : state.nuclearTargetMW / state.nuclearCapacityMW);
     this.boilerKnob.update(state.thermalThrottle);
     this.windSwitch.update(state.windEnabled ? "on" : "off");
     this.damRotary.update(state.waterDamMode);
-    this.forecast.update(state);
+    this.forecastTape?.update({ seed: state.matchSeed, timeSeconds: state.timeSeconds });
     for (const row of this.upgradeRows) {
       row.update(state.plants[row.plantKey]);
     }
@@ -179,18 +193,20 @@ export class ControlDeskScreen extends Container {
     this.readouts.get("score")?.update(`SCORE ${Math.floor(state.score)}`);
     this.readouts.get("tariff")?.update(`TARIFF ${state.playerTariffCents.toFixed(1)}c`);
     this.readouts.get("rivalTariff")?.update(`RIVAL ${state.rivalTariffCents.toFixed(1)}c`);
-    this.readouts.get("weather")?.update(`WEATHER ${state.forecast.map((token) => token.label).join(" / ")}`);
+    this.readouts.get("weather")?.update(`WEATHER ${state.currentWeather.condition.toUpperCase()} ${state.currentWindKmh.toFixed(0)} KMH`);
     this.readouts.get("load")?.update(`LOAD ${state.currentDemandMW.toFixed(1)} MW`);
     this.readouts.get("generation")?.update(`GEN ${state.generationMW.toFixed(1)} MW`);
     this.readouts.get("breaker")?.update(state.breakerStatusText);
     this.readouts
       .get("share")
       ?.update(`SHARE YOU ${(state.playerSubscribedLoadShare * 100).toFixed(0)}% RIVAL ${((1 - state.playerSubscribedLoadShare) * 100).toFixed(0)}%`);
-    this.readouts.get("reactor")?.update(`REACT ${state.nuclearTargetMW.toFixed(0)} MW`);
-    this.readouts.get("boiler")?.update(`BOILER ${(state.thermalCapacityMW * state.thermalThrottle).toFixed(0)} MW`);
-    this.readouts.get("wind")?.update(`WIND ${state.windEnabled ? "GRID" : "OFF"} ${this.windAvailableMW.toFixed(0)} MW`);
-    this.readouts.get("solar")?.update(`SOLAR ${state.solarOutputMW.toFixed(0)} MW`);
-    this.readouts.get("dam")?.update(`DAM ${state.waterDamMode.toUpperCase()} ${Math.max(state.damOutputMW, state.damAbsorbMW).toFixed(0)} MW`);
+    this.readouts.get("reactor")?.update(`REACT ${state.nuclearOutputMW.toFixed(0)}/${state.nuclearTargetMW.toFixed(0)} MW`);
+    this.readouts.get("boiler")?.update(`BOILER ${state.thermalOutputMW.toFixed(0)} MW`);
+    this.readouts
+      .get("wind")
+      ?.update(`WIND ${state.currentWindKmh.toFixed(0)}K ${state.windOutputMW.toFixed(0)}/${state.windPotentialMW.toFixed(0)}MW`);
+    this.readouts.get("solar")?.update(`SOLAR ${state.solarOutputMW.toFixed(0)}/${state.solarPeakMW.toFixed(0)} MW`);
+    this.readouts.get("dam")?.update(formatDamReadout(state));
   }
 
   public debugComponentLabels(): string[] {
@@ -216,15 +232,11 @@ export class ControlDeskScreen extends Container {
   }
 
   public animate(dt: number): void {
-    this.forecast.animate(dt);
+    this.cityScene?.tick(dt * 1000);
   }
 
-  public debugForecastFeatures(): { hasCurrentMarker: boolean; hasRangeBand: boolean; hasForecastCurve: boolean; hasScanAnimation: boolean } {
-    return this.forecast.debugFeatures();
-  }
-
-  public debugForecastAnimationPhase(): number {
-    return this.forecast.debugAnimationPhase();
+  public debugForecastTapeState(): ForecastTapeDebugState | undefined {
+    return this.forecastTape?.debugState();
   }
 
   public debugWindLedCount(): number {
@@ -246,6 +258,26 @@ export class ControlDeskScreen extends Container {
 
   public debugReadoutFill(key: ReadoutKey): unknown {
     return this.readouts.get(key)?.debugFill();
+  }
+
+  public debugCitySlotLevel(slotId: CitySlotId): number | undefined {
+    return this.cityScene?.debugSlotLevel(slotId);
+  }
+
+  public debugDamWaterState(): DamWaterVisualState | undefined {
+    return this.cityScene?.debugDamWaterState();
+  }
+
+  public debugActiveTurbineCount(): number | undefined {
+    return this.cityScene?.debugActiveTurbineCount();
+  }
+
+  public debugWindFramePosition(): number | undefined {
+    return this.cityScene?.debugWindFramePosition();
+  }
+
+  public debugCitySectorOverlayState(slotId: CitySectorSlotId): CitySectorOverlayState | undefined {
+    return this.cityScene?.debugSectorOverlayState(slotId);
   }
 
   private createLedStrip(key: keyof ControlDeskLayout["ledStrips"], cells: 3 | 10): SpriteLedStrip {
@@ -335,17 +367,17 @@ export class ControlDeskScreen extends Container {
   }
 
   private addLayoutDebug(): void {
-    const drawRect = (rect: Rect, color: number): void => {
+    const outlineRect = (rect: Rect, color: number): void => {
       this.alignmentDebugLayer.addChild(
         new Graphics().rect(rect.x, rect.y, rect.w, rect.h).stroke({ color, alpha: 0.7, width: 2 }),
       );
     };
-    const drawCircle = (circle: CircleLayout, color: number): void => {
+    const outlineCircle = (circle: CircleLayout, color: number): void => {
       this.alignmentDebugLayer.addChild(
         new Graphics().circle(circle.x, circle.y, circle.r).stroke({ color, alpha: 0.7, width: 2 }),
       );
     };
-    const drawCrosshair = (point: Point, color: number): void => {
+    const markPoint = (point: Point, color: number): void => {
       this.alignmentDebugLayer.addChild(
         new Graphics()
           .moveTo(point.x - 10, point.y)
@@ -356,25 +388,25 @@ export class ControlDeskScreen extends Container {
       );
     };
 
-    drawRect(this.layout.forecast.plot, 0x44d7ff);
-    drawCrosshair(this.layout.gauges.capacity.center, 0xff7044);
-    drawCrosshair(this.layout.gauges.supplyDelta.center, 0xff7044);
-    drawCrosshair(this.layout.knobs.reactor.center, 0xffd447);
-    drawCrosshair(this.layout.knobs.boiler.center, 0xffd447);
-    drawCrosshair(this.layout.knobs.windSwitch.center, 0xffd447);
-    drawCrosshair(this.layout.knobs.dam.center, 0xffd447);
+    outlineRect(this.layout.forecast.plot, 0x44d7ff);
+    markPoint(this.layout.gauges.capacity.center, 0xff7044);
+    markPoint(this.layout.gauges.supplyDelta.center, 0xff7044);
+    markPoint(this.layout.knobs.reactor.center, 0xffd447);
+    markPoint(this.layout.knobs.boiler.center, 0xffd447);
+    markPoint(this.layout.knobs.windSwitch.center, 0xffd447);
+    markPoint(this.layout.knobs.dam.center, 0xffd447);
     for (const row of this.layout.upgradeRows) {
-      drawRect(row.hitZone, 0xffd447);
-      drawRect(row.ledStrip, 0x7aff8a);
+      outlineRect(row.hitZone, 0xffd447);
+      outlineRect(row.ledStrip, 0x7aff8a);
     }
     for (const strip of Object.values(this.layout.ledStrips)) {
-      drawRect(strip, 0x7aff8a);
+      outlineRect(strip, 0x7aff8a);
     }
     for (const hitZone of Object.values(this.layout.hitZones)) {
       if ("r" in hitZone) {
-        drawCircle(hitZone, 0x44d7ff);
+        outlineCircle(hitZone, 0x44d7ff);
       } else {
-        drawRect(hitZone, 0x44d7ff);
+        outlineRect(hitZone, 0x44d7ff);
       }
     }
   }
@@ -382,4 +414,14 @@ export class ControlDeskScreen extends Container {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
+}
+
+function formatDamReadout(state: ProductionConsoleState): string {
+  if (state.damOutputMW > 0) {
+    return `DAM OUT ${state.damOutputMW.toFixed(0)} MW`;
+  }
+  if (state.damAbsorbMW > 0) {
+    return `DAM FILL ${state.damAbsorbMW.toFixed(0)} MW`;
+  }
+  return `DAM ${state.waterDamMode.toUpperCase()} 0 MW`;
 }

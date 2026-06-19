@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 
 import { createInitialMatchState, selectProductionConsoleState } from "../src/gameplay/match";
 import type { PlayerCommand, ProductionConsoleState } from "../src/gameplay/types";
+import { sampleWeather } from "../src/gameplay/weather";
 import type { AssetResolver, PixiAssetKey } from "../src/pixi/assets";
+import { CITY_ASSET_SOURCES } from "../src/pixi/city/cityAssets";
+import { FORECAST_BUCKET_SECONDS, ForecastTape } from "../src/pixi/controlDesk/components/ForecastTape";
 import { CONTROL_DESK_LAYOUT, type ControlDeskLayout } from "../src/pixi/controlDesk/controlDeskLayout";
 import { Backplate } from "../src/pixi/controlDesk/components/Backplate";
 import { GaugeNeedle } from "../src/pixi/controlDesk/components/GaugeNeedle";
@@ -13,6 +16,7 @@ import { RotaryKnob } from "../src/pixi/controlDesk/components/RotaryKnob";
 import { SpriteLedStrip } from "../src/pixi/controlDesk/components/SpriteLedStrip";
 import { TextReadout } from "../src/pixi/controlDesk/components/TextReadout";
 import { UpgradeRow } from "../src/pixi/controlDesk/components/UpgradeRow";
+import { WEATHER_ICON_ASSET_SOURCES, WEATHER_ICON_CONDITIONS, type WeatherIconTextures } from "../src/pixi/controlDesk/weatherIconAssets";
 import { ControlDeskScreen } from "../src/pixi/screens/ControlDeskScreen";
 
 function recordingAssets(enabled: Partial<Record<PixiAssetKey, boolean>> = {}): { calls: PixiAssetKey[]; resolver: AssetResolver } {
@@ -33,6 +37,14 @@ function productionState(): ProductionConsoleState {
   return selectProductionConsoleState(createInitialMatchState());
 }
 
+function enabledWeatherIcons(): Partial<Record<PixiAssetKey, boolean>> {
+  return Object.fromEntries(Object.keys(WEATHER_ICON_ASSET_SOURCES).map((key) => [key, true])) as Partial<Record<PixiAssetKey, boolean>>;
+}
+
+function emptyWeatherIconTextures(): WeatherIconTextures {
+  return Object.fromEntries(WEATHER_ICON_CONDITIONS.map((condition) => [condition, Texture.EMPTY])) as WeatherIconTextures;
+}
+
 describe("ControlDeskScreen", () => {
   it("builds the required sprite-overlay control desk layers", () => {
     const { resolver } = recordingAssets({ desk_background: true });
@@ -40,6 +52,7 @@ describe("ControlDeskScreen", () => {
 
     expect(screen.label).toBe("ControlDeskRoot");
     expect(screen.debugComponentLabels()).toEqual([
+      "WorldViewportLayer",
       "DeskBackplateLayer",
       "StaticTextLayer",
       "InstrumentOverlayLayer",
@@ -51,6 +64,97 @@ describe("ControlDeskScreen", () => {
     expect(screen.deskBackplateLayer.children[0]?.label).toBe("DeskBackplate");
     expect(screen.deskBackplateLayer.children[0]?.children).toHaveLength(1);
     expect(screen.deskBackplateLayer.children[0]?.children[0]?.label).toBe("desk-background-sprite");
+  });
+
+  it("mounts the production city scene behind the desk when city textures are loaded", () => {
+    const cityTextures = Object.fromEntries(
+      Object.keys(CITY_ASSET_SOURCES).map((key) => [key, true]),
+    ) as Partial<Record<PixiAssetKey, boolean>>;
+    const { resolver } = recordingAssets({ ...cityTextures, desk_background: true });
+    const screen = new ControlDeskScreen(resolver, () => undefined);
+    const state = productionState();
+
+    screen.update(state);
+
+    expect(screen.worldViewportLayer.children[0]?.label).toBe("city-view-root");
+    expect(screen.debugCitySlotLevel("household")).toBe(state.sectors.homes.demandLevel);
+    expect(screen.debugCitySlotLevel("business")).toBe(state.sectors.services.demandLevel);
+    expect(screen.debugCitySlotLevel("datacenter")).toBe(state.sectors.dataCenters.demandLevel);
+    expect(screen.debugCitySlotLevel("nuclear")).toBe(state.plants.reactor.level);
+    expect(screen.debugCitySlotLevel("thermal")).toBe(state.plants.boiler.level);
+    expect(screen.debugCitySlotLevel("solar")).toBe(state.plants.renewables.level);
+    expect(screen.debugCitySlotLevel("wind")).toBe(state.plants.renewables.level);
+    expect(screen.debugCitySlotLevel("dam")).toBe(state.plants.waterDam.level);
+  });
+
+  it("forwards selector state to city, dam, and wind visuals without mutating gameplay state during animation", () => {
+    const cityTextures = Object.fromEntries(
+      Object.keys(CITY_ASSET_SOURCES).map((key) => [key, true]),
+    ) as Partial<Record<PixiAssetKey, boolean>>;
+    const { resolver } = recordingAssets({ ...cityTextures, desk_background: true });
+    const screen = new ControlDeskScreen(resolver, () => undefined);
+    const state: ProductionConsoleState = {
+      ...productionState(),
+      storedWaterMWh: 14,
+      waterDamCapacityMWh: 20,
+      damOutputMW: 9,
+      damAbsorbMW: 0,
+      waterDamMaxPowerMW: 15,
+      rainActive: true,
+      timeOfDayRatio: 0.4,
+      windOutputMW: 10,
+      windPotentialMW: 12,
+      windPeakMW: 15,
+      windEnabled: true,
+      currentWindKmh: 42,
+      plants: {
+        ...productionState().plants,
+        renewables: { ...productionState().plants.renewables, level: 3 },
+      },
+      sectors: {
+        ...productionState().sectors,
+        homes: {
+          ...productionState().sectors.homes,
+          isSpiking: true,
+          activeEventId: "footballFinal",
+        },
+        dataCenters: {
+          ...productionState().sectors.dataCenters,
+          isDemandCritical: true,
+        },
+      },
+      plantStates: {
+        ...productionState().plantStates,
+        wind: "online",
+      },
+    };
+    const serializedState = JSON.stringify(state);
+
+    screen.update(state);
+
+    expect(screen.debugDamWaterState()).toMatchObject({
+      levelRatio: 0.7,
+      outputRatio: 0.6,
+      rainActive: true,
+      timeOfDayRatio: 0.4,
+    });
+    expect(screen.debugActiveTurbineCount()).toBe(4);
+    expect(screen.debugCitySectorOverlayState("household")).toMatchObject({
+      isSpiking: true,
+      activeEventId: "footballFinal",
+    });
+    expect(screen.debugCitySectorOverlayState("datacenter")).toMatchObject({
+      isDemandCritical: true,
+    });
+    const frameBefore = screen.debugWindFramePosition();
+    screen.animate(1);
+
+    expect(screen.debugWindFramePosition()).toBeGreaterThan(frameBefore ?? 0);
+    expect(screen.debugDamWaterState()).toMatchObject({
+      levelRatio: 0.7,
+      outputRatio: 0.6,
+    });
+    expect(JSON.stringify(state)).toBe(serializedState);
   });
 
   it("does not render the full reference PNG unless explicitly requested", () => {
@@ -185,21 +289,41 @@ describe("ControlDeskScreen", () => {
     expect(commands).toEqual(expectedCommands);
   });
 
-  it("draws the forecast oscilloscope range, current marker, and forecast curve", () => {
-    const { resolver } = recordingAssets();
+  it("renders a moving weather forecast tape from deterministic sampled weather", () => {
+    const seed = "forecast-tape-proof";
+    const { resolver } = recordingAssets(enabledWeatherIcons());
     const screen = new ControlDeskScreen(resolver, () => undefined);
+    const baseState = { ...productionState(), matchSeed: seed, timeSeconds: 0 };
 
-    screen.update(productionState());
+    screen.update(baseState);
+    const first = screen.debugForecastTapeState();
+    screen.update({ ...baseState, timeSeconds: FORECAST_BUCKET_SECONDS / 2 });
+    const second = screen.debugForecastTapeState();
 
-    expect(screen.debugForecastFeatures()).toEqual({
-      hasCurrentMarker: true,
-      hasRangeBand: true,
-      hasForecastCurve: true,
-      hasScanAnimation: true,
-    });
-    expect(screen.debugForecastAnimationPhase()).toBe(0);
-    screen.animate(0.25);
-    expect(screen.debugForecastAnimationPhase()).toBe(0.1);
+    expect(first?.pointerX).toBe(second?.pointerX);
+    expect(first?.offsetPixels).toBe(0);
+    expect(second?.offsetPixels).toBeGreaterThan(0);
+    expect(second?.tileXs).not.toEqual(first?.tileXs);
+    expect(second?.visibleIcons).toEqual(
+      second?.visibleSlots.map((slotIndex) => sampleWeather(seed, slotIndex * FORECAST_BUCKET_SECONDS).condition),
+    );
+  });
+
+  it("recycles forecast tape tiles while keeping stable slot indices", () => {
+    const seed = "forecast-recycle-proof";
+    const tape = new ForecastTape(CONTROL_DESK_LAYOUT.forecast.plot, emptyWeatherIconTextures());
+
+    tape.update({ seed, timeSeconds: 0 });
+    const initial = tape.debugState();
+    tape.update({ seed, timeSeconds: FORECAST_BUCKET_SECONDS * 9 + 3 });
+    const recycled = tape.debugState();
+
+    expect(initial.tileSlots).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    expect(recycled.tileSlots).toEqual([9, 10, 11, 12, 13, 14, 15]);
+    expect(recycled.pointerX).toBe(initial.pointerX);
+    expect(recycled.visibleIcons).toEqual(
+      recycled.visibleSlots.map((slotIndex) => sampleWeather(seed, slotIndex * FORECAST_BUCKET_SECONDS).condition),
+    );
   });
 
   it("shows the player versus rival subscribed-load share in the desk-top HUD", () => {
@@ -217,35 +341,66 @@ describe("ControlDeskScreen", () => {
     expect(screen.debugReadoutText("dam")).toMatch(/MW$/);
   });
 
-  it("shows commanded reactor and boiler values instead of stale output values", () => {
+  it("shows selector-owned readouts instead of alternate UI calculations", () => {
     const { resolver } = recordingAssets({ led_empty_10: true, led_green: true });
     const screen = new ControlDeskScreen(resolver, () => undefined);
     const state = {
       ...productionState(),
+      currentDemandMW: 95,
+      generationMW: 120,
+      deliveredSupplyMW: 80,
+      currentWeather: {
+        ...productionState().currentWeather,
+        condition: "wind" as const,
+      },
+      currentWindKmh: 36,
+      windOutputMW: 0,
+      windPotentialMW: 11,
+      windPeakMW: 15,
       nuclearTargetMW: 20,
       nuclearOutputMW: 35,
       thermalThrottle: 0.75,
       thermalOutputMW: 17,
+      thermalCapacityMW: 100,
+      solarFactor: 0.25,
+      solarOutputMW: 3,
+      solarPeakMW: 10,
+      damOutputMW: 7,
+      damAbsorbMW: 0,
     };
 
     screen.update(state);
 
-    expect(screen.debugReadoutText("reactor")).toBe("REACT 20 MW");
-    expect(screen.debugReadoutText("boiler")).toBe("BOILER 34 MW");
+    expect(screen.debugReadoutText("generation")).toBe("GEN 120.0 MW");
+    expect(screen.debugReadoutText("weather")).toBe("WEATHER WIND 36 KMH");
+    expect(screen.debugReadoutText("reactor")).toBe("REACT 35/20 MW");
+    expect(screen.debugReadoutText("boiler")).toBe("BOILER 17 MW");
+    expect(screen.debugReadoutText("wind")).toBe("WIND 36K 0/11MW");
+    expect(screen.debugReadoutText("solar")).toBe("SOLAR 3/10 MW");
+    expect(screen.debugReadoutText("dam")).toBe("DAM OUT 7 MW");
     expect(screen.debugReactorLedCount()).toBe(6);
+
+    screen.update({ ...state, damOutputMW: 0, damAbsorbMW: 5 });
+    expect(screen.debugReadoutText("dam")).toBe("DAM FILL 5 MW");
   });
 
-  it("keeps wind resource LEDs stable when the switch disconnects wind from the grid", () => {
+  it("keeps wind resource LEDs selector-driven when the switch disconnects wind from the grid", () => {
     const { resolver } = recordingAssets({ led_empty_10: true, led_green: true });
     const screen = new ControlDeskScreen(resolver, () => undefined);
-    const state = productionState();
+    const state = {
+      ...productionState(),
+      windOutputMW: 9,
+      windPotentialMW: 9,
+      windPeakMW: 15,
+      currentWindKmh: 32,
+    };
 
     screen.update(state);
     const connectedCount = screen.debugWindLedCount();
     screen.update({ ...state, windEnabled: false, windOutputMW: 0, generationMW: state.generationMW - state.windOutputMW });
 
     expect(screen.debugWindLedCount()).toBe(connectedCount);
-    expect(screen.debugReadoutText("wind")).toBe(`WIND OFF ${state.windOutputMW.toFixed(0)} MW`);
+    expect(screen.debugReadoutText("wind")).toBe("WIND 32K 0/9MW");
   });
 
   it("keeps top-level LED strips on the declared manifest coordinates only", () => {
@@ -400,7 +555,7 @@ describe("control desk sprite components", () => {
     expect(backplate.sprite?.height).toBe(CONTROL_DESK_LAYOUT.backplate.h);
   });
 
-  it("does not draw a procedural fallback desk when the backplate texture is missing", () => {
+  it("does not render a procedural fallback desk when the backplate texture is missing", () => {
     const backplate = new Backplate(undefined, CONTROL_DESK_LAYOUT.backplate);
 
     expect(backplate.children).toHaveLength(0);
@@ -566,7 +721,7 @@ describe("control desk sprite components", () => {
     expect(events).toEqual(["down", "move", "up"]);
   });
 
-  it("draws hit zone outlines only for layout debug", () => {
+  it("renders hit zone outlines only for layout debug", () => {
     const debugZone = new HitZone(CONTROL_DESK_LAYOUT.hitZones.wind, () => undefined, true);
 
     expect(debugZone.children).toHaveLength(1);
