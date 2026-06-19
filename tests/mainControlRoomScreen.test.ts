@@ -638,6 +638,19 @@ describe("ControlDeskScreen", () => {
     expect(screen.debugControls().dam.debugLabelFills()).toEqual([0x1a130d, 0x1a130d, 0x1a130d]);
   });
 
+  it("keeps cash and score readouts on one top-status row", () => {
+    const { resolver } = recordingAssets();
+    const screen = new ControlDeskScreen(resolver, () => undefined);
+
+    screen.update(productionState());
+
+    expect(screen.debugReadoutText("cash")).toMatch(/^CASH ₽\d+$/);
+    expect(screen.debugReadoutText("score")).toMatch(/^SCORE \d+$/);
+    expect(screen.debugReadoutPosition("cash")?.y).toBe(screen.debugReadoutPosition("score")?.y);
+    expect(CONTROL_DESK_LAYOUT.text.score.x).toBeGreaterThan(CONTROL_DESK_LAYOUT.text.cash.x + 170);
+    expect(CONTROL_DESK_LAYOUT.text.cash.maxWidth).toBeGreaterThanOrEqual(170);
+  });
+
   it("shows purchased upgrade levels immediately without dimming other upgrade arrows", () => {
     const { resolver } = recordingAssets({ upgrade_arrow: true });
     const screen = new ControlDeskScreen(resolver, () => undefined);
