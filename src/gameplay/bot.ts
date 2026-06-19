@@ -4,7 +4,14 @@ export function chooseBotCommands(rival: PlayerState): PlayerCommand[] {
   const commands: PlayerCommand[] = [];
 
   if (rival.lastCapacityUtilization > 0.98 || Math.abs(rival.lastSupplyDemandMismatch) > 0.12) {
-    commands.push({ type: "setThermalThrottle", playerId: "rival", throttle: Math.max(0.2, rival.controls.thermalThrottle - 0.05) });
+    commands.push({
+      type: "setThermalThrottle",
+      playerId: "rival",
+      throttle:
+        rival.lastSupplyDemandMismatch < 0
+          ? Math.min(1, rival.controls.thermalThrottle + 0.08)
+          : Math.max(0.2, rival.controls.thermalThrottle - 0.05),
+    });
     commands.push({ type: "setWaterDamMode", playerId: "rival", mode: rival.lastSupplyDemandMismatch < 0 ? "drain" : "fill" });
     return commands;
   }
