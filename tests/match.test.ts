@@ -398,6 +398,14 @@ describe("match", () => {
     expect(dispatch.incidents[0]?.remainingSeconds).toBeGreaterThan(0);
   });
 
+  it("uses player load rather than whole-city load for the production forecast", () => {
+    const state = createInitialMatchState();
+    const dispatch = selectDispatchConsoleState(state);
+
+    expect(dispatch.cityDemandMW).toBe(140);
+    expect(dispatch.eventTrace[0]?.demandMW).toBe(70);
+  });
+
   it("unaffordable breaker reset ends the match", () => {
     let state = forceUnderloadTrip();
     state = {
@@ -417,6 +425,28 @@ describe("match", () => {
     expect(isMatchOver(state)).toBe(true);
     expect(result.reason).toBe("player-reset-bankrupt");
     expect(result.winner).toBe("rival");
+  });
+
+  it("ends immediately when the breaker trips and reset is unaffordable", () => {
+    let state = createInitialMatchState();
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        player: {
+          ...state.players.player,
+          cash: GAME_CONFIG.strike.cashPenalty + GAME_CONFIG.breaker.resetCost - 1,
+        },
+      },
+    };
+    state = applyPlayerCommand(state, { type: "setNuclearTarget", playerId: "player", targetMW: 0 });
+    state = applyPlayerCommand(state, { type: "setThermalThrottle", playerId: "player", throttle: 0 });
+    state = applyPlayerCommand(state, { type: "setWindEnabled", playerId: "player", enabled: false });
+    state = tickMatch(state, 2);
+
+    expect(state.players.player.runtime.breakerTrippedSeconds).toBeGreaterThan(0);
+    expect(state.gameOverReason).toBe("player-reset-bankrupt");
+    expect(computeFinalResult(state).winner).toBe("rival");
   });
 
   it("manual correction can drain breaker risk before a trip", () => {
