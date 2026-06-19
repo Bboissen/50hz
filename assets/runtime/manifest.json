@@ -180,6 +180,10 @@
       "runtime": "/assets/runtime/ui/background/empty_background_1920.runtime.webp"
     },
     {
+      "source": "/assets/ui/background/menu.png",
+      "runtime": "/assets/runtime/ui/background/menu.webp"
+    },
+    {
       "source": "/assets/ui/components/Knob/knob.png",
       "runtime": "/assets/runtime/ui/components/Knob/knob.webp"
     },

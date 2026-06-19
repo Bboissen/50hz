@@ -234,23 +234,24 @@ export function createGameMenu(options: {
     panel.append(title, status);
   };
 
-  const renderPixelPlant = (): HTMLElement => {
-    const plant = document.createElement("div");
-    plant.className = "game-menu__pixel-plant";
-    plant.setAttribute("aria-hidden", "true");
-    for (const className of [
-      "game-menu__wind",
-      "game-menu__solar",
-      "game-menu__tower",
-      "game-menu__factory",
-      "game-menu__pylon",
-      "game-menu__city",
-    ]) {
-      const shape = document.createElement("span");
-      shape.className = className;
-      plant.appendChild(shape);
-    }
-    return plant;
+  const renderStartHero = (): HTMLElement => {
+    const hero = document.createElement("div");
+    hero.className = "game-menu__hero";
+
+    const copy = document.createElement("div");
+    copy.className = "game-menu__hero-copy";
+
+    const title = document.createElement("h1");
+    title.className = "game-menu__title";
+    title.textContent = "50Hz";
+
+    const status = document.createElement("p");
+    status.className = "game-menu__status";
+    status.textContent = "BALANCE TODAY, POWER TOMORROW";
+
+    copy.append(title, status);
+    hero.append(copy);
+    return hero;
   };
 
   const renderGithubLink = (): HTMLAnchorElement => {
@@ -372,7 +373,6 @@ export function createGameMenu(options: {
   const renderStart = (): void => {
     panel.replaceChildren();
     setPanelMode("start");
-    appendTopFrame("", "50Hz", "BALANCE TODAY, POWER TOMORROW");
 
     const actions = document.createElement("div");
     actions.className = "game-menu__actions";
@@ -385,7 +385,7 @@ export function createGameMenu(options: {
       }),
     );
 
-    panel.append(renderPixelPlant(), actions, renderGithubLink());
+    panel.append(renderStartHero(), actions, renderGithubLink());
     overlay.classList.add("is-visible");
   };
 

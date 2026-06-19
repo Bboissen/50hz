@@ -11,12 +11,20 @@ const assetSourceFiles = [
 ];
 const runtimeRoot = join(repoRoot, "assets/runtime");
 const assetPathPattern = /"(?<path>\/assets\/[^"]+\.png)"/g;
+const extraAssetSources = ["/assets/ui/background/menu.png"];
+const assetOptions = {
+  "/assets/ui/background/menu.png": { quality: 80, alphaQuality: 90 },
+};
 
 function runtimePathForSource(sourcePath) {
   return sourcePath.replace(/^\/assets\//, "/assets/runtime/").replace(/\.png$/, ".webp");
 }
 
 const sources = new Set();
+for (const sourcePath of extraAssetSources) {
+  sources.add(sourcePath);
+}
+
 for (const sourceFile of assetSourceFiles) {
   const content = await readFile(join(repoRoot, sourceFile), "utf8");
   for (const match of content.matchAll(assetPathPattern)) {
@@ -32,8 +40,9 @@ for (const sourcePath of [...sources].sort()) {
   const outputPath = join(repoRoot, runtimePathForSource(sourcePath).slice(1));
 
   await mkdir(dirname(outputPath), { recursive: true });
+  const options = assetOptions[sourcePath] ?? { quality: 85, alphaQuality: 90 };
   await sharp(inputPath)
-    .webp({ quality: 85, alphaQuality: 90, effort: 6 })
+    .webp({ ...options, effort: 6 })
     .toFile(outputPath);
 
   manifest.push({

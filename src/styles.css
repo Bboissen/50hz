@@ -121,8 +121,9 @@ canvas {
 }
 
 .game-menu__panel--start {
-  grid-template-rows: auto auto auto 1fr auto auto;
-  align-items: start;
+  grid-template-rows: auto minmax(0, 1fr);
+  align-items: stretch;
+  padding: clamp(10px, 1.4vw, 18px);
 }
 
 .game-menu__panel--pause {
@@ -190,130 +191,67 @@ canvas {
   font-size: clamp(13px, 1.5vw, 20px);
 }
 
-.game-menu__pixel-plant {
+.game-menu__hero {
   position: relative;
-  align-self: end;
-  width: min(100%, 1120px);
-  height: clamp(160px, 25vh, 270px);
-  margin: 0 auto;
-  border-bottom: 7px solid var(--phosphor-green);
-  filter: drop-shadow(0 0 3px rgba(164, 173, 104, 0.3));
+  z-index: 2;
+  height: 50vh;
+  max-height: 470px;
+  min-height: 0;
+  overflow: hidden;
+  border: 2px solid rgba(164, 173, 104, 0.3);
+  border-radius: 18px;
+  background:
+    url("/assets/runtime/ui/background/menu.webp") center / 100% 100% no-repeat,
+    #031006;
+  box-shadow:
+    inset 0 0 0 5px rgba(0, 0, 0, 0.3),
+    0 18px 70px rgba(0, 0, 0, 0.5);
 }
 
-.game-menu__pixel-plant span {
+.game-menu__hero::after {
   position: absolute;
-  bottom: 0;
-  display: block;
-}
-
-.game-menu__wind {
-  left: 10%;
-  width: 12px;
-  height: 150px;
-  background: var(--phosphor-green);
-}
-
-.game-menu__wind::before,
-.game-menu__wind::after {
-  position: absolute;
-  left: -54px;
-  top: 34px;
-  width: 120px;
-  height: 10px;
-  background: var(--phosphor-green);
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(2, 7, 4, 0.04) 48%, rgba(2, 7, 4, 0.22)),
+    radial-gradient(ellipse at center, transparent 58%, rgba(0, 0, 0, 0.32) 100%);
   content: "";
 }
 
-.game-menu__wind::before {
-  transform: rotate(24deg);
+.game-menu__hero-copy {
+  position: relative;
+  z-index: 1;
+  padding: clamp(24px, 5vh, 42px) clamp(18px, 4vw, 62px) 0;
 }
 
-.game-menu__wind::after {
-  transform: rotate(-62deg);
+.game-menu__hero .game-menu__title {
+  margin-top: 0;
+  font-size: clamp(52px, 10vw, 128px);
+  text-shadow:
+    0 0 3px rgba(164, 173, 104, 0.42),
+    0 9px 22px rgba(0, 0, 0, 0.82);
 }
 
-.game-menu__solar {
-  left: 22%;
-  width: 150px;
-  height: 58px;
-  background:
-    repeating-linear-gradient(90deg, transparent 0 22px, #031407 22px 28px),
-    var(--phosphor-green);
-  transform: skewX(-14deg);
-}
-
-.game-menu__tower {
-  left: 43%;
-  width: 108px;
-  height: 108px;
-  border: 8px solid var(--phosphor-green);
-  border-bottom-width: 18px;
-  border-radius: 42px 42px 10px 10px;
-}
-
-.game-menu__tower::after {
-  position: absolute;
-  left: 28px;
-  top: -58px;
-  width: 56px;
-  height: 56px;
-  background:
-    radial-gradient(circle, var(--phosphor-green) 0 6px, transparent 7px),
-    radial-gradient(circle at 22px 28px, var(--phosphor-green) 0 5px, transparent 6px),
-    radial-gradient(circle at 38px 16px, var(--phosphor-green) 0 4px, transparent 5px);
-  content: "";
-}
-
-.game-menu__factory {
-  left: 55%;
-  width: 160px;
-  height: 74px;
-  background: var(--phosphor-green);
-  box-shadow: inset 0 0 0 18px #061308;
-}
-
-.game-menu__factory::before,
-.game-menu__factory::after {
-  position: absolute;
-  bottom: 74px;
-  width: 16px;
-  height: 64px;
-  background: var(--phosphor-green);
-  content: "";
-}
-
-.game-menu__factory::before {
-  left: 58px;
-}
-
-.game-menu__factory::after {
-  left: 104px;
-}
-
-.game-menu__pylon {
-  left: 72%;
-  width: 110px;
-  height: 150px;
-  clip-path: polygon(50% 0, 100% 100%, 77% 100%, 50% 58%, 23% 100%, 0 100%);
-  background: var(--phosphor-green);
-}
-
-.game-menu__city {
-  right: 4%;
-  width: 190px;
-  height: 148px;
-  background:
-    repeating-linear-gradient(90deg, transparent 0 26px, #061308 26px 36px),
-    repeating-linear-gradient(0deg, transparent 0 20px, #061308 20px 28px),
-    var(--phosphor-green);
-  clip-path: polygon(0 42%, 18% 42%, 18% 12%, 36% 12%, 36% 34%, 52% 34%, 52% 0, 70% 0, 70% 22%, 86% 22%, 86% 48%, 100% 48%, 100% 100%, 0 100%);
+.game-menu__hero .game-menu__status {
+  text-shadow:
+    0 0 3px rgba(164, 173, 104, 0.42),
+    0 6px 18px rgba(0, 0, 0, 0.8);
 }
 
 .game-menu__actions {
+  position: relative;
+  z-index: 2;
   display: grid;
   width: min(430px, 100%);
   gap: 12px;
   margin: clamp(20px, 3vw, 34px) auto 0;
+}
+
+.game-menu__panel--start .game-menu__actions {
+  align-self: center;
+  margin-top: 0;
+  padding: clamp(16px, 2vw, 26px) 0 clamp(4px, 0.8vw, 12px);
 }
 
 .game-menu__actions--split {
@@ -354,7 +292,7 @@ canvas {
   position: absolute;
   right: clamp(22px, 3vw, 44px);
   bottom: clamp(20px, 3vw, 40px);
-  z-index: 1;
+  z-index: 2;
   display: grid;
   width: clamp(34px, 4vw, 48px);
   aspect-ratio: 1;
@@ -795,8 +733,14 @@ canvas {
     font-size: 11px;
   }
 
-  .game-menu__pixel-plant {
-    height: 150px;
+  .game-menu__hero {
+    height: 50vh;
+    min-height: 300px;
+    border-radius: 12px;
+  }
+
+  .game-menu__hero-copy {
+    padding: clamp(20px, 5vh, 34px) 14px 0;
   }
 
   .game-menu__howto-grid,
