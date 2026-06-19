@@ -238,7 +238,7 @@ export class ControlDeskScreen extends Container {
     this.boilerKnob.update(state.thermalThrottle);
     this.windSwitch.update(state.windEnabled ? "on" : "off");
     this.damRotary.update(state.waterDamMode);
-    this.forecastTape?.update({ seed: state.matchSeed, timeSeconds: state.timeSeconds, forecast: state.forecast });
+    this.forecastTape?.update({ seed: state.matchSeed, timeSeconds: state.timeSeconds });
     this.updateSafetyNetCooldown(state.gridShutdownReliefSeconds);
     this.demandMonitor.update({
       eventTrace: state.eventTrace,

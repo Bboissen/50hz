@@ -1,15 +1,13 @@
 import { Container, Graphics, Sprite } from "pixi.js";
 
 import { GAME_CONFIG } from "../../../gameplay/config";
-import type { TimelineToken } from "../../../gameplay/types";
-import { sampleWeather, timeOfDayRatioAt, type WeatherCondition } from "../../../gameplay/weather";
+import { sampleWeather, timeOfDayRatioAt, weatherSegmentSeconds, type WeatherCondition } from "../../../gameplay/weather";
 import type { Rect } from "../controlDeskLayout";
 import type { WeatherIconId, WeatherIconTextures } from "../weatherIconAssets";
 
 export type ForecastTapeState = {
   seed: string;
   timeSeconds: number;
-  forecast?: TimelineToken[];
 };
 
 export type ForecastBucket = {
@@ -33,14 +31,9 @@ export type ForecastTapeDebugState = {
   visibleIcons: WeatherIconId[];
 };
 
-export const FORECAST_BUCKET_SECONDS = GAME_CONFIG.weather.forecastOffsetsSeconds[1] ?? GAME_CONFIG.weather.conditionSegmentSeconds;
-const FORECAST_OFFSETS_SECONDS = GAME_CONFIG.weather.forecastOffsetsSeconds;
-const FORECAST_TILE_OFFSETS_SECONDS = [
-  ...FORECAST_OFFSETS_SECONDS,
-  (FORECAST_OFFSETS_SECONDS.at(-1) ?? 0) + FORECAST_BUCKET_SECONDS,
-];
-const FORECAST_VISIBLE_BUCKET_COUNT = FORECAST_OFFSETS_SECONDS.length;
-const FORECAST_TILE_COUNT = FORECAST_TILE_OFFSETS_SECONDS.length;
+export const FORECAST_BUCKET_SECONDS = weatherSegmentSeconds();
+const FORECAST_VISIBLE_BUCKET_COUNT = GAME_CONFIG.weather.forecastOffsetsSeconds.length;
+const FORECAST_TILE_COUNT = FORECAST_VISIBLE_BUCKET_COUNT + 2;
 const SKY_GRADIENT_STEPS = 14;
 
 const ICON_STYLES: Record<WeatherIconId, { tint: number; glowAlpha: number }> = {
@@ -99,9 +92,11 @@ export class ForecastTape extends Container {
   }
 
   public update(state: ForecastTapeState): ForecastBucket[] {
+    const currentSlotIndex = Math.floor(state.timeSeconds / FORECAST_BUCKET_SECONDS);
+    const firstSlotIndex = currentSlotIndex - 1;
     this.offsetPixels = positiveModulo(state.timeSeconds, FORECAST_BUCKET_SECONDS) / FORECAST_BUCKET_SECONDS * this.cellW;
-    const buckets = FORECAST_TILE_OFFSETS_SECONDS.map((offsetSeconds, index) =>
-      bucketForOffset(state.seed, state.timeSeconds, offsetSeconds, index, state.forecast),
+    const buckets = Array.from({ length: FORECAST_TILE_COUNT }, (_, index) =>
+      bucketForSlot(state.seed, firstSlotIndex + index),
     );
     const signature = buckets.map((bucket) => `${bucket.slotIndex}:${bucket.icon}`).join("|");
     if (signature !== this.lastSignature) {
@@ -115,8 +110,9 @@ export class ForecastTape extends Container {
     }
 
     const visibleBuckets: ForecastBucket[] = [];
-    for (const [index, tile] of this.tileViews.entries()) {
-      const x = this.pointerX + index * this.cellW - this.offsetPixels;
+    for (const tile of this.tileViews) {
+      const slotOffset = tile.slotIndex - currentSlotIndex;
+      const x = this.pointerX + slotOffset * this.cellW - this.offsetPixels;
       tile.position.set(Math.round(x), this.cellY);
       tile.visible = x + this.cellW > this.bounds.x + this.leftPad && x < this.bounds.x + this.bounds.w - this.leftPad;
       if (tile.visible) {
@@ -130,7 +126,7 @@ export class ForecastTape extends Container {
   public debugState(): ForecastTapeDebugState {
     const ordered = [...this.tileViews].sort((a, b) => a.slotIndex - b.slotIndex);
     const visible = ordered.filter((tile) => tile.visible);
-    const pointerTile = ordered.find((tile) => tile.slotIndex === 0);
+    const pointerTile = ordered.find((tile) => this.pointerX >= tile.x && this.pointerX < tile.x + this.cellW);
     return {
       offsetPixels: this.offsetPixels,
       pointerX: this.pointerX,
@@ -302,22 +298,15 @@ class ForecastBucketView extends Container {
   }
 }
 
-function bucketForOffset(
-  seed: string,
-  timeSeconds: number,
-  offsetSeconds: number,
-  index: number,
-  forecast: TimelineToken[] | undefined,
-): ForecastBucket {
-  const token = forecast?.find((item) => Math.abs(item.remainingSeconds - offsetSeconds) < 0.001);
-  const absoluteTimeSeconds = timeSeconds + offsetSeconds;
-  const condition = weatherConditionFromToken(token) ?? sampleWeather(seed, absoluteTimeSeconds).condition;
+function bucketForSlot(seed: string, slotIndex: number): ForecastBucket {
+  const absoluteTimeSeconds = slotIndex * FORECAST_BUCKET_SECONDS;
+  const condition = sampleWeather(seed, absoluteTimeSeconds).condition;
   const icon = iconForConditionAtTime(condition, absoluteTimeSeconds);
   return {
     condition,
     icon,
     absoluteTimeSeconds,
-    slotIndex: index === 0 ? 0 : offsetSeconds,
+    slotIndex,
   };
 }
 
@@ -326,19 +315,6 @@ function iconForConditionAtTime(condition: WeatherCondition, absoluteTimeSeconds
     return "moon";
   }
   return condition;
-}
-
-function weatherConditionFromToken(token: TimelineToken | undefined): WeatherCondition | undefined {
-  if (
-    token?.id === "sun" ||
-    token?.id === "cloud" ||
-    token?.id === "rain" ||
-    token?.id === "wind" ||
-    token?.id === "snow"
-  ) {
-    return token.id;
-  }
-  return undefined;
 }
 
 function fitSprite(sprite: Sprite, maxWidth: number, maxHeight: number): void {

@@ -52,6 +52,12 @@ function displayWeatherIcon(condition: WeatherCondition, timeSeconds: number): W
   return condition === "sun" && timeOfDayRatioAt(timeSeconds) > 0.5 ? "moon" : condition;
 }
 
+function tileXForSlot(state: { tileSlots: number[]; tileXs: number[] }, slotIndex: number): number {
+  const index = state.tileSlots.indexOf(slotIndex);
+  expect(index).toBeGreaterThanOrEqual(0);
+  return state.tileXs[index]!;
+}
+
 function deskGlobalPoint(point: { x: number; y: number }): Point {
   return deskGlobalPointFor(CONTROL_DESK_LAYOUT, point);
 }
@@ -334,21 +340,15 @@ describe("ControlDeskScreen", () => {
     expect(commands).toEqual(expectedCommands);
   });
 
-  it("renders the weather forecast tape from selector-owned sampled offsets", () => {
+  it("renders the weather forecast tape from absolute weather slots", () => {
     const seed = "forecast-tape-proof";
     const { resolver } = recordingAssets(enabledWeatherIcons());
     const screen = new ControlDeskScreen(resolver, () => undefined);
     const baseState = { ...productionState(), matchSeed: seed, timeSeconds: 0 };
-    const forecast = [
-      { id: "sun", label: "SUN", phase: "impact" as const, remainingSeconds: 0 },
-      { id: "cloud", label: "CLOUD", phase: "warning" as const, remainingSeconds: 15 },
-      { id: "wind", label: "WIND", phase: "warning" as const, remainingSeconds: 30 },
-      { id: "snow", label: "SNOW", phase: "warning" as const, remainingSeconds: 45 },
-    ];
 
-    screen.update({ ...baseState, forecast });
+    screen.update(baseState);
     const first = screen.debugForecastTapeState();
-    screen.update({ ...baseState, timeSeconds: FORECAST_BUCKET_SECONDS / 2, forecast });
+    screen.update({ ...baseState, timeSeconds: FORECAST_BUCKET_SECONDS / 2 });
     const second = screen.debugForecastTapeState();
 
     expect(first?.pointerX).toBe(second?.pointerX);
@@ -357,11 +357,12 @@ describe("ControlDeskScreen", () => {
     expect(second?.tileXs).not.toEqual(first?.tileXs);
     expect(second?.pointerSlotIndex).toBe(0);
     expect(second?.pointerIcon).toBe("sun");
-    expect(second?.visibleSlots).toEqual([0, 15, 30, 45]);
-    expect(second?.visibleIcons.slice(0, forecast.length)).toEqual(["sun", "cloud", "wind", "snow"]);
+    expect(second?.visibleIcons).toEqual(
+      second?.visibleSlots.map((slotIndex) =>
+        displayWeatherIcon(sampleWeather(seed, slotIndex * FORECAST_BUCKET_SECONDS).condition, slotIndex * FORECAST_BUCKET_SECONDS),
+      ),
+    );
     expect(second?.tileBackgroundSamples[0]?.left).not.toBe(second?.tileBackgroundSamples[0]?.right);
-    expect(second?.tileIconTints[1]).toBe(0xf8fbff);
-    expect(second?.tileIconTints[2]).toBe(0xf2fbff);
     expect(second?.tileIconSizes.every((size) => size.width <= 58 && size.height <= 54)).toBe(true);
   });
 
@@ -454,28 +455,39 @@ describe("ControlDeskScreen", () => {
     expect(monitor?.supplyPoint).toEqual(monitor?.demandPoints[0]);
   });
 
-  it("falls back to exact sampled forecast offsets when selector tokens are absent", () => {
+  it("keeps weather tape motion continuous across segment boundaries and backward seeks", () => {
     const seed = "forecast-recycle-proof";
     const tape = new ForecastTape(CONTROL_DESK_LAYOUT.forecast.plot, emptyWeatherIconTextures());
 
-    tape.update({ seed, timeSeconds: 0 });
-    const initial = tape.debugState();
+    tape.update({ seed, timeSeconds: FORECAST_BUCKET_SECONDS - 0.05 });
+    const beforeBoundary = tape.debugState();
+    tape.update({ seed, timeSeconds: FORECAST_BUCKET_SECONDS + 0.05 });
+    const afterBoundary = tape.debugState();
     tape.update({ seed, timeSeconds: FORECAST_BUCKET_SECONDS * 9 + 3 });
-    const updated = tape.debugState();
+    const later = tape.debugState();
+    tape.update({ seed, timeSeconds: FORECAST_BUCKET_SECONDS * 4 + 6 });
+    const backward = tape.debugState();
 
-    expect(initial.tileSlots).toEqual([0, 15, 30, 45, 60]);
-    expect(updated.tileSlots).toEqual([0, 15, 30, 45, 60]);
-    expect(updated.pointerX).toBe(initial.pointerX);
-    expect(updated.pointerSlotIndex).toBe(0);
-    expect(updated.pointerIcon).toBe(
+    expect(afterBoundary.pointerX).toBe(beforeBoundary.pointerX);
+    expect(afterBoundary.pointerSlotIndex).toBe(1);
+    expect(Math.abs(tileXForSlot(afterBoundary, 1) - tileXForSlot(beforeBoundary, 1))).toBeLessThan(
+      CONTROL_DESK_LAYOUT.forecast.plot.w * 0.02,
+    );
+    expect(later.pointerSlotIndex).toBe(9);
+    expect(later.pointerIcon).toBe(
       displayWeatherIcon(sampleWeather(seed, FORECAST_BUCKET_SECONDS * 9 + 3).condition, FORECAST_BUCKET_SECONDS * 9 + 3),
     );
-    expect(updated.tileIconSizes.every((size) => size.width <= 58 && size.height <= 54)).toBe(true);
-    expect(updated.visibleIcons).toEqual(
-      updated.visibleSlots.map((offsetSeconds) =>
+    expect(backward.pointerSlotIndex).toBe(4);
+    expect(backward.pointerIcon).toBe(
+      displayWeatherIcon(sampleWeather(seed, FORECAST_BUCKET_SECONDS * 4 + 6).condition, FORECAST_BUCKET_SECONDS * 4 + 6),
+    );
+    expect(backward.tileSlots).toEqual([3, 4, 5, 6, 7, 8]);
+    expect(backward.tileIconSizes.every((size) => size.width <= 58 && size.height <= 54)).toBe(true);
+    expect(backward.visibleIcons).toEqual(
+      backward.visibleSlots.map((slotIndex) =>
         displayWeatherIcon(
-          sampleWeather(seed, FORECAST_BUCKET_SECONDS * 9 + 3 + offsetSeconds).condition,
-          FORECAST_BUCKET_SECONDS * 9 + 3 + offsetSeconds,
+          sampleWeather(seed, slotIndex * FORECAST_BUCKET_SECONDS).condition,
+          slotIndex * FORECAST_BUCKET_SECONDS,
         ),
       ),
     );
