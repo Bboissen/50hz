@@ -78,7 +78,7 @@ async function pageClip(page: Page, clip: { x: number; y: number; width: number;
 }
 
 async function startGame(page: Page): Promise<void> {
-  const playButton = page.getByRole("button", { name: "Play game" });
+  const playButton = page.getByRole("button", { name: "Start Game" });
   if (await playButton.isVisible()) {
     await playButton.click();
   }
@@ -88,8 +88,18 @@ async function startGame(page: Page): Promise<void> {
 test("shows the start menu before the match begins", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.getByRole("button", { name: "Play game" })).toBeVisible();
-  await page.getByRole("button", { name: "Play game" }).click();
+  await expect(page.getByRole("heading", { name: "50Hz" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start Game" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "How to Play" })).toBeVisible();
+  await page.getByRole("button", { name: "How to Play" }).click();
+  await expect(page.getByRole("heading", { name: "How to Play" })).toBeVisible();
+  await expect(page.locator(".game-menu__step")).toHaveCount(3);
+  await expect(page.getByText("Balance Load")).toBeVisible();
+  await expect(page.getByText("Win Demand")).toBeVisible();
+  await expect(page.getByText("Survive Pressure")).toBeVisible();
+  await page.getByRole("button", { name: "Back" }).click();
+  await expect(page.getByRole("heading", { name: "50Hz" })).toBeVisible();
+  await page.getByRole("button", { name: "Start Game" }).click();
   await expect(page.locator(".game-menu")).toBeHidden();
   await expect(page.locator("canvas")).toBeVisible();
 });
@@ -348,6 +358,8 @@ test("shows an endgame summary menu and replays from a fresh match", async ({ pa
 
   await expect(page.getByText("Grid Lost")).toBeVisible();
   await expect(page.getByText("You could not pay the breaker reset.")).toBeVisible();
+  await expect(page.getByText("YOU")).toBeVisible();
+  await expect(page.getByText("GRID-AI")).toBeVisible();
   await expect(page.getByRole("button", { name: "Replay" })).toBeVisible();
 
   await page.getByRole("button", { name: "Replay" }).click();

@@ -10,9 +10,11 @@ describe("game menu summaries", () => {
 
     expect(summarizeFinalResult(result, state)).toMatchObject({
       outcome: "The match clock expired.",
-      scoreLine: `${result.playerFinalScore.toFixed(0)} / ${result.rivalFinalScore.toFixed(0)}`,
-      customerLine: "50% / 50%",
-      strikeLine: "0 / 0",
+      rows: expect.arrayContaining([
+        { label: "Final score", you: result.playerFinalScore.toFixed(0), opponent: result.rivalFinalScore.toFixed(0) },
+        { label: "Customers", you: "50%", opponent: "50%" },
+        { label: "Strikes", you: "0", opponent: "0" },
+      ]),
     });
   });
 

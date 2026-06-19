@@ -15,6 +15,7 @@ export class ModeRotarySwitch<Mode extends string> extends Container {
   private selectedIndex = 0;
   private cycleDirection = 1;
   private dragStartX?: number;
+  private dragStartIndex?: number;
   private visualRotation = 0;
 
   public constructor(
@@ -58,6 +59,9 @@ export class ModeRotarySwitch<Mode extends string> extends Container {
   }
 
   public update(mode: Mode): void {
+    if (this.dragStartX !== undefined) {
+      return;
+    }
     const index = this.options.findIndex((option) => option.mode === mode);
     if (index >= 0) {
       this.applyIndex(index);
@@ -78,6 +82,7 @@ export class ModeRotarySwitch<Mode extends string> extends Container {
 
   public beginDrag(global: { x: number }): void {
     this.dragStartX = global.x;
+    this.dragStartIndex = this.selectedIndex;
   }
 
   public dragTo(global: { x: number }): void {
@@ -88,11 +93,16 @@ export class ModeRotarySwitch<Mode extends string> extends Container {
     if (Math.abs(deltaX) < 12) {
       return;
     }
-    this.selectIndex(deltaX < 0 ? 0 : this.options.length - 1);
+    this.applyIndex(this.nearestIndexForX(global.x));
   }
 
   public endDrag(): void {
+    const shouldCommit = this.dragStartIndex !== undefined && this.selectedIndex !== this.dragStartIndex;
     this.dragStartX = undefined;
+    this.dragStartIndex = undefined;
+    if (shouldCommit) {
+      this.onChange(this.options[this.selectedIndex]!.mode);
+    }
   }
 
   public debugSelectedMode(): Mode {
@@ -133,6 +143,19 @@ export class ModeRotarySwitch<Mode extends string> extends Container {
     }
     this.applyIndex(clamped);
     this.onChange(this.options[this.selectedIndex]!.mode);
+  }
+
+  private nearestIndexForX(x: number): number {
+    let nearestIndex = this.selectedIndex;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    for (const [index, option] of this.options.entries()) {
+      const distance = Math.abs(option.labelX - x);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestIndex = index;
+      }
+    }
+    return nearestIndex;
   }
 
   private applyIndex(index: number): void {

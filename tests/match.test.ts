@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   applyPlayerCommand,
+  buildForecastTraceFromMatchState,
   computeFinalResult,
   createInitialMatchState,
   isMatchOver,
@@ -404,6 +405,41 @@ describe("match", () => {
 
     expect(dispatch.cityDemandMW).toBe(140);
     expect(dispatch.eventTrace[0]?.demandMW).toBe(70);
+  });
+
+  it("builds the production forecast from deterministic known demand", () => {
+    const state = createInitialMatchState();
+    const trace = buildForecastTraceFromMatchState(state);
+
+    expect(trace.map((point) => point.timeOffsetSeconds)).toEqual([0, 5, 10, 15, 20, 25, 30]);
+    expect(trace[0]?.demandMW).toBe(70);
+    expect(trace.at(-1)?.demandMW).toBeCloseTo(71.2);
+  });
+
+  it("does not make the forecast jump from previewed market-share drift", () => {
+    const base = createInitialMatchState();
+    const state = {
+      ...base,
+      players: {
+        ...base.players,
+        player: {
+          ...base.players.player,
+          devGodMode: true,
+        },
+        rival: {
+          ...base.players.rival,
+          capacities: {
+            ...base.players.rival.capacities,
+            nuclearCapacityMW: 105,
+            thermalCapacityMW: 95,
+          },
+        },
+      },
+    };
+    const trace = buildForecastTraceFromMatchState(state);
+    const baselineTrace = buildForecastTraceFromMatchState(base);
+
+    expect(trace.map((point) => point.demandMW)).toEqual(baselineTrace.map((point) => point.demandMW));
   });
 
   it("unaffordable breaker reset ends the match", () => {

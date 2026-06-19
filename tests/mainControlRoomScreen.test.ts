@@ -6,6 +6,7 @@ import type { PlayerCommand, ProductionConsoleState } from "../src/gameplay/type
 import { sampleWeather } from "../src/gameplay/weather";
 import type { AssetResolver, PixiAssetKey } from "../src/pixi/assets";
 import { CITY_ASSET_SOURCES } from "../src/pixi/city/cityAssets";
+import { DESK_VIEWPORT } from "../src/pixi/city/citySceneConfig";
 import { FORECAST_BUCKET_SECONDS, ForecastTape } from "../src/pixi/controlDesk/components/ForecastTape";
 import { CONTROL_DESK_LAYOUT, type ControlDeskLayout } from "../src/pixi/controlDesk/controlDeskLayout";
 import { Backplate } from "../src/pixi/controlDesk/components/Backplate";
@@ -243,6 +244,9 @@ describe("ControlDeskScreen", () => {
 
     screen.hitZoneLayer.children[2]?.emit("pointerdown", { global: deskGlobalPoint({ x: 1200, y: 136 }) } as never);
     screen.hitZoneLayer.children[2]?.emit("globalpointermove", { global: deskGlobalPoint({ x: 1000, y: 136 }) } as never);
+
+    expect(commands).toEqual([]);
+
     screen.hitZoneLayer.children[2]?.emit("pointerup", { global: deskGlobalPoint({ x: 1000, y: 136 }) } as never);
 
     expect(commands).toContainEqual({ type: "setWindEnabled", playerId: "player", enabled: false });
@@ -282,6 +286,35 @@ describe("ControlDeskScreen", () => {
 
     expect(commands).toContainEqual({ type: "setWindEnabled", playerId: "player", enabled: false });
     expect(commands).toContainEqual({ type: "setWaterDamMode", playerId: "player", mode: "drain" });
+  });
+
+  it("shows the post-reset safety net cooldown meter", () => {
+    const { resolver } = recordingAssets();
+    const screen = new ControlDeskScreen(resolver, () => undefined);
+
+    screen.update({ ...productionState(), gridShutdownReliefSeconds: 10 });
+
+    expect(screen.debugSafetyNetCooldownState()).toMatchObject({
+      visible: true,
+      text: "Reset safety net - 10s left to match the demand",
+      barRatio: 10 / 15,
+    });
+    expect(screen.topStatusLayer.children.map((child) => child.label)).toContain("SafetyNetCooldown");
+    expect(screen.debugInstrumentChildLabels()).not.toContain("SafetyNetCooldown");
+    expect(screen.debugSafetyNetCooldownState().bounds).toMatchObject({
+      x: DESK_VIEWPORT.x + DESK_VIEWPORT.w / 2 - 385,
+      y: CONTROL_DESK_LAYOUT.deskTransform.y + (DESK_VIEWPORT.y + DESK_VIEWPORT.h) * CONTROL_DESK_LAYOUT.deskTransform.scaleY - 58,
+      w: 770,
+      h: 50,
+    });
+
+    screen.update({ ...productionState(), gridShutdownReliefSeconds: 0 });
+
+    expect(screen.debugSafetyNetCooldownState()).toMatchObject({
+      visible: false,
+      text: "",
+      barRatio: 0,
+    });
   });
 
   it("keeps knob drags stable when the whole desk is moved and resized", () => {
@@ -377,6 +410,58 @@ describe("ControlDeskScreen", () => {
     expect(first?.demandPoints).toHaveLength(3);
     expect(first?.supplyPoint.x).toBe(second?.supplyPoint.x);
     expect(first?.safeRange.minY).not.toBe(first?.safeRange.maxY);
+  });
+
+  it("marks forecast points that carry breaker risk", () => {
+    const { resolver } = recordingAssets();
+    const screen = new ControlDeskScreen(resolver, () => undefined);
+
+    screen.update({
+      ...productionState(),
+      currentDemandMW: 100,
+      generationMW: 103,
+      eventTrace: [
+        { timeOffsetSeconds: 0, demandMW: 100, renewableSupplyMW: 0, eventIntensity: 0 },
+        {
+          timeOffsetSeconds: 15,
+          demandMW: 118,
+          renewableSupplyMW: 0,
+          eventIntensity: 0,
+          breakerRiskSource: "capacity",
+          breakerTimer: 1.5,
+        },
+        {
+          timeOffsetSeconds: 30,
+          demandMW: 130,
+          renewableSupplyMW: 0,
+          eventIntensity: 0,
+          breakerRiskSource: "capacity",
+          breakerWouldTrip: true,
+        },
+      ],
+    });
+
+    expect(screen.debugDemandForecastMonitorState()?.riskMarkers.map((marker) => marker.level)).toEqual(["warning", "trip"]);
+  });
+
+  it("plots current generation on the forecast line when live supply matches live load", () => {
+    const { resolver } = recordingAssets();
+    const screen = new ControlDeskScreen(resolver, () => undefined);
+
+    screen.update({
+      ...productionState(),
+      currentDemandMW: 100,
+      generationMW: 100,
+      eventTrace: [
+        { timeOffsetSeconds: 0, demandMW: 100, renewableSupplyMW: 0, eventIntensity: 0 },
+        { timeOffsetSeconds: 15, demandMW: 112, renewableSupplyMW: 0, eventIntensity: 0 },
+        { timeOffsetSeconds: 30, demandMW: 124, renewableSupplyMW: 0, eventIntensity: 0 },
+      ],
+    });
+
+    const monitor = screen.debugDemandForecastMonitorState();
+
+    expect(monitor?.supplyPoint).toEqual(monitor?.demandPoints[0]);
   });
 
   it("recycles forecast tape tiles while keeping stable slot indices", () => {
@@ -768,17 +853,46 @@ describe("control desk sprite components", () => {
     );
 
     dam.update("hold");
-    dam.dragTo({ x: 900 });
-    dam.dragTo({ x: 940 });
+    dam.dragTo({ x: CONTROL_DESK_LAYOUT.knobs.dam.center.x });
+    dam.dragTo({ x: CONTROL_DESK_LAYOUT.knobs.dam.center.x + 82 });
 
     expect(dam.debugSelectedMode()).toBe("hold");
     expect(commands).toEqual([]);
 
-    dam.beginDrag({ x: 900 });
-    dam.dragTo({ x: 940 });
+    dam.beginDrag({ x: CONTROL_DESK_LAYOUT.knobs.dam.center.x });
+    dam.dragTo({ x: CONTROL_DESK_LAYOUT.knobs.dam.center.x + 82 });
 
     expect(dam.debugSelectedMode()).toBe("drain");
+    expect(commands).toEqual([]);
+
+    dam.endDrag();
+
     expect(commands).toEqual(["drain"]);
+  });
+
+  it("can preview and commit the middle dam rotary slot on release", () => {
+    const commands: string[] = [];
+    const dam = new ModeRotarySwitch(
+      [
+        { mode: "fill", label: "FILL", texture: Texture.EMPTY, rotation: -0.42, labelX: CONTROL_DESK_LAYOUT.knobs.dam.center.x - 76 },
+        { mode: "hold", label: "HOLD", texture: Texture.EMPTY, rotation: 0, labelX: CONTROL_DESK_LAYOUT.knobs.dam.center.x },
+        { mode: "drain", label: "DRAIN", texture: Texture.EMPTY, rotation: 0.42, labelX: CONTROL_DESK_LAYOUT.knobs.dam.center.x + 82 },
+      ],
+      CONTROL_DESK_LAYOUT.knobs.dam,
+      "Courier New, monospace",
+      (mode) => commands.push(mode),
+    );
+
+    dam.update("drain");
+    dam.beginDrag({ x: CONTROL_DESK_LAYOUT.knobs.dam.center.x + 82 });
+    dam.dragTo({ x: CONTROL_DESK_LAYOUT.knobs.dam.center.x });
+
+    expect(dam.debugSelectedMode()).toBe("hold");
+    expect(commands).toEqual([]);
+
+    dam.endDrag();
+
+    expect(commands).toEqual(["hold"]);
   });
 
   it("updates text readouts only when rendered text changes", () => {

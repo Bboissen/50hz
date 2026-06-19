@@ -28,6 +28,7 @@ import type {
   ContractOfferState,
   DerivedPlayerStats,
   DispatchConsoleState,
+  EventTracePoint,
   FinalResult,
   MatchState,
   MatchSeed,
@@ -37,6 +38,9 @@ import type {
   SectorVisualState,
   ProductionConsoleState,
 } from "./types";
+
+const FORECAST_TRACE_HORIZON_SECONDS = 30;
+const FORECAST_TRACE_STEP_SECONDS = 5;
 
 function createInitialContractOffers(): ContractOffer[] {
   return GAME_CONFIG.contracts.offerSchedule.map((offer) => ({
@@ -519,6 +523,28 @@ export function tickMatch(state: MatchState, dt = 1 / GAME_CONFIG.match.tickRate
   };
 }
 
+export function buildForecastTraceFromMatchState(
+  state: MatchState,
+  horizonSeconds = FORECAST_TRACE_HORIZON_SECONDS,
+  stepSeconds = FORECAST_TRACE_STEP_SECONDS,
+): EventTracePoint[] {
+  const player = state.players.player;
+  const fixedLoadMW = player.activeContracts.reduce((sum, contract) => sum + contract.loadMW, 0);
+  return buildEventTrace({
+    seed: state.seed,
+    demandSchedule: state.demandSchedule,
+    timeSeconds: state.timeSeconds,
+    capacities: player.capacities,
+    controls: player.controls,
+    subscribedLoadShare: player.subscribedLoadShare,
+    fixedLoadMW,
+  }).filter(
+    (point) =>
+      point.timeOffsetSeconds <= horizonSeconds &&
+      Math.abs(point.timeOffsetSeconds / stepSeconds - Math.round(point.timeOffsetSeconds / stepSeconds)) < 0.000_001,
+  );
+}
+
 export function selectPlayerDerivedStats(state: MatchState, playerId: PlayerId): DerivedPlayerStats {
   const player = state.players[playerId];
   return {
@@ -690,7 +716,6 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
     },
   };
   const activeOffer = state.contractOffers.find((offer) => offer.status === "active");
-  const fixedLoadMW = player.activeContracts.reduce((sum, contract) => sum + contract.loadMW, 0);
   const contractOffer: ContractOfferState | undefined = activeOffer
     ? {
         id: activeOffer.id,
@@ -755,15 +780,7 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
     sectors,
     forecast: forecastWeather(state.seed, state.timeSeconds),
     incidents: forecastEventQueue(state.timeSeconds),
-    eventTrace: buildEventTrace({
-      seed: state.seed,
-      demandSchedule: state.demandSchedule,
-      timeSeconds: state.timeSeconds,
-      capacities: player.capacities,
-      controls: player.controls,
-      subscribedLoadShare: isGridDown ? 0 : player.subscribedLoadShare,
-      fixedLoadMW: isGridDown ? 0 : fixedLoadMW,
-    }),
+    eventTrace: buildForecastTraceFromMatchState(state),
     contractOffer,
     activeContracts,
   };

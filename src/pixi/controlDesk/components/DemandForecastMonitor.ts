@@ -15,9 +15,8 @@ export type DemandForecastMonitorDebugState = {
   demandPoints: Point[];
   supplyPoint: Point;
   safeRange: { minY: number; maxY: number };
+  riskMarkers: Array<{ point: Point; level: "warning" | "trip" }>;
 };
-
-const SUPPLY_MARKER_RATIO = 0.14;
 
 export class DemandForecastMonitor extends Container {
   private readonly frame = new Graphics({ label: "DemandForecastMonitorFrame" });
@@ -38,7 +37,7 @@ export class DemandForecastMonitor extends Container {
       h: bounds.h - 108,
     };
     this.title = new Text({
-      text: "POWER BALANCE",
+      text: "LOAD Forecast",
       style: {
         fontFamily,
         fontSize: 28,
@@ -50,9 +49,9 @@ export class DemandForecastMonitor extends Container {
     this.title.position.set(bounds.x + bounds.w / 2, bounds.y + 24);
 
     this.labels = [
-      this.createLabel("LOAD", bounds.x + 30, bounds.y + bounds.h - 34, fontFamily, "left"),
+      this.createLabel("NOW", bounds.x + 30, bounds.y + bounds.h - 34, fontFamily, "left"),
       this.createLabel("TIME", bounds.x + bounds.w / 2, bounds.y + bounds.h - 34, fontFamily, "center"),
-      this.createLabel("+30s LOAD", bounds.x + bounds.w - 30, bounds.y + bounds.h - 34, fontFamily, "right"),
+      this.createLabel("+30s", bounds.x + bounds.w - 30, bounds.y + bounds.h - 34, fontFamily, "right"),
     ];
     this.addChild(this.frame, this.plotLayer, this.title, ...this.labels);
     this.drawFrame();
@@ -71,7 +70,11 @@ export class DemandForecastMonitor extends Container {
       x: this.plot.x + (point.timeOffsetSeconds / 30) * this.plot.w,
       y: this.yForMW(point.demandMW, scaleMin, scaleMax),
     }));
-    const markerX = this.plot.x + this.plot.w * SUPPLY_MARKER_RATIO;
+    const riskMarkers = demandTrace.flatMap((point, index) => {
+      const level = riskLevelForTracePoint(point);
+      return level ? [{ point: demandPoints[index]!, level }] : [];
+    });
+    const markerX = demandPoints[0]?.x ?? this.plot.x;
     const supplyPoint = { x: markerX, y: this.yForMW(state.generationMW, scaleMin, scaleMax) };
     const safeRange = {
       minY: this.yForMW(safeMinMW, scaleMin, scaleMax),
@@ -79,7 +82,7 @@ export class DemandForecastMonitor extends Container {
     };
 
     this.drawPlot(demandPoints, supplyPoint, safeRange);
-    this.debug = { plot: this.plot, demandPoints, supplyPoint, safeRange };
+    this.debug = { plot: this.plot, demandPoints, supplyPoint, safeRange, riskMarkers };
   }
 
   public debugState(): DemandForecastMonitorDebugState | undefined {
@@ -159,6 +162,16 @@ export class DemandForecastMonitor extends Container {
     label.position.set(x, y);
     return label;
   }
+}
+
+function riskLevelForTracePoint(point: EventTracePoint): "warning" | "trip" | undefined {
+  if (point.breakerWouldTrip) {
+    return "trip";
+  }
+  if ((point.breakerTimer ?? 0) > 0 || (point.breakerRiskSource !== undefined && point.breakerRiskSource !== "none")) {
+    return "warning";
+  }
+  return undefined;
 }
 
 function normalizeTrace(eventTrace: EventTracePoint[], fallbackDemandMW: number): EventTracePoint[] {

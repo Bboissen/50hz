@@ -1,10 +1,11 @@
-import { Container, Graphics, Sprite } from "pixi.js";
+import { Container, Graphics, Sprite, Text } from "pixi.js";
 
 import { GAME_CONFIG } from "../../gameplay/config";
 import type { PlayerCommand, ProductionConsoleState, WaterDamMode } from "../../gameplay/types";
 import type { AssetResolver } from "../assets";
 import { CityScene } from "../city/CityScene";
 import { citySceneTexturesFromResolver } from "../city/cityAssets";
+import { DESK_VIEWPORT } from "../city/citySceneConfig";
 import { cityViewStateFromProductionState, selectDamWaterVisualState, selectWindFarmVisualState } from "../city/cityState";
 import type { CitySectorOverlayState, CitySectorSlotId, CitySlotId } from "../city/cityTypes";
 import type { DamWaterVisualState } from "../city/DamWaterObject";
@@ -72,6 +73,10 @@ export class ControlDeskScreen extends Container {
   private readonly damRotary: ModeRotarySwitch<WaterDamMode>;
   private readonly forecastTape?: ForecastTape;
   private readonly demandMonitor: DemandForecastMonitor;
+  private readonly safetyNetCooldown = new Container({ label: "SafetyNetCooldown" });
+  private readonly safetyNetCooldownBar = new Graphics({ label: "SafetyNetCooldownBar" });
+  private readonly safetyNetCooldownLabel: Text;
+  private safetyNetCooldownRatio = 0;
   private readonly upgradeRows: UpgradeRow[];
   private readonly readouts = new Map<ReadoutKey, TextReadout>();
   private readonly cityScene?: CityScene;
@@ -165,6 +170,22 @@ export class ControlDeskScreen extends Container {
       this.forecastTape = new ForecastTape(this.layout.forecast.plot, weatherIconTextures);
     }
     this.demandMonitor = new DemandForecastMonitor(this.layout.demandMonitor, assets.fontFamily);
+    this.safetyNetCooldownLabel = new Text({
+      text: "",
+      style: {
+        fontFamily: assets.fontFamily,
+        fontSize: 24,
+        fill: 0xfff3b0,
+        fontWeight: "900",
+        align: "center",
+        stroke: { color: 0x101711, width: 5 },
+      },
+    });
+    this.safetyNetCooldown.eventMode = "none";
+    this.safetyNetCooldown.interactiveChildren = false;
+    this.safetyNetCooldownLabel.anchor.set(0.5, 0.5);
+    this.safetyNetCooldownLabel.position.set(SAFETY_NET_COOLDOWN_LAYOUT.x + SAFETY_NET_COOLDOWN_LAYOUT.w / 2, SAFETY_NET_COOLDOWN_LAYOUT.y + 24);
+    this.safetyNetCooldown.addChild(this.safetyNetCooldownBar, this.safetyNetCooldownLabel);
     this.upgradeRows = this.layout.upgradeRows.map(
       (row) => new UpgradeRow(row, assets, sink, assets.fontFamily, options.showLayoutDebug === true),
     );
@@ -198,6 +219,7 @@ export class ControlDeskScreen extends Container {
         this.staticTextLayer.addChild(readout);
       }
     }
+    this.topStatusLayer.addChild(this.safetyNetCooldown);
 
     this.addHitZones(options.showLayoutDebug === true);
     if (options.showReferenceOverlay) {
@@ -225,6 +247,7 @@ export class ControlDeskScreen extends Container {
     this.windSwitch.update(state.windEnabled ? "on" : "off");
     this.damRotary.update(state.waterDamMode);
     this.forecastTape?.update({ seed: state.matchSeed, timeSeconds: state.timeSeconds });
+    this.updateSafetyNetCooldown(state.gridShutdownReliefSeconds);
     this.demandMonitor.update({
       eventTrace: state.eventTrace,
       generationMW: state.generationMW,
@@ -284,6 +307,15 @@ export class ControlDeskScreen extends Container {
 
   public debugDemandForecastMonitorState(): DemandForecastMonitorDebugState | undefined {
     return this.demandMonitor.debugState();
+  }
+
+  public debugSafetyNetCooldownState(): { visible: boolean; text: string; barRatio: number; bounds: Rect } {
+    return {
+      visible: this.safetyNetCooldown.visible,
+      text: this.safetyNetCooldownLabel.text,
+      barRatio: this.safetyNetCooldownRatio,
+      bounds: SAFETY_NET_COOLDOWN_LAYOUT,
+    };
   }
 
   public debugWindLedCount(): number {
@@ -434,6 +466,34 @@ export class ControlDeskScreen extends Container {
     );
   }
 
+  private updateSafetyNetCooldown(secondsRemaining: number): void {
+    const remaining = Math.max(0, secondsRemaining);
+    this.safetyNetCooldown.visible = remaining > 0;
+    if (remaining <= 0) {
+      this.safetyNetCooldownRatio = 0;
+      this.safetyNetCooldownBar.clear();
+      this.safetyNetCooldownLabel.text = "";
+      return;
+    }
+
+    const ratio = Math.min(1, remaining / GAME_CONFIG.breaker.gridShutdownReliefSeconds);
+    this.safetyNetCooldownRatio = ratio;
+    const { x, y, w, h } = SAFETY_NET_COOLDOWN_LAYOUT;
+    this.safetyNetCooldownBar
+      .clear()
+      .roundRect(x - 5, y - 5, w + 10, h + 10, 11)
+      .fill({ color: 0x101711, alpha: 0.95 })
+      .stroke({ color: 0xff3b25, alpha: 1, width: 3 })
+      .roundRect(x, y, w, h, 8)
+      .fill({ color: 0xb73524, alpha: 0.96 })
+      .stroke({ color: 0xfff3b0, alpha: 1, width: 2 })
+      .roundRect(x + 18, y + h - 13, w - 36, 8, 4)
+      .fill({ color: 0x101711, alpha: 0.42 })
+      .roundRect(x + 18, y + h - 13, (w - 36) * ratio, 8, 4)
+      .fill({ color: 0xfff3b0, alpha: 1 });
+    this.safetyNetCooldownLabel.text = `Reset safety net - ${Math.ceil(remaining)}s left to match the demand`;
+  }
+
   private addReferenceOverlay(): void {
     const texture = this.assets.texture("desk_reference_full_clean");
     if (!texture) {
@@ -546,6 +606,12 @@ export class ControlDeskScreen extends Container {
 }
 
 const TOP_STATUS_READOUT_KEYS = new Set<ReadoutKey>(["cash", "score", "tariff", "rivalTariff", "incidents", "city"]);
+const SAFETY_NET_COOLDOWN_LAYOUT: Rect = {
+  x: DESK_VIEWPORT.x + DESK_VIEWPORT.w / 2 - 385,
+  y: CONTROL_DESK_LAYOUT.deskTransform.y + (DESK_VIEWPORT.y + DESK_VIEWPORT.h) * CONTROL_DESK_LAYOUT.deskTransform.scaleY - 58,
+  w: 770,
+  h: 50,
+};
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
