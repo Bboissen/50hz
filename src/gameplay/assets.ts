@@ -44,8 +44,18 @@ export function updateAssetOutputs(args: {
     thermalOutputMW *= GAME_CONFIG.assets.thermal.outputMultiplierWhenOverheated;
   }
 
-  let solarOutputMW = args.capacities.solarPeakMW * clamp01(args.solarFactor);
-  let windOutputMW = args.controls.windEnabled ? args.capacities.windPeakMW * windFactor(args.windKmh) : 0;
+  const solarPotentialMW = args.capacities.solarPeakMW * clamp01(args.solarFactor);
+  const windPotentialMW = args.controls.windEnabled ? args.capacities.windPeakMW * windFactor(args.windKmh) : 0;
+  let solarOutputMW = moveTowards(
+    args.runtime.solarOutputMW,
+    solarPotentialMW,
+    GAME_CONFIG.assets.renewable.rampMWPerSecond * args.dt,
+  );
+  let windOutputMW = moveTowards(
+    args.runtime.windOutputMW,
+    windPotentialMW,
+    GAME_CONFIG.assets.renewable.rampMWPerSecond * args.dt,
+  );
   let gridNuclearOutputMW = nuclearOutputMW;
   let gridThermalOutputMW = thermalOutputMW;
   const plantStates: AssetOutputs["plantStates"] = {
@@ -108,6 +118,8 @@ export function updateAssetOutputs(args: {
   const runtime = {
     ...args.runtime,
     nuclearOutputMW,
+    solarOutputMW,
+    windOutputMW,
     thermalHeat,
     storedWaterMWh,
   };

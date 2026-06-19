@@ -50,19 +50,51 @@ function createInitialContractOffers(): ContractOffer[] {
   }));
 }
 
+function primeRenewableRuntime(player: PlayerState, solarFactor: number, windKmh: number): PlayerState {
+  const solarOutputMW = player.capacities.solarPeakMW * solarFactor;
+  const windOutputMW = player.controls.windEnabled ? player.capacities.windPeakMW * windFactor(windKmh) : 0;
+  const rawProductionMW =
+    player.lastOutputs.rawProductionMW - player.lastOutputs.solarOutputMW - player.lastOutputs.windOutputMW + solarOutputMW + windOutputMW;
+
+  return {
+    ...player,
+    runtime: {
+      ...player.runtime,
+      solarOutputMW,
+      windOutputMW,
+    },
+    lastOutputs: {
+      ...player.lastOutputs,
+      solarOutputMW,
+      windOutputMW,
+      rawProductionMW,
+      deliveredSupplyMW: Math.min(rawProductionMW, player.capacities.gridCapacityMW),
+    },
+  };
+}
+
 export function createInitialMatchState(options: { seed?: MatchSeed } = {}): MatchState {
   const seed = options.seed ?? GAME_CONFIG.match.defaultSeed;
+  const demandSchedule = generateDemandSchedule(seed);
+  const environment = sampleEventEnvironment({
+    seed,
+    demandSchedule,
+    timeSeconds: 0,
+  });
+  const player = primeRenewableRuntime(createInitialPlayerState("player"), environment.solarFactor, environment.windKmh);
+  const rival = primeRenewableRuntime(createInitialPlayerState("rival"), environment.solarFactor, environment.windKmh);
+
   return {
     seed,
-    demandSchedule: generateDemandSchedule(seed),
+    demandSchedule,
     contractOffers: createInitialContractOffers(),
     timeSeconds: 0,
     isPaused: false,
     gameOverReason: undefined,
     activeEvents: [],
     players: {
-      player: createInitialPlayerState("player"),
-      rival: createInitialPlayerState("rival"),
+      player,
+      rival,
     },
   };
 }

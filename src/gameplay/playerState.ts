@@ -56,6 +56,8 @@ export function createInitialPlayerState(id: PlayerId): PlayerState {
     capacities,
     runtime: {
       nuclearOutputMW: GAME_CONFIG.assets.nuclear.initialOutputMW,
+      solarOutputMW: 0,
+      windOutputMW: 0,
       thermalHeat: 0,
       storedWaterMWh: emptyOutputs.storedWaterMWh,
       capacityOverloadTimer: 0,

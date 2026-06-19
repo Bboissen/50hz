@@ -39,6 +39,44 @@ describe("assets", () => {
     expect(windFactor(GAME_CONFIG.assets.renewable.windCutOutKmh + 1)).toBe(0);
   });
 
+  it("ramps renewable output toward weather potential instead of snapping", () => {
+    const player = createInitialPlayerState("player");
+    const result = updateAssetOutputs({
+      capacities: player.capacities,
+      runtime: player.runtime,
+      controls: player.controls,
+      currentDemandMW: 70,
+      dt: 1,
+      solarFactor: 1,
+      windKmh: GAME_CONFIG.assets.renewable.windFullPowerKmh,
+    });
+
+    expect(result.outputs.solarOutputMW).toBe(GAME_CONFIG.assets.renewable.rampMWPerSecond);
+    expect(result.outputs.windOutputMW).toBe(GAME_CONFIG.assets.renewable.rampMWPerSecond);
+    expect(result.outputs.solarOutputMW).toBeLessThan(player.capacities.solarPeakMW);
+    expect(result.outputs.windOutputMW).toBeLessThan(player.capacities.windPeakMW);
+  });
+
+  it("ramps renewable output down after weather or routing loss", () => {
+    const player = createInitialPlayerState("player");
+    const result = updateAssetOutputs({
+      capacities: player.capacities,
+      runtime: {
+        ...player.runtime,
+        solarOutputMW: player.capacities.solarPeakMW,
+        windOutputMW: player.capacities.windPeakMW,
+      },
+      controls: { ...player.controls, windEnabled: false },
+      currentDemandMW: 70,
+      dt: 1,
+      solarFactor: 0,
+      windKmh: GAME_CONFIG.assets.renewable.windFullPowerKmh,
+    });
+
+    expect(result.outputs.solarOutputMW).toBe(player.capacities.solarPeakMW - GAME_CONFIG.assets.renewable.rampMWPerSecond);
+    expect(result.outputs.windOutputMW).toBe(player.capacities.windPeakMW - GAME_CONFIG.assets.renewable.rampMWPerSecond);
+  });
+
   it("clamps stored water while filling and draining", () => {
     const player = createInitialPlayerState("player");
     const filled = updateAssetOutputs({

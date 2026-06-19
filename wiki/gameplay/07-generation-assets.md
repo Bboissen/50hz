@@ -175,6 +175,8 @@ Output:
 thermalOutputMW = thermalCapacityMW * thermalThrottle;
 ```
 
+When a boiler upgrade completes, the new maximum capacity must not increase live output instantly. Preserve the current MW output and lower `thermalThrottle` to the equivalent fraction of the new capacity. The player can then raise throttle manually.
+
 Heat:
 
 ```ts
@@ -210,7 +212,12 @@ cheap non-deterministic supply
 Output:
 
 ```ts
-solarOutputMW = solarPeakMW * weatherSolarFactor;
+solarPotentialMW = solarPeakMW * weatherSolarFactor;
+solarOutputMW = moveTowards(
+  solarOutputMW,
+  solarPotentialMW,
+  RENEWABLE_RAMP_MW_PER_SECOND * dt
+);
 ```
 
 Recommended weather factors:
@@ -258,7 +265,12 @@ function windFactor(speedKmh: number): number {
   return 1;
 }
 
-const windOutputMW = windPeakMW * windFactor(currentWindKmh);
+const windPotentialMW = windPeakMW * windFactor(currentWindKmh);
+const windOutputMW = moveTowards(
+  windOutputMW,
+  windPotentialMW,
+  RENEWABLE_RAMP_MW_PER_SECOND * dt
+);
 ```
 
 Recommended:
@@ -267,6 +279,7 @@ Recommended:
 const WIND_CUT_IN_KMH = 12;
 const WIND_FULL_POWER_KMH = 45;
 const WIND_CUT_OUT_KMH = 90;
+const RENEWABLE_RAMP_MW_PER_SECOND = 4;
 ```
 
 Manual control:
@@ -276,6 +289,8 @@ wind turbine ON / OFF
 ```
 
 If wind is outside the valid range, ON still produces `0 MW`. If wind is strong enough to create surplus, switching OFF can prevent overload.
+
+Wind output should ramp down when switched off rather than disappearing instantly, so the operator sees the supply change and can react.
 
 Wind should fluctuate every match from a seeded deterministic weather sampler. It should not stay at a flat default speed except in tests that explicitly pass a constant wind value.
 
