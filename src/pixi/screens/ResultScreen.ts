@@ -18,17 +18,19 @@ function resultText(text: string, x: number, y: number, size = 28): Text {
 }
 
 export class ResultScreen extends Container {
-  private readonly body = resultText("", 160, 190, 30);
+  private readonly body = resultText("", 176, 236, 28);
 
   public constructor() {
     super();
     const g = new Graphics()
       .rect(0, 0, 1920, 1080)
       .fill({ color: DESIGN_TOKENS.colors.inkBlack })
-      .roundRect(120, 110, 1680, 820, 18)
-      .fill({ color: DESIGN_TOKENS.colors.panelGreen })
-      .stroke({ color: DESIGN_TOKENS.colors.fadedOlive, width: 8 });
-    this.addChild(g, resultText("MATCH RESULT", 160, 140, 44), this.body);
+      .rect(100, 92, 1720, 896)
+      .fill({ color: 0x061008 })
+      .stroke({ color: DESIGN_TOKENS.colors.phosphorGreen, width: 6, alpha: 0.45 })
+      .rect(140, 132, 1640, 816)
+      .stroke({ color: DESIGN_TOKENS.colors.fadedOlive, width: 3, alpha: 0.5 });
+    this.addChild(g, resultText("MATCH REPORT", 176, 156, 48), this.body);
   }
 
   public update(result: FinalResult, state: MatchState): void {
@@ -39,18 +41,16 @@ export class ResultScreen extends Container {
           ? "RIVAL COULD NOT PAY BREAKER RESET"
           : "MATCH CLOCK EXPIRED";
     this.body.text = [
-      `WINNER: ${result.winner.toUpperCase()}`,
+      `WINNER: ${result.winner === "rival" ? "GRID-AI" : result.winner.toUpperCase()}`,
       `OUTCOME: ${outcome}`,
-      `FINAL SCORE: ${result.playerFinalScore.toFixed(0)} vs ${result.rivalFinalScore.toFixed(0)}`,
-      `EFFICIENCY NOW: ${(state.players.player.lastEfficiency * 100).toFixed(0)}% vs ${(state.players.rival.lastEfficiency * 100).toFixed(0)}%`,
-      `PRICE NOW: ${state.players.player.lastPrice.toFixed(1)} vs ${state.players.rival.lastPrice.toFixed(1)}`,
-      `CUSTOMERS WON: ${(state.players.player.subscribedLoadShare * 100).toFixed(0)}% vs ${(state.players.rival.subscribedLoadShare * 100).toFixed(0)}%`,
-      `REVENUE GENERATED: ${result.playerScore.toFixed(0)} vs ${result.rivalScore.toFixed(0)}`,
-      `FIXED CONTRACT LOAD: ${state.players.player.activeContracts.length} active vs ${state.players.rival.activeContracts.length} active`,
-      `STRIKES: ${result.playerStrikes} vs ${result.rivalStrikes}`,
+      `SCORE        YOU ${result.playerFinalScore.toFixed(0)} / GRID-AI ${result.rivalFinalScore.toFixed(0)}`,
+      `EFFICIENCY   YOU ${(state.players.player.lastEfficiency * 100).toFixed(0)}% / GRID-AI ${(state.players.rival.lastEfficiency * 100).toFixed(0)}%`,
+      `TARIFF       YOU ${state.players.player.lastPrice.toFixed(1)}c / GRID-AI ${state.players.rival.lastPrice.toFixed(1)}c`,
+      `CUSTOMERS    YOU ${(state.players.player.subscribedLoadShare * 100).toFixed(0)}% / GRID-AI ${(state.players.rival.subscribedLoadShare * 100).toFixed(0)}%`,
+      `STRIKES      YOU ${result.playerStrikes} / GRID-AI ${result.rivalStrikes}`,
       "",
-      "CAUSE: BETTER EFFICIENCY LOWERS TARIFF, WINS CUSTOMERS,",
-      "EARNS MORE REVENUE, AND RAISES GRID PRESSURE.",
+      "CAUSE: EFFICIENCY LOWERS TARIFF, WINS CUSTOMERS,",
+      "AND RAISES GRID PRESSURE.",
     ].join("\n");
   }
 }

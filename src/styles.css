@@ -1,7 +1,22 @@
 :root {
+  --ink-black: #101711;
+  --panel-green: #1f2b22;
+  --oxide-green: #3d4b36;
+  --faded-olive: #7b8060;
+  --paper-tan: #c8b982;
+  --phosphor-green: #78d66b;
+  --amber-warn: #ffbd45;
+  --overload-red: #e34b35;
+  --smoke-grey: #8d9380;
   color: #c8b982;
   background: #101711;
-  font-family: "Courier New", monospace;
+  font-family: "Metadannye", "Courier New", monospace;
+}
+
+@font-face {
+  font-family: "Metadannye";
+  src: url("../assets/fonts/Metadannye-Export.ttf") format("truetype");
+  font-display: swap;
 }
 
 * {
@@ -48,11 +63,12 @@ canvas {
   z-index: 20;
   display: none;
   place-items: center;
-  padding: 24px;
-  color: #c8b982;
+  padding: clamp(10px, 2vw, 28px);
+  color: var(--phosphor-green);
   background:
-    linear-gradient(rgba(16, 23, 17, 0.82), rgba(16, 23, 17, 0.9)),
-    repeating-linear-gradient(90deg, rgba(141, 252, 122, 0.05) 0 1px, transparent 1px 18px);
+    radial-gradient(ellipse at center, rgba(120, 214, 107, 0.1), rgba(16, 23, 17, 0.72) 45%, #020403 78%),
+    repeating-linear-gradient(0deg, rgba(120, 214, 107, 0.025) 0 1px, transparent 1px 5px),
+    var(--ink-black);
 }
 
 .game-menu.is-visible {
@@ -60,78 +76,352 @@ canvas {
 }
 
 .game-menu__panel {
-  width: min(560px, 100%);
-  padding: 32px;
-  background: rgba(31, 43, 34, 0.96);
-  border: 2px solid rgba(200, 185, 130, 0.8);
+  position: relative;
+  display: grid;
+  width: min(1200px, 100%);
+  min-height: min(760px, calc(100vh - 28px));
+  overflow: hidden;
+  padding: clamp(18px, 3vw, 42px);
+  color: var(--phosphor-green);
+  background:
+    linear-gradient(rgba(4, 12, 6, 0.92), rgba(2, 7, 4, 0.94)),
+    repeating-linear-gradient(90deg, rgba(141, 252, 122, 0.06) 0 1px, transparent 1px 56px),
+    repeating-linear-gradient(0deg, rgba(141, 252, 122, 0.05) 0 1px, transparent 1px 36px);
+  border: 2px solid rgba(120, 214, 107, 0.34);
+  border-radius: 24px;
   box-shadow:
-    0 22px 70px rgba(0, 0, 0, 0.52),
-    inset 0 0 0 1px rgba(141, 252, 122, 0.16);
+    0 28px 120px rgba(0, 0, 0, 0.78),
+    inset 0 0 0 7px rgba(0, 0, 0, 0.35),
+    inset 0 0 28px rgba(120, 214, 107, 0.11);
+  text-shadow: 0 0 5px rgba(120, 214, 107, 0.46);
+}
+
+.game-menu__panel::before,
+.game-menu__panel::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+}
+
+.game-menu__panel::before {
+  background:
+    linear-gradient(rgba(120, 214, 107, 0.045) 50%, rgba(0, 0, 0, 0.08) 50%),
+    radial-gradient(ellipse at center, transparent 56%, rgba(0, 0, 0, 0.52) 100%);
+  background-size: 100% 6px, 100% 100%;
+  mix-blend-mode: screen;
+}
+
+.game-menu__panel::after {
+  border: 24px solid rgba(0, 0, 0, 0.28);
+  border-radius: 24px;
+  box-shadow: inset 0 0 36px rgba(0, 0, 0, 0.85);
+}
+
+.game-menu__panel--start {
+  grid-template-rows: auto auto auto 1fr auto auto;
+  align-items: start;
+}
+
+.game-menu__panel--howto,
+.game-menu__panel--end {
+  gap: clamp(16px, 2vw, 26px);
+}
+
+.game-menu__topline,
+.game-menu__footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  color: var(--phosphor-green);
+  font-size: clamp(13px, 1.8vw, 24px);
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.game-menu__footer {
+  align-self: end;
+  justify-content: center;
+  color: rgba(120, 214, 107, 0.72);
 }
 
 .game-menu__title {
-  margin: 0;
-  color: #8dfc7a;
-  font-family: "Courier New", monospace;
-  font-size: 56px;
-  line-height: 1;
+  margin: clamp(18px, 4vw, 46px) 0 0;
+  color: var(--phosphor-green);
+  font-family: "Metadannye", "Courier New", monospace;
+  font-size: clamp(62px, 12vw, 154px);
+  line-height: 0.82;
   letter-spacing: 0;
+  text-align: center;
   text-transform: uppercase;
 }
 
 .game-menu__status {
-  margin: 12px 0 28px;
-  color: #f2dd8a;
-  font-size: 16px;
+  margin: 8px 0 0;
+  color: var(--phosphor-green);
+  font-size: clamp(14px, 2.2vw, 30px);
+  line-height: 1.05;
   letter-spacing: 0;
+  text-align: center;
   text-transform: uppercase;
+}
+
+.game-menu__pixel-plant {
+  position: relative;
+  align-self: end;
+  width: min(100%, 1120px);
+  height: clamp(160px, 25vh, 270px);
+  margin: 0 auto;
+  border-bottom: 7px solid var(--phosphor-green);
+  filter: drop-shadow(0 0 5px rgba(120, 214, 107, 0.48));
+}
+
+.game-menu__pixel-plant span {
+  position: absolute;
+  bottom: 0;
+  display: block;
+}
+
+.game-menu__wind {
+  left: 10%;
+  width: 12px;
+  height: 150px;
+  background: var(--phosphor-green);
+}
+
+.game-menu__wind::before,
+.game-menu__wind::after {
+  position: absolute;
+  left: -54px;
+  top: 34px;
+  width: 120px;
+  height: 10px;
+  background: var(--phosphor-green);
+  content: "";
+}
+
+.game-menu__wind::before {
+  transform: rotate(24deg);
+}
+
+.game-menu__wind::after {
+  transform: rotate(-62deg);
+}
+
+.game-menu__solar {
+  left: 22%;
+  width: 150px;
+  height: 58px;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 22px, #031407 22px 28px),
+    var(--phosphor-green);
+  transform: skewX(-14deg);
+}
+
+.game-menu__tower {
+  left: 43%;
+  width: 108px;
+  height: 108px;
+  border: 8px solid var(--phosphor-green);
+  border-bottom-width: 18px;
+  border-radius: 42px 42px 10px 10px;
+}
+
+.game-menu__tower::after {
+  position: absolute;
+  left: 28px;
+  top: -58px;
+  width: 56px;
+  height: 56px;
+  background:
+    radial-gradient(circle, var(--phosphor-green) 0 6px, transparent 7px),
+    radial-gradient(circle at 22px 28px, var(--phosphor-green) 0 5px, transparent 6px),
+    radial-gradient(circle at 38px 16px, var(--phosphor-green) 0 4px, transparent 5px);
+  content: "";
+}
+
+.game-menu__factory {
+  left: 55%;
+  width: 160px;
+  height: 74px;
+  background: var(--phosphor-green);
+  box-shadow: inset 0 0 0 18px #061308;
+}
+
+.game-menu__factory::before,
+.game-menu__factory::after {
+  position: absolute;
+  bottom: 74px;
+  width: 16px;
+  height: 64px;
+  background: var(--phosphor-green);
+  content: "";
+}
+
+.game-menu__factory::before {
+  left: 58px;
+}
+
+.game-menu__factory::after {
+  left: 104px;
+}
+
+.game-menu__pylon {
+  left: 72%;
+  width: 110px;
+  height: 150px;
+  clip-path: polygon(50% 0, 100% 100%, 77% 100%, 50% 58%, 23% 100%, 0 100%);
+  background: var(--phosphor-green);
+}
+
+.game-menu__city {
+  right: 4%;
+  width: 190px;
+  height: 148px;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 26px, #061308 26px 36px),
+    repeating-linear-gradient(0deg, transparent 0 20px, #061308 20px 28px),
+    var(--phosphor-green);
+  clip-path: polygon(0 42%, 18% 42%, 18% 12%, 36% 12%, 36% 34%, 52% 34%, 52% 0, 70% 0, 70% 22%, 86% 22%, 86% 48%, 100% 48%, 100% 100%, 0 100%);
+}
+
+.game-menu__actions {
+  display: grid;
+  width: min(430px, 100%);
+  gap: 12px;
+  margin: clamp(20px, 3vw, 34px) auto 0;
+}
+
+.game-menu__actions--split {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(680px, 100%);
 }
 
 .game-menu__button {
   width: 100%;
-  min-height: 64px;
-  color: #101711;
-  background: #ffbd45;
-  border: 0;
-  box-shadow: inset 0 -6px 0 rgba(16, 23, 17, 0.26);
+  min-height: 58px;
+  color: var(--phosphor-green);
+  background: rgba(4, 20, 8, 0.86);
+  border: 2px solid var(--phosphor-green);
+  box-shadow:
+    inset 0 0 0 2px rgba(120, 214, 107, 0.08),
+    0 0 10px rgba(120, 214, 107, 0.14);
   cursor: pointer;
-  font: 700 22px/1 "Courier New", monospace;
+  font: 700 clamp(18px, 2.3vw, 30px) / 1 "Metadannye", "Courier New", monospace;
   letter-spacing: 0;
+  text-shadow: 0 0 4px rgba(120, 214, 107, 0.55);
   text-transform: uppercase;
 }
 
 .game-menu__button:hover,
 .game-menu__button:focus-visible {
-  background: #8dfc7a;
-  outline: 3px solid #f2dd8a;
+  color: var(--ink-black);
+  background: var(--phosphor-green);
+  outline: 3px solid var(--amber-warn);
   outline-offset: 4px;
+  text-shadow: none;
 }
 
-.game-menu__summary {
+.game-menu__steps {
   display: grid;
-  grid-template-columns: minmax(120px, 0.8fr) minmax(0, 1.2fr);
-  gap: 10px 18px;
-  margin: 0 0 28px;
-  padding: 18px 0;
-  border-top: 1px solid rgba(200, 185, 130, 0.45);
-  border-bottom: 1px solid rgba(200, 185, 130, 0.45);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(12px, 2vw, 24px);
+  margin-top: 8px;
 }
 
-.game-menu__summary dt,
-.game-menu__summary dd {
-  margin: 0;
-  font-size: 15px;
+.game-menu__step {
+  position: relative;
+  min-height: 210px;
+  padding: 24px;
+  background: rgba(4, 20, 8, 0.72);
+  border: 1px solid rgba(120, 214, 107, 0.4);
+  box-shadow: inset 0 0 12px rgba(120, 214, 107, 0.06);
+}
+
+.game-menu__step-number {
+  color: var(--amber-warn);
+  font-size: 18px;
+}
+
+.game-menu__step h2 {
+  margin: 12px 0 8px;
+  color: var(--phosphor-green);
+  font-size: clamp(22px, 3vw, 36px);
+  line-height: 0.95;
   letter-spacing: 0;
   text-transform: uppercase;
 }
 
-.game-menu__summary dt {
-  color: #8d9380;
+.game-menu__step p {
+  margin: 0;
+  color: rgba(200, 185, 130, 0.94);
+  font: 700 15px/1.35 "Courier New", monospace;
+  text-transform: uppercase;
 }
 
-.game-menu__summary dd {
-  color: #c8b982;
+.game-menu__stats {
+  display: grid;
+  grid-template-columns: minmax(130px, 1.2fr) repeat(2, minmax(90px, 0.8fr));
+  gap: 2px;
+  width: min(840px, 100%);
+  margin: 4px auto 0;
+  padding: 6px;
+  background: rgba(0, 0, 0, 0.38);
+  border: 1px solid rgba(120, 214, 107, 0.42);
+}
+
+.game-menu__stats b,
+.game-menu__stats span {
+  margin: 0;
+  min-height: 38px;
+  padding: 10px 12px;
+  color: var(--paper-tan);
+  background: rgba(16, 23, 17, 0.82);
+  font: 700 clamp(13px, 1.8vw, 18px) / 1 "Courier New", monospace;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.game-menu__stats b {
+  color: var(--phosphor-green);
+}
+
+.game-menu__stats b:nth-child(n + 2),
+.game-menu__stats span:nth-child(3n + 2),
+.game-menu__stats span:nth-child(3n + 3) {
   text-align: right;
+}
+
+@media (max-width: 760px) {
+  .game-menu {
+    align-items: start;
+    overflow: auto;
+  }
+
+  .game-menu__panel {
+    min-height: calc(100vh - 20px);
+    border-radius: 16px;
+  }
+
+  .game-menu__topline {
+    font-size: 11px;
+  }
+
+  .game-menu__pixel-plant {
+    height: 150px;
+  }
+
+  .game-menu__steps {
+    grid-template-columns: 1fr;
+  }
+
+  .game-menu__step {
+    min-height: auto;
+  }
+
+  .game-menu__actions--split {
+    grid-template-columns: 1fr;
+  }
 }
 
 .city-editor {

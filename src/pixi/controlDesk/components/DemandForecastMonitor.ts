@@ -39,7 +39,7 @@ export class DemandForecastMonitor extends Container {
       h: bounds.h - 108,
     };
     this.title = new Text({
-      text: "POWER BALANCE",
+      text: "LOAD Forecast",
       style: {
         fontFamily,
         fontSize: 28,
@@ -51,9 +51,9 @@ export class DemandForecastMonitor extends Container {
     this.title.position.set(bounds.x + bounds.w / 2, bounds.y + 24);
 
     this.labels = [
-      this.createLabel("LOAD", bounds.x + 30, bounds.y + bounds.h - 34, fontFamily, "left"),
+      this.createLabel("NOW", bounds.x + 30, bounds.y + bounds.h - 34, fontFamily, "left"),
       this.createLabel("TIME", bounds.x + bounds.w / 2, bounds.y + bounds.h - 34, fontFamily, "center"),
-      this.createLabel("+30s LOAD", bounds.x + bounds.w - 30, bounds.y + bounds.h - 34, fontFamily, "right"),
+      this.createLabel("+30s", bounds.x + bounds.w - 30, bounds.y + bounds.h - 34, fontFamily, "right"),
     ];
     this.addChild(this.frame, this.plotLayer, this.title, ...this.labels);
     this.drawFrame();
@@ -83,7 +83,7 @@ export class DemandForecastMonitor extends Container {
       maxY: this.yForMW(safeMaxMW, scaleMin, scaleMax),
     };
 
-    this.drawPlot(demandPoints, supplyPoint, safeRange, riskMarkers);
+    this.drawPlot(demandPoints, supplyPoint, safeRange);
     this.debug = { plot: this.plot, demandPoints, supplyPoint, safeRange, riskMarkers };
   }
 
@@ -104,12 +104,7 @@ export class DemandForecastMonitor extends Container {
       .stroke({ color: 0xa8ff63, alpha: 0.82, width: 3 });
   }
 
-  private drawPlot(
-    demandPoints: Point[],
-    supplyPoint: Point,
-    safeRange: { minY: number; maxY: number },
-    riskMarkers: Array<{ point: Point; level: "warning" | "trip" }>,
-  ): void {
+  private drawPlot(demandPoints: Point[], supplyPoint: Point, safeRange: { minY: number; maxY: number }): void {
     this.plotLayer.clear();
     for (let index = 1; index <= 6; index += 1) {
       const x = this.plot.x + (this.plot.w / 6) * index;
@@ -132,15 +127,6 @@ export class DemandForecastMonitor extends Container {
         this.plotLayer.lineTo(point.x, point.y);
       }
       this.plotLayer.stroke({ color: 0x93c7ff, width: 3 });
-    }
-
-    for (const marker of riskMarkers) {
-      const color = marker.level === "trip" ? 0xff352e : 0xffbd45;
-      this.plotLayer
-        .circle(marker.point.x, marker.point.y, marker.level === "trip" ? 9 : 7)
-        .fill({ color, alpha: 0.94 })
-        .circle(marker.point.x, marker.point.y, marker.level === "trip" ? 13 : 11)
-        .stroke({ color: 0xfff0c6, alpha: 0.9, width: 2 });
     }
 
     const rangeTop = Math.min(safeRange.minY, safeRange.maxY);
