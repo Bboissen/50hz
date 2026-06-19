@@ -4,6 +4,7 @@ import type { CityLevel, CitySlotConfig } from "./cityTypes";
 
 export class CitySlot extends Container {
   private readonly sprite: Sprite;
+  private readonly normalizedSize: { width: number; height: number };
   private currentLevel: CityLevel;
 
   public constructor(
@@ -15,6 +16,7 @@ export class CitySlot extends Container {
     this.scale.set(config.scale);
     this.zIndex = config.zIndex;
     this.currentLevel = config.defaultLevel;
+    this.normalizedSize = normalizedTextureSize(textures);
 
     this.sprite = new Sprite({
       texture: textures[this.currentLevel],
@@ -23,6 +25,7 @@ export class CitySlot extends Container {
     this.sprite.anchor.set(0.5);
     this.sprite.eventMode = "none";
     this.addChild(this.sprite);
+    this.normalizeSpriteSize();
   }
 
   public setLevel(level: CityLevel): void {
@@ -31,6 +34,7 @@ export class CitySlot extends Container {
     }
     this.currentLevel = level;
     this.sprite.texture = this.textures[level];
+    this.normalizeSpriteSize();
   }
 
   public level(): CityLevel {
@@ -46,4 +50,26 @@ export class CitySlot extends Container {
   public slotId(): string {
     return this.config.id;
   }
+
+  public debugRenderedSize(): { width: number; height: number } {
+    return {
+      width: this.sprite.width,
+      height: this.sprite.height,
+    };
+  }
+
+  private normalizeSpriteSize(): void {
+    this.sprite.width = this.normalizedSize.width;
+    this.sprite.height = this.normalizedSize.height;
+  }
+}
+
+function normalizedTextureSize(textures: Record<CityLevel, Texture>): { width: number; height: number } {
+  return Object.values(textures).reduce(
+    (size, texture) => ({
+      width: Math.max(size.width, texture.width || 1),
+      height: Math.max(size.height, texture.height || 1),
+    }),
+    { width: 1, height: 1 },
+  );
 }

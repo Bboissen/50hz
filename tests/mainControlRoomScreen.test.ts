@@ -6,6 +6,7 @@ import type { PlayerCommand, ProductionConsoleState } from "../src/gameplay/type
 import { sampleWeather } from "../src/gameplay/weather";
 import type { AssetResolver, PixiAssetKey } from "../src/pixi/assets";
 import { CITY_ASSET_SOURCES } from "../src/pixi/city/cityAssets";
+import { DESK_VIEWPORT } from "../src/pixi/city/citySceneConfig";
 import { FORECAST_BUCKET_SECONDS, ForecastTape } from "../src/pixi/controlDesk/components/ForecastTape";
 import { CONTROL_DESK_LAYOUT, type ControlDeskLayout } from "../src/pixi/controlDesk/controlDeskLayout";
 import { Backplate } from "../src/pixi/controlDesk/components/Backplate";
@@ -295,8 +296,12 @@ describe("ControlDeskScreen", () => {
 
     expect(screen.debugSafetyNetCooldownState()).toMatchObject({
       visible: true,
-      text: "SAFETY NET 10s",
+      text: "Reset safety net - 10s left to match the demand",
       barRatio: 10 / 15,
+    });
+    expect(screen.debugSafetyNetCooldownState().bounds).toMatchObject({
+      x: DESK_VIEWPORT.x + DESK_VIEWPORT.w / 2 - 305,
+      y: DESK_VIEWPORT.y + DESK_VIEWPORT.h - 54,
     });
 
     screen.update({ ...productionState(), gridShutdownReliefSeconds: 0 });
@@ -401,6 +406,38 @@ describe("ControlDeskScreen", () => {
     expect(first?.demandPoints).toHaveLength(3);
     expect(first?.supplyPoint.x).toBe(second?.supplyPoint.x);
     expect(first?.safeRange.minY).not.toBe(first?.safeRange.maxY);
+  });
+
+  it("marks forecast points that carry breaker risk", () => {
+    const { resolver } = recordingAssets();
+    const screen = new ControlDeskScreen(resolver, () => undefined);
+
+    screen.update({
+      ...productionState(),
+      currentDemandMW: 100,
+      generationMW: 103,
+      eventTrace: [
+        { timeOffsetSeconds: 0, demandMW: 100, renewableSupplyMW: 0, eventIntensity: 0 },
+        {
+          timeOffsetSeconds: 15,
+          demandMW: 118,
+          renewableSupplyMW: 0,
+          eventIntensity: 0,
+          breakerRiskSource: "capacity",
+          breakerTimer: 1.5,
+        },
+        {
+          timeOffsetSeconds: 30,
+          demandMW: 130,
+          renewableSupplyMW: 0,
+          eventIntensity: 0,
+          breakerRiskSource: "capacity",
+          breakerWouldTrip: true,
+        },
+      ],
+    });
+
+    expect(screen.debugDemandForecastMonitorState()?.riskMarkers.map((marker) => marker.level)).toEqual(["warning", "trip"]);
   });
 
   it("recycles forecast tape tiles while keeping stable slot indices", () => {

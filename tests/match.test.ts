@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   applyPlayerCommand,
+  buildForecastTraceFromMatchState,
   computeFinalResult,
   createInitialMatchState,
   isMatchOver,
@@ -404,6 +405,67 @@ describe("match", () => {
 
     expect(dispatch.cityDemandMW).toBe(140);
     expect(dispatch.eventTrace[0]?.demandMW).toBe(70);
+  });
+
+  it("builds the production forecast from the same simulated match path", () => {
+    const state = createInitialMatchState();
+    const trace = buildForecastTraceFromMatchState(state);
+    const current = tickMatch({ ...state, isPaused: false }, 0);
+    let advanced = current;
+    for (let elapsed = 0; elapsed < 5; elapsed += 1 / GAME_CONFIG.match.tickRateHz) {
+      advanced = tickMatch(advanced, Math.min(1 / GAME_CONFIG.match.tickRateHz, 5 - elapsed));
+    }
+
+    expect(trace[0]?.demandMW).toBeCloseTo(current.players.player.lastCurrentDemandMW);
+    expect(trace[1]?.demandMW).toBeCloseTo(advanced.players.player.lastCurrentDemandMW);
+    expect(trace[1]?.supplyDemandMismatch).toBeCloseTo(advanced.players.player.lastSupplyDemandMismatch);
+  });
+
+  it("forecasts customer-share load drift under unchanged player controls", () => {
+    const base = createInitialMatchState();
+    const state = {
+      ...base,
+      players: {
+        ...base.players,
+        player: {
+          ...base.players.player,
+          devGodMode: true,
+        },
+        rival: {
+          ...base.players.rival,
+          capacities: {
+            ...base.players.rival.capacities,
+            nuclearCapacityMW: 105,
+            thermalCapacityMW: 95,
+          },
+        },
+      },
+    };
+    const trace = buildForecastTraceFromMatchState(state);
+
+    expect(trace.at(-1)?.demandMW).toBeGreaterThan(trace[0]!.demandMW);
+  });
+
+  it("marks forecast breaker risk for capacity pressure even when balance is not the source", () => {
+    let state = createInitialMatchState();
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        player: {
+          ...state.players.player,
+          capacities: {
+            ...state.players.player.capacities,
+            gridCapacityMW: 90,
+          },
+        },
+      },
+    };
+    state = applyPlayerCommand(state, { type: "forceAcceptContract", playerId: "player", kind: "business" });
+    state = applyPlayerCommand(state, { type: "forceAcceptContract", playerId: "player", kind: "dataCenter" });
+    const trace = buildForecastTraceFromMatchState(state);
+
+    expect(trace.some((point) => point.breakerRiskSource === "capacity" || point.breakerWouldTrip)).toBe(true);
   });
 
   it("unaffordable breaker reset ends the match", () => {

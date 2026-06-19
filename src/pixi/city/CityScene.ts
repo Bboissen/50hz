@@ -143,6 +143,10 @@ export class CityScene extends Container {
     return this.slots.get(slotId)?.level();
   }
 
+  public debugSlotRenderedSize(slotId: CitySlotId): { width: number; height: number } | undefined {
+    return this.slots.get(slotId)?.debugRenderedSize();
+  }
+
   public debugDamWaterState(): DamWaterVisualState {
     return this.damWater.debugState();
   }

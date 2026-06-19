@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { Texture } from "pixi.js";
+import { Texture, TextureSource } from "pixi.js";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 
@@ -41,6 +41,10 @@ function cityTextures(): CitySceneTextures {
     windFrames: Array.from({ length: 8 }, () => Texture.EMPTY),
     slots,
   };
+}
+
+function textureWithSize(width: number, height: number): Texture {
+  return new Texture({ source: new TextureSource({ width, height }) });
 }
 
 describe("city view production integration", () => {
@@ -173,6 +177,38 @@ describe("city view production integration", () => {
     scene.setLevels({ ...cityViewStateFromProductionState(productionState()).levels, household: 1 });
     expect(scene.debugSlotLevel("household")).toBe(1);
     expect(scene.debugSlotLevel("business")).toBe(1);
+  });
+
+  it("keeps each city slot rendered at one stable size across levels", () => {
+    const textures = cityTextures();
+    textures.slots.nuclear = {
+      1: textureWithSize(918, 514),
+      2: textureWithSize(1211, 674),
+      3: textureWithSize(1213, 770),
+    };
+    textures.slots.thermal = {
+      1: textureWithSize(1348, 735),
+      2: textureWithSize(1350, 787),
+      3: textureWithSize(1352, 785),
+    };
+    textures.slots.wind = {
+      1: textureWithSize(1432, 830),
+      2: textureWithSize(1432, 822),
+      3: textureWithSize(1430, 826),
+    };
+    const scene = new CityScene(textures);
+
+    for (const slotId of ["nuclear", "thermal", "wind"] as const) {
+      scene.setLevels({ ...cityViewStateFromProductionState(productionState()).levels, [slotId]: 1 });
+      const first = scene.debugSlotRenderedSize(slotId);
+      scene.setLevels({ ...cityViewStateFromProductionState(productionState()).levels, [slotId]: 2 });
+      const second = scene.debugSlotRenderedSize(slotId);
+      scene.setLevels({ ...cityViewStateFromProductionState(productionState()).levels, [slotId]: 3 });
+      const third = scene.debugSlotRenderedSize(slotId);
+
+      expect(second).toEqual(first);
+      expect(third).toEqual(first);
+    }
   });
 
   it("pulses sector overlays without changing baseline level textures", () => {

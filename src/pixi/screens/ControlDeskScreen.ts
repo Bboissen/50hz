@@ -5,6 +5,7 @@ import type { PlayerCommand, ProductionConsoleState, WaterDamMode } from "../../
 import type { AssetResolver } from "../assets";
 import { CityScene } from "../city/CityScene";
 import { citySceneTexturesFromResolver } from "../city/cityAssets";
+import { DESK_VIEWPORT } from "../city/citySceneConfig";
 import { cityViewStateFromProductionState, selectDamWaterVisualState, selectWindFarmVisualState } from "../city/cityState";
 import type { CitySectorOverlayState, CitySectorSlotId, CitySlotId } from "../city/cityTypes";
 import type { DamWaterVisualState } from "../city/DamWaterObject";
@@ -173,12 +174,16 @@ export class ControlDeskScreen extends Container {
       text: "",
       style: {
         fontFamily: assets.fontFamily,
-        fontSize: 22,
+        fontSize: 20,
         fill: 0x101711,
         fontWeight: "700",
+        align: "center",
       },
     });
-    this.safetyNetCooldownLabel.position.set(876, 740);
+    this.safetyNetCooldown.eventMode = "none";
+    this.safetyNetCooldown.interactiveChildren = false;
+    this.safetyNetCooldownLabel.anchor.set(0.5, 0.5);
+    this.safetyNetCooldownLabel.position.set(SAFETY_NET_COOLDOWN_LAYOUT.x + SAFETY_NET_COOLDOWN_LAYOUT.w / 2, SAFETY_NET_COOLDOWN_LAYOUT.y + 18);
     this.safetyNetCooldown.addChild(this.safetyNetCooldownBar, this.safetyNetCooldownLabel);
     this.upgradeRows = this.layout.upgradeRows.map(
       (row) => new UpgradeRow(row, assets, sink, assets.fontFamily, options.showLayoutDebug === true),
@@ -303,11 +308,12 @@ export class ControlDeskScreen extends Container {
     return this.demandMonitor.debugState();
   }
 
-  public debugSafetyNetCooldownState(): { visible: boolean; text: string; barRatio: number } {
+  public debugSafetyNetCooldownState(): { visible: boolean; text: string; barRatio: number; bounds: Rect } {
     return {
       visible: this.safetyNetCooldown.visible,
       text: this.safetyNetCooldownLabel.text,
       barRatio: this.safetyNetCooldownRatio,
+      bounds: SAFETY_NET_COOLDOWN_LAYOUT,
     };
   }
 
@@ -471,16 +477,17 @@ export class ControlDeskScreen extends Container {
 
     const ratio = Math.min(1, remaining / GAME_CONFIG.breaker.gridShutdownReliefSeconds);
     this.safetyNetCooldownRatio = ratio;
+    const { x, y, w, h } = SAFETY_NET_COOLDOWN_LAYOUT;
     this.safetyNetCooldownBar
       .clear()
-      .roundRect(846, 728, 342, 54, 7)
+      .roundRect(x, y, w, h, 7)
       .fill({ color: 0x6fcad1, alpha: 0.92 })
       .stroke({ color: 0x101711, alpha: 0.78, width: 3 })
-      .roundRect(862, 764, 310, 8, 3)
+      .roundRect(x + 16, y + h - 12, w - 32, 7, 3)
       .fill({ color: 0x101711, alpha: 0.28 })
-      .roundRect(862, 764, 310 * ratio, 8, 3)
+      .roundRect(x + 16, y + h - 12, (w - 32) * ratio, 7, 3)
       .fill({ color: 0x101711, alpha: 0.95 });
-    this.safetyNetCooldownLabel.text = `SAFETY NET ${Math.ceil(remaining)}s`;
+    this.safetyNetCooldownLabel.text = `Reset safety net - ${Math.ceil(remaining)}s left to match the demand`;
   }
 
   private addReferenceOverlay(): void {
@@ -595,6 +602,12 @@ export class ControlDeskScreen extends Container {
 }
 
 const TOP_STATUS_READOUT_KEYS = new Set<ReadoutKey>(["cash", "score", "tariff", "rivalTariff", "incidents", "city"]);
+const SAFETY_NET_COOLDOWN_LAYOUT: Rect = {
+  x: DESK_VIEWPORT.x + DESK_VIEWPORT.w / 2 - 305,
+  y: DESK_VIEWPORT.y + DESK_VIEWPORT.h - 54,
+  w: 610,
+  h: 42,
+};
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));

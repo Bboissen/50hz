@@ -15,6 +15,7 @@ export type DemandForecastMonitorDebugState = {
   demandPoints: Point[];
   supplyPoint: Point;
   safeRange: { minY: number; maxY: number };
+  riskMarkers: Array<{ point: Point; level: "warning" | "trip" }>;
 };
 
 const SUPPLY_MARKER_RATIO = 0.14;
@@ -71,6 +72,10 @@ export class DemandForecastMonitor extends Container {
       x: this.plot.x + (point.timeOffsetSeconds / 30) * this.plot.w,
       y: this.yForMW(point.demandMW, scaleMin, scaleMax),
     }));
+    const riskMarkers = demandTrace.flatMap((point, index) => {
+      const level = riskLevelForTracePoint(point);
+      return level ? [{ point: demandPoints[index]!, level }] : [];
+    });
     const markerX = this.plot.x + this.plot.w * SUPPLY_MARKER_RATIO;
     const supplyPoint = { x: markerX, y: this.yForMW(state.generationMW, scaleMin, scaleMax) };
     const safeRange = {
@@ -78,8 +83,8 @@ export class DemandForecastMonitor extends Container {
       maxY: this.yForMW(safeMaxMW, scaleMin, scaleMax),
     };
 
-    this.drawPlot(demandPoints, supplyPoint, safeRange);
-    this.debug = { plot: this.plot, demandPoints, supplyPoint, safeRange };
+    this.drawPlot(demandPoints, supplyPoint, safeRange, riskMarkers);
+    this.debug = { plot: this.plot, demandPoints, supplyPoint, safeRange, riskMarkers };
   }
 
   public debugState(): DemandForecastMonitorDebugState | undefined {
@@ -99,7 +104,12 @@ export class DemandForecastMonitor extends Container {
       .stroke({ color: 0xa8ff63, alpha: 0.82, width: 3 });
   }
 
-  private drawPlot(demandPoints: Point[], supplyPoint: Point, safeRange: { minY: number; maxY: number }): void {
+  private drawPlot(
+    demandPoints: Point[],
+    supplyPoint: Point,
+    safeRange: { minY: number; maxY: number },
+    riskMarkers: Array<{ point: Point; level: "warning" | "trip" }>,
+  ): void {
     this.plotLayer.clear();
     for (let index = 1; index <= 6; index += 1) {
       const x = this.plot.x + (this.plot.w / 6) * index;
@@ -122,6 +132,15 @@ export class DemandForecastMonitor extends Container {
         this.plotLayer.lineTo(point.x, point.y);
       }
       this.plotLayer.stroke({ color: 0x93c7ff, width: 3 });
+    }
+
+    for (const marker of riskMarkers) {
+      const color = marker.level === "trip" ? 0xff352e : 0xffbd45;
+      this.plotLayer
+        .circle(marker.point.x, marker.point.y, marker.level === "trip" ? 9 : 7)
+        .fill({ color, alpha: 0.94 })
+        .circle(marker.point.x, marker.point.y, marker.level === "trip" ? 13 : 11)
+        .stroke({ color: 0xfff0c6, alpha: 0.9, width: 2 });
     }
 
     const rangeTop = Math.min(safeRange.minY, safeRange.maxY);
@@ -159,6 +178,16 @@ export class DemandForecastMonitor extends Container {
     label.position.set(x, y);
     return label;
   }
+}
+
+function riskLevelForTracePoint(point: EventTracePoint): "warning" | "trip" | undefined {
+  if (point.breakerWouldTrip) {
+    return "trip";
+  }
+  if ((point.breakerTimer ?? 0) > 0 || (point.breakerRiskSource !== undefined && point.breakerRiskSource !== "none")) {
+    return "warning";
+  }
+  return undefined;
 }
 
 function normalizeTrace(eventTrace: EventTracePoint[], fallbackDemandMW: number): EventTracePoint[] {

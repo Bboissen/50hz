@@ -140,6 +140,11 @@ export type EventTracePoint = {
   demandMW: number;
   renewableSupplyMW: number;
   eventIntensity: number;
+  supplyDemandMismatch?: number;
+  capacityUtilization?: number;
+  breakerRiskSource?: BreakerRiskSource;
+  breakerTimer?: number;
+  breakerWouldTrip?: boolean;
 };
 
 export type ContractOffer = {
