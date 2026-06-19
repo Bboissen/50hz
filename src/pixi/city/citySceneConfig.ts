@@ -26,7 +26,7 @@ export const CITY_DECORATION_CONFIGS = [
     x: 1690,
     y: 418,
     scale: 0.2255,
-    zIndex: 972,
+    zIndex: 360,
   },
 ] as const;
 

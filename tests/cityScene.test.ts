@@ -402,5 +402,7 @@ describe("city view production integration", () => {
       datacenter: 0.3545,
     });
     expect(openAiSign?.scale).toBe(0.2255);
+    expect(openAiSign?.zIndex).toBeLessThan(CITY_SLOT_CONFIGS.find((slot) => slot.id === "nuclear")?.zIndex ?? Number.NEGATIVE_INFINITY);
+    expect(openAiSign?.zIndex).toBeLessThan(CITY_SLOT_CONFIGS.find((slot) => slot.id === "business")?.zIndex ?? Number.NEGATIVE_INFINITY);
   });
 });
