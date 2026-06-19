@@ -471,8 +471,8 @@ export function summarizeFinalResult(result: FinalResult, state: MatchState): Ga
       },
       {
         label: "Tariff",
-        you: `${player.lastPrice.toFixed(1)}c`,
-        opponent: `${rival.lastPrice.toFixed(1)}c`,
+        you: `₽${player.lastPrice.toFixed(1)}/kWh`,
+        opponent: `₽${rival.lastPrice.toFixed(1)}/kWh`,
       },
       {
         label: "Customers",

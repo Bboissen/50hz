@@ -76,7 +76,7 @@ export abstract class PlantDefinition {
         ? `BUILD ${Math.ceil(remainingBuildSeconds)}s`
         : isMaxed
           ? "MAX"
-          : `€${upgradeCost.toFixed(0)}`,
+          : `₽${upgradeCost.toFixed(0)}`,
       capacityLabel: this.capacityLabel(player.capacities),
     };
   }

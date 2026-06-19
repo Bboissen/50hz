@@ -250,7 +250,7 @@ export class ControlDeskScreen extends Container {
       row.update(state.plants[row.plantKey]);
     }
 
-    this.readouts.get("cash")?.update(`CASH ${Math.floor(state.cash)}`);
+    this.readouts.get("cash")?.update(`CASH ₽${Math.floor(state.cash)}`);
     this.readouts.get("score")?.update(`SCORE ${Math.floor(state.score)}`);
     this.readouts.get("incidents")?.update(formatIncidentReadout(state));
     this.readouts.get("city")?.update(formatCityReadout(state));

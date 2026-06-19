@@ -63,10 +63,10 @@ The Upgrade Rack is the player interaction area for plant improvements.
 
 ```txt
 UPGRADE RACK
-REACTOR      Nuclear       [■■□]  €85
-BOILER       Thermal       [■□□]  €40
-RENEWABLES   Wind/Solar    [■■□]  €45
-WATER DAM    Storage       [■□□]  €50
+REACTOR      Nuclear       [■■□]  ₽85
+BOILER       Thermal       [■□□]  ₽40
+RENEWABLES   Wind/Solar    [■■□]  ₽45
+WATER DAM    Storage       [■□□]  ₽50
 ```
 
 There is no Network upgrade in gameplay. Grid capacity can still exist as a system limit, but it is not an upgradable purchase unless gameplay canon changes.
@@ -87,10 +87,10 @@ Tariff Boards are the most important middle-row comparison after the city.
 
 ```txt
 YOUR TARIFF
-12.4¢/kWh
+₽12.4/kWh
 
 RIVAL TARIFF
-15.1¢/kWh
+₽15.1/kWh
 ```
 
 ## Tariff visual rules
@@ -98,7 +98,7 @@ RIVAL TARIFF
 | Rule | Value |
 |---|---|
 | Number size | Large enough to compare at a glance |
-| Format | `12.4¢/kWh` or `€0.124/kWh`; choose one and stay consistent |
+| Format | `₽12.4/kWh`; keep the gameplay value unchanged and only translate the display symbol |
 | Style | Mechanical flip digits or segmented display |
 | Change animation | Step/tick digits, 0.2–0.5s |
 | Lower price highlight | Subtle green marker on cheaper side |
@@ -109,12 +109,12 @@ RIVAL TARIFF
 Use:
 
 ```txt
-12.4¢/kWh
+₽12.4/kWh
 ```
 
-It is shorter and faster to read than `€0.124/kWh`.
+It keeps the gameplay value readable while using the Russian ruble symbol.
 
-This is a visual display format only. Gameplay price remains the canonical `priceFromEfficiency` output; code must map or mock display tariffs explicitly instead of deriving a second economy model from these cents/kWh examples.
+This is a visual display format only. Gameplay price remains the canonical `priceFromEfficiency` output; code must not derive a second economy model from these ₽/kWh examples.
 
 ## Contract Split link
 

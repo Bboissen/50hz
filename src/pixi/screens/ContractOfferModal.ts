@@ -106,7 +106,7 @@ export class ContractOfferModal extends Container {
     this.labels.removeChildren();
     const seconds = Math.max(0, Math.ceil(offer.remainingSeconds));
     const loadLabel = `${offer.loadMW} MW`;
-    const rewardLabel = `+${offer.completionCashReward}`;
+    const rewardLabel = `+₽${offer.completionCashReward}`;
     const strikeLabel = `-${offer.strikeScorePenalty}`;
     const countdownColor = seconds <= 2 ? PIXEL.red : PIXEL.amber;
 

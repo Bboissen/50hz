@@ -603,12 +603,12 @@ describe("ControlDeskScreen", () => {
     expect(rowLabels).toContain("DAM L1");
     expect(rowLabels).toContain("REACTOR L1");
     expect(rowLabels).toContain("BOILER L1");
-    expect(rowPrices).toContain("€50");
-    expect(rowPrices).toContain("€85");
-    expect(rowPrices).toContain("€40");
-    expect(rowPrices.every((price) => /€\d+|BUILD \d+s|MAX/.test(price))).toBe(true);
+    expect(rowPrices).toContain("₽50");
+    expect(rowPrices).toContain("₽85");
+    expect(rowPrices).toContain("₽40");
+    expect(rowPrices.every((price) => /₽\d+|BUILD \d+s|MAX/.test(price))).toBe(true);
     expect(rowLabels.every((label) => !label.includes("/"))).toBe(true);
-    expect(rowLabels.every((label) => !label.includes("€"))).toBe(true);
+    expect(rowLabels.every((label) => !label.includes("₽"))).toBe(true);
     expect(CONTROL_DESK_LAYOUT.upgradeRows.every((row) => row.price.x + (row.price.maxWidth ?? 0) <= 462)).toBe(true);
     expect(CONTROL_DESK_LAYOUT.upgradeRows.every((row) => row.price.x > row.upgradeArrow.x)).toBe(true);
     expect(CONTROL_DESK_LAYOUT.upgradeRows.at(-1)?.label.y).toBeLessThanOrEqual(900);
@@ -925,14 +925,14 @@ describe("control desk sprite components", () => {
   it("updates text readouts only when rendered text changes", () => {
     const readout = new TextReadout(CONTROL_DESK_LAYOUT.text.cash, "Courier New, monospace");
 
-    readout.update("CASH EUR 80");
+    readout.update("CASH ₽80");
     const firstUpdateCount = readout.debugRenderedUpdateCount();
-    readout.update("CASH EUR 80");
-    readout.update("CASH EUR 85");
+    readout.update("CASH ₽80");
+    readout.update("CASH ₽85");
 
     expect(firstUpdateCount).toBe(1);
     expect(readout.debugRenderedUpdateCount()).toBe(2);
-    expect(readout.debugText()).toBe("CASH EUR 85");
+    expect(readout.debugText()).toBe("CASH ₽85");
   });
 
   it("keeps hit zones invisible outside layout debug while preserving explicit hit areas", () => {

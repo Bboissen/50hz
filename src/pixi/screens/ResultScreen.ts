@@ -45,7 +45,7 @@ export class ResultScreen extends Container {
       `OUTCOME: ${outcome}`,
       `SCORE        YOU ${result.playerFinalScore.toFixed(0)} / GRID-AI ${result.rivalFinalScore.toFixed(0)}`,
       `EFFICIENCY   YOU ${(state.players.player.lastEfficiency * 100).toFixed(0)}% / GRID-AI ${(state.players.rival.lastEfficiency * 100).toFixed(0)}%`,
-      `TARIFF       YOU ${state.players.player.lastPrice.toFixed(1)}c / GRID-AI ${state.players.rival.lastPrice.toFixed(1)}c`,
+      `TARIFF       YOU ₽${state.players.player.lastPrice.toFixed(1)}/kWh / GRID-AI ₽${state.players.rival.lastPrice.toFixed(1)}/kWh`,
       `CUSTOMERS    YOU ${(state.players.player.subscribedLoadShare * 100).toFixed(0)}% / GRID-AI ${(state.players.rival.subscribedLoadShare * 100).toFixed(0)}%`,
       `STRIKES      YOU ${result.playerStrikes} / GRID-AI ${result.rivalStrikes}`,
       "",

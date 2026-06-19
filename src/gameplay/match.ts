@@ -738,11 +738,11 @@ function breakerStatusText(player: PlayerState): string {
     return `GRID DOWN: ${reason}`;
   }
   if (lifecycle === "awaiting-reset") {
-    return `RESET REQUIRED: ${reason} / COST ${GAME_CONFIG.breaker.resetCost}`;
+    return `RESET REQUIRED: ${reason} / COST ₽${GAME_CONFIG.breaker.resetCost}`;
   }
   if (lifecycle === "reset-progress") {
     if (player.cash < GAME_CONFIG.breaker.resetCost) {
-      return `RESET BLOCKED: NEED ${GAME_CONFIG.breaker.resetCost}`;
+      return `RESET BLOCKED: NEED ₽${GAME_CONFIG.breaker.resetCost}`;
     }
     return `RESET HOLD ${(player.runtime.breakerResetHoldSeconds / BREAKER_RESET_HOLD_SECONDS * 100).toFixed(0)}%`;
   }

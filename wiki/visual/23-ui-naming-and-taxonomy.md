@@ -46,9 +46,9 @@ Use short player-facing labels with educational subtitles.
 ### Upgrade rack display
 
 ```txt
-REACTOR      Nuclear       [■■□]  €80
-BOILER       Thermal       [■□□]  €45
-RENEWABLES   Wind/Solar    [■■□]  €60
+REACTOR      Nuclear       [■■□]  ₽80
+BOILER       Thermal       [■□□]  ₽45
+RENEWABLES   Wind/Solar    [■■□]  ₽60
 ```
 
 ## City sectors
