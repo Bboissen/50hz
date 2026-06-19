@@ -2,7 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import { windFactor } from "../src/gameplay/assets";
 import { GAME_CONFIG } from "../src/gameplay/config";
-import { forecastWeather, sampleWeather, solarFactorForTimeOfDay, timeOfDayRatioAt, weatherConditionAt } from "../src/gameplay/weather";
+import {
+  forecastWeather,
+  sampleWeather,
+  solarFactorForTimeOfDay,
+  timeOfDayRatioAt,
+  weatherConditionAt,
+  weatherSegmentSeconds,
+} from "../src/gameplay/weather";
 
 describe("weather", () => {
   it("maps one in-game day to one real-world minute at current simulation speed", () => {
@@ -20,6 +27,14 @@ describe("weather", () => {
     expect(timeOfDayRatioAt(cycle * 2)).toBeCloseTo(timeOfDayRatioAt(0));
   });
 
+  it("uses one shared weather segment length for condition changes and forecast buckets", () => {
+    const segment = weatherSegmentSeconds();
+
+    expect(segment).toBe(GAME_CONFIG.weather.conditionSegmentSeconds);
+    expect(weatherConditionAt(segment - 0.01)).toBe("sun");
+    expect(weatherConditionAt(segment)).toBe("cloud");
+  });
+
   it("makes solar follow time of day and reach zero at night", () => {
     const seed = GAME_CONFIG.match.defaultSeed;
     const cycle = GAME_CONFIG.weather.dayCycleSeconds;
@@ -30,6 +45,8 @@ describe("weather", () => {
     expect(dawn.solarFactor).toBe(0);
     expect(noon.solarFactor).toBeGreaterThan(dawn.solarFactor);
     expect(night.solarFactor).toBe(0);
+    expect(noon.condition).toBe("sun");
+    expect(noon.solarFactor).toBeCloseTo(1);
     expect(solarFactorForTimeOfDay(0.25)).toBeCloseTo(1);
   });
 
@@ -45,15 +62,18 @@ describe("weather", () => {
 
   it("applies readable weather condition effects", () => {
     const seed = GAME_CONFIG.match.defaultSeed;
-    const cycle = GAME_CONFIG.weather.dayCycleSeconds;
-    const cloud = sampleWeather(seed, cycle * 0.25);
-    const rain = sampleWeather(seed, cycle * 0.45);
-    const wind = sampleWeather(seed, cycle * 0.65);
-    const snow = sampleWeather(seed, cycle * 0.85);
+    const cloud = sampleWeather(seed, 15);
+    const rain = sampleWeather(seed, 85);
+    const wind = sampleWeather(seed, 39);
+    const snow = sampleWeather(seed, 50);
 
-    expect(weatherConditionAt(cycle * 0.1)).toBe("sun");
+    expect(weatherConditionAt(GAME_CONFIG.weather.dayCycleSeconds * 0.1)).toBe("sun");
+    expect(cloud.condition).toBe("cloud");
+    expect(rain.condition).toBe("rain");
+    expect(snow.condition).toBe("snow");
     expect(cloud.solarFactor).toBeLessThan(solarFactorForTimeOfDay(cloud.timeOfDayRatio));
     expect(rain.solarFactor).toBeLessThan(solarFactorForTimeOfDay(rain.timeOfDayRatio));
+    expect(snow.solarFactor).toBeLessThan(solarFactorForTimeOfDay(snow.timeOfDayRatio));
     expect(rain.rainActive).toBe(true);
     expect(rain.householdDemandMultiplier).toBeCloseTo(1.03);
     expect(wind.windKmh).toBeGreaterThan(cloud.windKmh);

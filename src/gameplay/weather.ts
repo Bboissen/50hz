@@ -45,6 +45,10 @@ export function timeOfDayRatioAt(timeSeconds: number): number {
   return (((timeSeconds % cycleSeconds) + cycleSeconds) % cycleSeconds) / cycleSeconds;
 }
 
+export function weatherSegmentSeconds(): number {
+  return GAME_CONFIG.weather.conditionSegmentSeconds;
+}
+
 export function solarFactorForTimeOfDay(timeOfDayRatio: number): number {
   if (timeOfDayRatio > 0.5) {
     return 0;
@@ -53,9 +57,9 @@ export function solarFactorForTimeOfDay(timeOfDayRatio: number): number {
 }
 
 export function weatherConditionAt(timeSeconds: number): WeatherCondition {
-  const cycleSeconds = GAME_CONFIG.weather.dayCycleSeconds;
+  const cycleSeconds = weatherSegmentSeconds() * 5;
   const cyclePosition = ((timeSeconds % cycleSeconds) + cycleSeconds) % cycleSeconds;
-  const segmentSeconds = cycleSeconds / 5;
+  const segmentSeconds = weatherSegmentSeconds();
   if (cyclePosition < segmentSeconds) {
     return "sun";
   }

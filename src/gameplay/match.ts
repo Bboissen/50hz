@@ -1,4 +1,4 @@
-import { updateAssetOutputs, windFactor } from "./assets";
+import { updateAssetOutputs, windPotentialMW } from "./assets";
 import { updateBreakerRisk, computeSupplyDemandMismatch } from "./breaker";
 import { GAME_CONFIG } from "./config";
 import { acceptContract, tickContracts } from "./contracts";
@@ -52,7 +52,7 @@ function createInitialContractOffers(): ContractOffer[] {
 
 function primeRenewableRuntime(player: PlayerState, solarFactor: number, windKmh: number): PlayerState {
   const solarOutputMW = player.capacities.solarPeakMW * solarFactor;
-  const windOutputMW = player.controls.windEnabled ? player.capacities.windPeakMW * windFactor(windKmh) : 0;
+  const windOutputMW = windPotentialMW(player.capacities, player.controls, windKmh);
   const rawProductionMW =
     player.lastOutputs.rawProductionMW - player.lastOutputs.solarOutputMW - player.lastOutputs.windOutputMW + solarOutputMW + windOutputMW;
 
@@ -65,7 +65,9 @@ function primeRenewableRuntime(player: PlayerState, solarFactor: number, windKmh
     },
     lastOutputs: {
       ...player.lastOutputs,
+      solarPotentialMW: solarOutputMW,
       solarOutputMW,
+      windPotentialMW: windOutputMW,
       windOutputMW,
       rawProductionMW,
       deliveredSupplyMW: Math.min(rawProductionMW, player.capacities.gridCapacityMW),
@@ -87,6 +89,7 @@ export function createInitialMatchState(options: { seed?: MatchSeed } = {}): Mat
   return {
     seed,
     demandSchedule,
+    environment,
     contractOffers: createInitialContractOffers(),
     timeSeconds: 0,
     isPaused: false,
@@ -543,6 +546,7 @@ export function tickMatch(state: MatchState, dt = 1 / GAME_CONFIG.match.tickRate
   return {
     seed: state.seed,
     demandSchedule: state.demandSchedule,
+    environment,
     contractOffers: tickContractOffers(state.contractOffers, nextTime, dt, player.runtime.breakerTrippedSeconds > 0),
     timeSeconds: nextTime,
     isPaused: false,
@@ -579,6 +583,7 @@ export function buildForecastTraceFromMatchState(
   let capacityOverloadTimer = player.runtime.capacityOverloadTimer;
   let balanceBreakerTimer = player.runtime.balanceBreakerTimer;
   let previousOffsetSeconds = 0;
+  const currentRenewableOutputMW = player.lastOutputs.solarOutputMW + player.lastOutputs.windOutputMW;
 
   return trace.map((point) => {
     const dt = Math.max(0, point.timeOffsetSeconds - previousOffsetSeconds);
@@ -589,7 +594,8 @@ export function buildForecastTraceFromMatchState(
       currentRenewableOutputMW: point.renewableSupplyMW,
     });
     const capacityUtilization = point.demandMW / Math.max(basisMW, 1);
-    const supplyDemandMismatch = computeSupplyDemandMismatch(player.lastOutputs.rawProductionMW, point.demandMW);
+    const projectedGenerationMW = player.lastOutputs.rawProductionMW - currentRenewableOutputMW + point.renewableSupplyMW;
+    const supplyDemandMismatch = computeSupplyDemandMismatch(projectedGenerationMW, point.demandMW);
     const breaker =
       player.runtime.breakerTrippedSeconds > 0
         ? {
@@ -757,12 +763,7 @@ function breakerStatusText(player: PlayerState): string {
 export function selectDispatchConsoleState(state: MatchState): DispatchConsoleState {
   const player = state.players.player;
   const rival = state.players.rival;
-  const environment = sampleEventEnvironment({
-    seed: state.seed,
-    demandSchedule: state.demandSchedule,
-    timeSeconds: state.timeSeconds,
-  });
-  const demand = environment.demand;
+  const demand = state.environment.demand;
   const deterministicMaxMW = deterministicMaxCapacityMW(player.capacities);
   const totalMaxMW = totalMaxCapacityForPlayer(player);
   const breakerLifecycleState = breakerLifecycle(player);
@@ -868,17 +869,14 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
 export function selectProductionConsoleState(state: MatchState): ProductionConsoleState {
   const dispatch = selectDispatchConsoleState(state);
   const player = state.players.player;
-  const environment = sampleEventEnvironment({
-    seed: state.seed,
-    demandSchedule: state.demandSchedule,
-    timeSeconds: state.timeSeconds,
-  });
+  const environment = state.environment;
   return {
     ...dispatch,
     matchSeed: state.seed,
     currentWeather: environment.weather,
     currentWindKmh: environment.windKmh,
-    windPotentialMW: player.capacities.windPeakMW * windFactor(environment.windKmh),
+    solarPotentialMW: player.lastOutputs.solarPotentialMW,
+    windPotentialMW: player.lastOutputs.windPotentialMW,
     rainActive: environment.weather.rainActive,
     solarFactor: environment.solarFactor,
     timeOfDayRatio: environment.weather.timeOfDayRatio,

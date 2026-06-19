@@ -1,7 +1,15 @@
-import { windFactor } from "./assets";
+import { solarPotentialMW, windPotentialMW } from "./assets";
 import { computeScheduledDemand } from "./demand";
-import { sampleWeather, type WeatherSample } from "./weather";
-import type { AssetCapacities, DemandBreakdown, DemandScheduleStep, EventTracePoint, GenerationControls, PublicEventState, TimelineToken } from "./types";
+import { sampleWeather } from "./weather";
+import type {
+  AssetCapacities,
+  DemandScheduleStep,
+  EventTracePoint,
+  GenerationControls,
+  MatchEnvironment,
+  PublicEventState,
+  TimelineToken,
+} from "./types";
 
 type ScriptedEvent = {
   id: string;
@@ -178,13 +186,7 @@ export function sampleEventEnvironment(args: {
   seed: string;
   demandSchedule: DemandScheduleStep[];
   timeSeconds: number;
-}): {
-  publicEvents: PublicEventState;
-  weather: WeatherSample;
-  demand: DemandBreakdown;
-  solarFactor: number;
-  windKmh: number;
-} {
+}): MatchEnvironment {
   const publicEvents = getPublicEventState(args.timeSeconds);
   const weather = sampleWeather(args.seed, args.timeSeconds);
   const eventState = {
@@ -218,8 +220,8 @@ export function buildEventTrace(args: {
       timeSeconds: args.timeSeconds + timeOffsetSeconds,
     });
     const renewableSupplyMW =
-      args.capacities.solarPeakMW * environment.solarFactor +
-      (args.controls.windEnabled ? args.capacities.windPeakMW * windFactor(environment.windKmh) : 0);
+      solarPotentialMW(args.capacities, environment.solarFactor) +
+      windPotentialMW(args.capacities, args.controls, environment.windKmh);
 
     return {
       timeOffsetSeconds,

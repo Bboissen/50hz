@@ -74,7 +74,7 @@ Plant upgrades set the next explicit physical level. Do not derive new levels by
 | Boiler | 45 MW | 70 MW | 95 MW | Fast deterministic peaker |
 | Renewable peak | 25 MW | 40 MW | 55 MW | Non-deterministic renewable peak |
 | Water dam storage | 20 MWh | 35 MWh | 50 MWh | Compressed arcade storage |
-| Water dam power | 15 MW | 25 MW | 35 MW | Instant buffer power |
+| Water dam power | 15 MW | 25 MW | 35 MW | Short-ramp buffer power |
 
 Renewable peak is split as:
 
@@ -213,11 +213,14 @@ Output:
 
 ```ts
 solarPotentialMW = solarPeakMW * weatherSolarFactor;
-solarOutputMW = moveTowards(
-  solarOutputMW,
-  solarPotentialMW,
-  RENEWABLE_RAMP_MW_PER_SECOND * dt
-);
+solarOutputMW =
+  solarPotentialMW < solarOutputMW
+    ? solarPotentialMW
+    : moveTowards(
+        solarOutputMW,
+        solarPotentialMW,
+        (solarPeakMW / RENEWABLE_RAMP_SECONDS) * dt
+      );
 ```
 
 Recommended weather factors:
@@ -245,6 +248,14 @@ Prototype weather should make time of day visible within the short match. The ti
 
 Solar output is exactly `0 MW` during night. Weather conditions then multiply only the daylight solar factor, so cloud/rain/snow cannot create nighttime trickle output.
 
+Weather front labels are not the same system as time of day. The prototype uses separate 12-second weather condition segments so sunny weather can include noon while cloud, rain, and snow still cap the panels during daylight. Bad-weather reductions cap actual solar output immediately; sunny recovery ramps upward for readability.
+
+Recommended:
+
+```ts
+const RENEWABLE_RAMP_SECONDS = 1.5;
+```
+
 ## Renewable wind
 
 Role:
@@ -269,7 +280,7 @@ const windPotentialMW = windPeakMW * windFactor(currentWindKmh);
 const windOutputMW = moveTowards(
   windOutputMW,
   windPotentialMW,
-  RENEWABLE_RAMP_MW_PER_SECOND * dt
+  (windPeakMW / RENEWABLE_RAMP_SECONDS) * dt
 );
 ```
 
@@ -279,7 +290,7 @@ Recommended:
 const WIND_CUT_IN_KMH = 12;
 const WIND_FULL_POWER_KMH = 45;
 const WIND_CUT_OUT_KMH = 90;
-const RENEWABLE_RAMP_MW_PER_SECOND = 4;
+const RENEWABLE_RAMP_SECONDS = 2.5;
 ```
 
 Manual control:
@@ -324,6 +335,8 @@ Recommended:
 const WATER_DAM_CAPACITY_MWH = 20;
 const WATER_DAM_MAX_POWER_MW = 15;
 const WATER_DAM_INITIAL_RATIO = 0.50;
+const WATER_DAM_FILL_RAMP_MW_PER_SECOND = 30;
+const WATER_DAM_DRAIN_RAMP_MW_PER_SECOND = 8;
 const WATER_DAM_FILL_EFFICIENCY = 0.75;
 const WATER_DAM_DRAIN_EFFICIENCY = 0.90;
 const WATER_DAM_STORAGE_SECONDS_PER_MWH = 20;
@@ -332,10 +345,11 @@ const RAIN_AUTODRAIN_THRESHOLD = 0.95;
 const RAIN_AUTODRAIN_POWER_RATIO = 0.25;
 ```
 
-Manual fill during overload / surplus:
+Manual fill as pump load:
 
 ```ts
-const fillMW = Math.min(surplusMW, WATER_DAM_MAX_POWER_MW);
+const fillTargetMW = WATER_DAM_MAX_POWER_MW;
+const fillMW = moveTowards(previousFillMW, fillTargetMW, WATER_DAM_FILL_RAMP_MW_PER_SECOND * dtSeconds);
 storedWaterMWh +=
   fillMW *
   WATER_DAM_FILL_EFFICIENCY *
@@ -349,11 +363,17 @@ const drainMW = Math.min(
   WATER_DAM_MAX_POWER_MW,
   storedWaterMWh / (dtSeconds / WATER_DAM_STORAGE_SECONDS_PER_MWH)
 );
-damOutputMW = drainMW * WATER_DAM_DRAIN_EFFICIENCY;
-storedWaterMWh -= drainMW * (dtSeconds / WATER_DAM_STORAGE_SECONDS_PER_MWH);
+damOutputMW = moveTowards(
+  previousDamOutputMW,
+  drainMW * WATER_DAM_DRAIN_EFFICIENCY,
+  WATER_DAM_DRAIN_RAMP_MW_PER_SECOND * dtSeconds
+);
+storedWaterMWh -=
+  (damOutputMW / WATER_DAM_DRAIN_EFFICIENCY) *
+  (dtSeconds / WATER_DAM_STORAGE_SECONDS_PER_MWH);
 ```
 
-For the prototype, dam storage uses a deliberately compressed arcade timebase instead of real-world MWh hours. This keeps the reservoir gauge readable during a short match while preserving the tactical rule: filling absorbs surplus and draining adds immediate power.
+For the prototype, dam storage uses a deliberately compressed arcade timebase instead of real-world MWh hours. This keeps the reservoir gauge readable during a short match while preserving the tactical rule: filling actively consumes generation as pump load and draining adds power after a short readable ramp.
 
 Rain fill:
 
@@ -375,8 +395,8 @@ This auto-drain is intentionally small. Full-rain overflow should be visible as 
 
 Interpretation:
 
-- full dam: cannot absorb overload/surplus, but can generate immediately,
-- empty dam: cannot generate, but can absorb overload/surplus or rain,
+- full dam: cannot absorb overload/surplus, but can ramp into generation,
+- empty dam: cannot generate, but can fill as pump load or from rain,
 - neutral dam: both fill and drain are actionable.
 
 ## Controllable generation output

@@ -22,6 +22,15 @@ function tickFor(seconds: number) {
   return state;
 }
 
+function tickFixedUntil(seconds: number) {
+  let state = createInitialMatchState();
+  const dt = 1 / GAME_CONFIG.match.tickRateHz;
+  while (state.timeSeconds < seconds) {
+    state = tickMatch(state, Math.min(dt, seconds - state.timeSeconds));
+  }
+  return state;
+}
+
 function forceUnderloadTrip() {
   let state = createInitialMatchState();
   state = applyPlayerCommand(state, { type: "setNuclearTarget", playerId: "player", targetMW: 0 });
@@ -456,6 +465,40 @@ describe("match", () => {
     expect(trace.some((point) => point.breakerWouldTrip)).toBe(true);
   });
 
+  it("projects renewable changes into forecast supply-demand mismatch", () => {
+    const base = createInitialMatchState();
+    const state = {
+      ...base,
+      timeSeconds: 80,
+      players: {
+        ...base.players,
+        player: {
+          ...base.players.player,
+          controls: {
+            ...base.players.player.controls,
+            windEnabled: false,
+          },
+          lastOutputs: {
+            ...base.players.player.lastOutputs,
+            solarOutputMW: base.players.player.capacities.solarPeakMW,
+            windOutputMW: 0,
+            rawProductionMW: 80,
+            deliveredSupplyMW: 80,
+          },
+        },
+      },
+    };
+    const trace = buildForecastTraceFromMatchState(state);
+    const current = trace[0]!;
+    const projectedGenerationMW = 80 - base.players.player.capacities.solarPeakMW + current.renewableSupplyMW;
+
+    expect(current.renewableSupplyMW).toBeLessThan(base.players.player.capacities.solarPeakMW);
+    expect(current.supplyDemandMismatch).toBeCloseTo(
+      (projectedGenerationMW - current.demandMW) / current.demandMW,
+    );
+    expect(current.supplyDemandMismatch).toBeLessThan((80 - current.demandMW) / current.demandMW);
+  });
+
   it("unaffordable breaker reset ends the match", () => {
     let state = forceUnderloadTrip();
     state = {
@@ -581,6 +624,8 @@ describe("match", () => {
     expect(production.matchSeed).toBe(state.seed);
     expect(production.currentWeather).toEqual(sampledWeather);
     expect(production.currentWindKmh).toBe(sampledWeather.windKmh);
+    expect(production.solarPotentialMW).toBe(state.players.player.lastOutputs.solarPotentialMW);
+    expect(production.windPotentialMW).toBe(state.players.player.lastOutputs.windPotentialMW);
     expect(production.windPotentialMW).toBeCloseTo(production.windPeakMW * windFactor(sampledWeather.windKmh));
     expect(production.rainActive).toBe(sampledWeather.rainActive);
     expect(production.solarFactor).toBe(sampledWeather.solarFactor);
@@ -589,6 +634,15 @@ describe("match", () => {
     expect(production.thermalOutputMW).toBeGreaterThanOrEqual(0);
     expect(production.waterDamCapacityMWh).toBeGreaterThan(0);
     expect(production.breakerResetProgress).toBeGreaterThanOrEqual(0);
+  });
+
+  it("does not carry near-full sunny solar output into cloud weather", () => {
+    const state = tickFixedUntil(GAME_CONFIG.weather.conditionSegmentSeconds + 0.1);
+    const production = selectProductionConsoleState(state);
+
+    expect(production.currentWeather.condition).toBe("cloud");
+    expect(production.solarOutputMW).toBeLessThanOrEqual(production.solarPotentialMW + 0.001);
+    expect(production.solarOutputMW / production.solarPeakMW).toBeLessThan(0.6);
   });
 
   it("production commands update one shared supply state across panels", () => {

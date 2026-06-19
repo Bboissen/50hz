@@ -47,6 +47,8 @@ export type AssetRuntime = {
   nuclearOutputMW: number;
   solarOutputMW: number;
   windOutputMW: number;
+  damOutputMW: number;
+  damAbsorbMW: number;
   thermalHeat: number;
   storedWaterMWh: number;
   capacityOverloadTimer: number;
@@ -63,7 +65,9 @@ export type AssetRuntime = {
 export type AssetOutputs = {
   nuclearOutputMW: number;
   thermalOutputMW: number;
+  solarPotentialMW: number;
   solarOutputMW: number;
+  windPotentialMW: number;
   windOutputMW: number;
   damOutputMW: number;
   damAbsorbMW: number;
@@ -195,9 +199,18 @@ export type PublicEventState = {
   windKmhOverride?: number;
 };
 
+export type MatchEnvironment = {
+  publicEvents: PublicEventState;
+  weather: WeatherSample;
+  demand: DemandBreakdown;
+  solarFactor: number;
+  windKmh: number;
+};
+
 export type MatchState = {
   seed: MatchSeed;
   demandSchedule: DemandScheduleStep[];
+  environment: MatchEnvironment;
   contractOffers: ContractOffer[];
   timeSeconds: number;
   isPaused: boolean;
@@ -286,6 +299,7 @@ export type ProductionConsoleState = DispatchConsoleState & {
   matchSeed: MatchSeed;
   currentWeather: WeatherSample;
   currentWindKmh: number;
+  solarPotentialMW: number;
   windPotentialMW: number;
   rainActive: boolean;
   solarFactor: number;

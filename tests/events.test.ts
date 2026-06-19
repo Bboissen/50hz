@@ -55,9 +55,8 @@ describe("events", () => {
   });
 
   it("rain and snow add a small household demand increase when wired into event demand", () => {
-    const cycle = GAME_CONFIG.weather.dayCycleSeconds;
-    const rainTime = cycle * 0.45;
-    const snowTime = cycle * 0.85;
+    const rainTime = GAME_CONFIG.weather.conditionSegmentSeconds * 2 + 1;
+    const snowTime = GAME_CONFIG.weather.conditionSegmentSeconds * 9 + 1;
     const rain = sampleWeather(GAME_CONFIG.match.defaultSeed, rainTime);
     const snow = sampleWeather(GAME_CONFIG.match.defaultSeed, snowTime);
     const baseline = computeDemand(getPublicEventState(0));
@@ -70,6 +69,8 @@ describe("events", () => {
       householdMultiplier: getPublicEventState(snowTime).householdMultiplier * snow.householdDemandMultiplier,
     });
 
+    expect(rain.condition).toBe("rain");
+    expect(snow.condition).toBe("snow");
     expect(rainDemand.householdsMW).toBeCloseTo(baseline.householdsMW * 1.03);
     expect(snowDemand.householdsMW).toBeCloseTo(baseline.householdsMW * 1.03);
   });

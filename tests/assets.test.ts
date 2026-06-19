@@ -51,13 +51,85 @@ describe("assets", () => {
       windKmh: GAME_CONFIG.assets.renewable.windFullPowerKmh,
     });
 
-    expect(result.outputs.solarOutputMW).toBe(GAME_CONFIG.assets.renewable.rampMWPerSecond);
-    expect(result.outputs.windOutputMW).toBe(GAME_CONFIG.assets.renewable.rampMWPerSecond);
+    expect(result.outputs.solarOutputMW).toBe(player.capacities.solarPeakMW / GAME_CONFIG.assets.renewable.rampSeconds);
+    expect(result.outputs.windOutputMW).toBe(player.capacities.windPeakMW / GAME_CONFIG.assets.renewable.rampSeconds);
     expect(result.outputs.solarOutputMW).toBeLessThan(player.capacities.solarPeakMW);
     expect(result.outputs.windOutputMW).toBeLessThan(player.capacities.windPeakMW);
   });
 
-  it("ramps renewable output down after weather or routing loss", () => {
+  it("exposes the same renewable potential that solar and wind ramp toward", () => {
+    const player = createInitialPlayerState("player");
+    const halfSun = updateAssetOutputs({
+      capacities: player.capacities,
+      runtime: player.runtime,
+      controls: player.controls,
+      currentDemandMW: 70,
+      dt: 1,
+      solarFactor: 0.5,
+      windKmh: GAME_CONFIG.assets.renewable.windFullPowerKmh,
+    });
+    const fullSun = updateAssetOutputs({
+      capacities: player.capacities,
+      runtime: halfSun.runtime,
+      controls: player.controls,
+      currentDemandMW: 70,
+      dt: 1,
+      solarFactor: 1,
+      windKmh: GAME_CONFIG.assets.renewable.windFullPowerKmh,
+    });
+
+    expect(halfSun.outputs.solarPotentialMW).toBe(player.capacities.solarPeakMW * 0.5);
+    expect(halfSun.outputs.windPotentialMW).toBe(player.capacities.windPeakMW);
+    expect(halfSun.outputs.solarOutputMW).toBeLessThanOrEqual(halfSun.outputs.solarPotentialMW);
+    expect(fullSun.outputs.solarPotentialMW).toBe(player.capacities.solarPeakMW);
+    expect(fullSun.outputs.solarOutputMW).toBe(fullSun.outputs.solarPotentialMW);
+    expect(fullSun.outputs.solarOutputMW).toBeGreaterThan(halfSun.outputs.solarOutputMW);
+  });
+
+  it("scales renewable ramp speed so upgraded plants reach peak within the response window", () => {
+    const player = createInitialPlayerState("player");
+    const capacities = {
+      ...player.capacities,
+      solarPeakMW: GAME_CONFIG.assets.plantLevels.renewablePeakMW[2] * GAME_CONFIG.assets.renewable.solarShare,
+      windPeakMW: GAME_CONFIG.assets.plantLevels.renewablePeakMW[2] * GAME_CONFIG.assets.renewable.windShare,
+    };
+    const result = updateAssetOutputs({
+      capacities,
+      runtime: player.runtime,
+      controls: player.controls,
+      currentDemandMW: 70,
+      dt: GAME_CONFIG.assets.renewable.rampSeconds,
+      solarFactor: 1,
+      windKmh: GAME_CONFIG.assets.renewable.windFullPowerKmh,
+    });
+
+    expect(result.outputs.solarOutputMW).toBe(capacities.solarPeakMW);
+    expect(result.outputs.windOutputMW).toBe(capacities.windPeakMW);
+  });
+
+  it("caps solar output immediately when weather reduces panel potential", () => {
+    const player = createInitialPlayerState("player");
+
+    for (const solarFactor of [0.55, 0.35, 0.25]) {
+      const result = updateAssetOutputs({
+        capacities: player.capacities,
+        runtime: {
+          ...player.runtime,
+          solarOutputMW: player.capacities.solarPeakMW,
+        },
+        controls: player.controls,
+        currentDemandMW: 70,
+        dt: 1 / GAME_CONFIG.match.tickRateHz,
+        solarFactor,
+        windKmh: GAME_CONFIG.assets.renewable.windFullPowerKmh,
+      });
+
+      expect(result.outputs.solarPotentialMW).toBeCloseTo(player.capacities.solarPeakMW * solarFactor);
+      expect(result.outputs.solarOutputMW).toBeCloseTo(result.outputs.solarPotentialMW);
+    }
+  });
+
+  it("caps solar immediately on weather loss while wind routing still ramps down", () => {
     const player = createInitialPlayerState("player");
     const result = updateAssetOutputs({
       capacities: player.capacities,
@@ -73,8 +145,115 @@ describe("assets", () => {
       windKmh: GAME_CONFIG.assets.renewable.windFullPowerKmh,
     });
 
-    expect(result.outputs.solarOutputMW).toBe(player.capacities.solarPeakMW - GAME_CONFIG.assets.renewable.rampMWPerSecond);
-    expect(result.outputs.windOutputMW).toBe(player.capacities.windPeakMW - GAME_CONFIG.assets.renewable.rampMWPerSecond);
+    expect(result.outputs.solarOutputMW).toBe(0);
+    expect(result.outputs.windOutputMW).toBe(
+      player.capacities.windPeakMW - player.capacities.windPeakMW / GAME_CONFIG.assets.renewable.rampSeconds,
+    );
+  });
+
+  it("ramps water dam drain output up and down instead of snapping", () => {
+    const player = createInitialPlayerState("player");
+    const rampUp = updateAssetOutputs({
+      capacities: player.capacities,
+      runtime: player.runtime,
+      controls: { ...player.controls, waterDamMode: "drain", windEnabled: false },
+      currentDemandMW: 100,
+      dt: 1,
+      solarFactor: 0,
+      windKmh: 0,
+    });
+    const rampDown = updateAssetOutputs({
+      capacities: player.capacities,
+      runtime: rampUp.runtime,
+      controls: { ...player.controls, waterDamMode: "hold", windEnabled: false },
+      currentDemandMW: 100,
+      dt: 1,
+      solarFactor: 0,
+      windKmh: 0,
+    });
+
+    expect(rampUp.outputs.damOutputMW).toBe(GAME_CONFIG.assets.waterDam.drainRampMWPerSecond);
+    expect(rampUp.outputs.damOutputMW).toBeLessThan(
+      player.capacities.waterDamMaxPowerMW * GAME_CONFIG.assets.waterDam.drainEfficiency,
+    );
+    expect(rampDown.outputs.damOutputMW).toBe(0);
+  });
+
+  it("ramps water dam fill absorption up and down instead of snapping", () => {
+    const player = createInitialPlayerState("player");
+    const rampUp = updateAssetOutputs({
+      capacities: player.capacities,
+      runtime: player.runtime,
+      controls: { ...player.controls, thermalThrottle: 1, waterDamMode: "fill" },
+      currentDemandMW: 1,
+      dt: 1,
+      solarFactor: 1,
+      windKmh: GAME_CONFIG.assets.renewable.windFullPowerKmh,
+    });
+    const rampDown = updateAssetOutputs({
+      capacities: player.capacities,
+      runtime: rampUp.runtime,
+      controls: { ...player.controls, thermalThrottle: 1, waterDamMode: "hold" },
+      currentDemandMW: 1,
+      dt: 1,
+      solarFactor: 1,
+      windKmh: GAME_CONFIG.assets.renewable.windFullPowerKmh,
+    });
+
+    expect(rampUp.outputs.damAbsorbMW).toBe(player.capacities.waterDamMaxPowerMW);
+    expect(GAME_CONFIG.assets.waterDam.fillRampMWPerSecond).toBeGreaterThan(
+      GAME_CONFIG.assets.waterDam.drainRampMWPerSecond,
+    );
+    expect(rampDown.outputs.damAbsorbMW).toBe(0);
+  });
+
+  it("lets dam fill actively consume power even without surplus", () => {
+    const player = createInitialPlayerState("player");
+    const hold = updateAssetOutputs({
+      capacities: player.capacities,
+      runtime: player.runtime,
+      controls: { ...player.controls, waterDamMode: "hold", windEnabled: false },
+      currentDemandMW: 100,
+      dt: 1,
+      solarFactor: 0,
+      windKmh: 0,
+    });
+    const fill = updateAssetOutputs({
+      capacities: player.capacities,
+      runtime: player.runtime,
+      controls: { ...player.controls, waterDamMode: "fill", windEnabled: false },
+      currentDemandMW: 100,
+      dt: 1,
+      solarFactor: 0,
+      windKmh: 0,
+    });
+
+    expect(fill.outputs.damAbsorbMW).toBe(player.capacities.waterDamMaxPowerMW);
+    expect(fill.outputs.deliveredSupplyMW).toBeLessThan(hold.outputs.deliveredSupplyMW);
+    expect(fill.outputs.storedWaterMWh).toBeGreaterThan(player.runtime.storedWaterMWh);
+  });
+
+  it("does not let dam fill create negative generation or supply", () => {
+    const player = createInitialPlayerState("player");
+    const result = updateAssetOutputs({
+      capacities: player.capacities,
+      runtime: {
+        ...player.runtime,
+        nuclearOutputMW: 0,
+        solarOutputMW: 0,
+        windOutputMW: 0,
+      },
+      controls: { ...player.controls, nuclearTargetMW: 0, thermalThrottle: 0, waterDamMode: "fill", windEnabled: false },
+      currentDemandMW: 100,
+      dt: 1,
+      solarFactor: 0,
+      windKmh: 0,
+    });
+
+    expect(result.outputs.damAbsorbMW).toBe(0);
+    expect(result.outputs.rawProductionMW).toBe(0);
+    expect(result.outputs.deliveredSupplyMW).toBe(0);
+    expect(result.outputs.storedWaterMWh).toBe(player.runtime.storedWaterMWh);
   });
 
   it("clamps stored water while filling and draining", () => {
@@ -102,7 +281,7 @@ describe("assets", () => {
     expect(drained.outputs.storedWaterMWh).toBe(0);
   });
 
-  it("makes dam fill visibly store surplus and reduce delivered supply", () => {
+  it("makes dam fill visibly store water and reduce delivered supply", () => {
     const player = createInitialPlayerState("player");
     const hold = updateAssetOutputs({
       capacities: player.capacities,

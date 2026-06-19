@@ -100,7 +100,7 @@ Each control should have a different response profile.
 |---|---|---|
 | Nuclear | Slow | Anticipation |
 | Thermal | Fast but costly | Crisis response |
-| Water dam | Immediate if filled, unavailable if empty | Timing |
+| Water dam | Short fill/drain ramp if storage allows | Timing |
 | Wind turbine | Produces only inside valid wind-speed range | Weather reading |
 | Breaker reset | Main-control-room modal switch arm plus fuse hold, paid from cash reserve | Recovery discipline |
 

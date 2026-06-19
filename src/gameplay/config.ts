@@ -7,6 +7,7 @@ export const GAME_CONFIG = {
   },
   weather: {
     dayCycleSeconds: 36,
+    conditionSegmentSeconds: 12,
     rainSnowHouseholdMultiplier: 1.03,
     forecastOffsetsSeconds: [0, 15, 30, 45],
   },
@@ -67,7 +68,7 @@ export const GAME_CONFIG = {
       solarShare: 0.4,
       windPeakMW: 15,
       windShare: 0.6,
-      rampMWPerSecond: 4,
+      rampSeconds: 1.5,
       windCutInKmh: 12,
       windFullPowerKmh: 45,
       windCutOutKmh: 90,
@@ -76,6 +77,8 @@ export const GAME_CONFIG = {
     waterDam: {
       capacityMWh: 20,
       maxPowerMW: 15,
+      fillRampMWPerSecond: 30,
+      drainRampMWPerSecond: 8,
       initialStoredRatio: 0.5,
       fillEfficiency: 0.75,
       drainEfficiency: 0.9,

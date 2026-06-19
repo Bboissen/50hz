@@ -22,7 +22,9 @@ export function createInitialPlayerState(id: PlayerId): PlayerState {
   const emptyOutputs = {
     nuclearOutputMW: GAME_CONFIG.assets.nuclear.initialOutputMW,
     thermalOutputMW: capacities.thermalCapacityMW * GAME_CONFIG.assets.thermal.initialThrottle,
+    solarPotentialMW: 0,
     solarOutputMW: 0,
+    windPotentialMW: 0,
     windOutputMW: 0,
     damOutputMW: 0,
     damAbsorbMW: 0,
@@ -58,6 +60,8 @@ export function createInitialPlayerState(id: PlayerId): PlayerState {
       nuclearOutputMW: GAME_CONFIG.assets.nuclear.initialOutputMW,
       solarOutputMW: 0,
       windOutputMW: 0,
+      damOutputMW: 0,
+      damAbsorbMW: 0,
       thermalHeat: 0,
       storedWaterMWh: emptyOutputs.storedWaterMWh,
       capacityOverloadTimer: 0,
