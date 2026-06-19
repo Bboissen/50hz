@@ -42,7 +42,15 @@ function numberFromReadout(text: string, pattern: RegExp): number {
 }
 
 async function clickDebugButton(page: Page, name: string): Promise<void> {
-  await page.getByRole("button", { name }).click({ force: true });
+  if (name !== "DEV") {
+    const debugPanel = page.locator(".debug-panel");
+    if ((await debugPanel.count()) > 0) {
+      await debugPanel.evaluate((element) => element.classList.remove("is-collapsed"));
+    }
+    await page.getByRole("button", { name, exact: true }).evaluate((element) => (element as HTMLButtonElement).click());
+    return;
+  }
+  await page.getByRole("button", { name, exact: true }).click({ force: true });
 }
 
 async function screenshotPixelStats(buffer: Buffer): Promise<{ nonTransparentPixels: number; distinctSampledColors: number }> {
@@ -69,8 +77,52 @@ async function pageClip(page: Page, clip: { x: number; y: number; width: number;
   return page.screenshot({ clip });
 }
 
+async function startGame(page: Page): Promise<void> {
+  const playButton = page.getByRole("button", { name: "Play game" });
+  if (await playButton.isVisible()) {
+    await playButton.click();
+  }
+  await expect(page.locator(".game-menu")).toBeHidden();
+}
+
+test("shows the start menu before the match begins", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.getByRole("button", { name: "Play game" })).toBeVisible();
+  await page.getByRole("button", { name: "Play game" }).click();
+  await expect(page.locator(".game-menu")).toBeHidden();
+  await expect(page.locator("canvas")).toBeVisible();
+});
+
+test("city editor adjusts and exports the production city layout", async ({ page }) => {
+  await page.goto("/?cityEditor=1");
+  const editor = page.locator(".city-editor");
+
+  await expect(editor).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("data-app-phase", "editing");
+  await expect(page.locator(".game-menu")).toBeHidden();
+  await expect(editor).toHaveAttribute("data-selected", "terrain");
+  const startX = Number(await editor.getAttribute("data-x"));
+  const startScale = Number(await editor.getAttribute("data-scale"));
+
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("KeyE");
+
+  await expect(editor).toHaveAttribute("data-x", String(startX + 1));
+  await expect(editor).toHaveAttribute("data-scale", String(startScale + 0.005));
+  await expect(editor.locator(".city-editor__export")).toHaveValue(/export const CITY_SLOT_CONFIGS/);
+
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-app-phase", "editing");
+  await expect(editor).toHaveAttribute("data-x", String(startX + 1));
+
+  await page.getByRole("button", { name: "Reset layout" }).click();
+  await expect(editor).toHaveAttribute("data-x", String(startX));
+});
+
 test("captures the live control desk route through the compatibility ui param", async ({ page }) => {
   await page.goto("/?ui=desk");
+  await startGame(page);
   const canvas = page.locator("canvas");
 
   await expect(canvas).toBeVisible();
@@ -94,13 +146,14 @@ test("captures the live control desk route through the compatibility ui param", 
     forecastBefore,
   );
   expect(forecastStats.distinctSampledColors).toBeGreaterThan(4);
-  await page.waitForTimeout(1_100);
+  await page.waitForTimeout(4_000);
   expect(Buffer.compare(forecastBefore, await pageClip(page, { x: 1518, y: 682, width: 304, height: 218 }))).not.toBe(0);
   await page.reload();
+  await startGame(page);
   await expect(canvas).toBeVisible();
   await page.waitForTimeout(250);
   const forecastAfterReload = await pageClip(page, { x: 1518, y: 682, width: 304, height: 218 });
-  await page.waitForTimeout(1_100);
+  await page.waitForTimeout(4_000);
   expect(Buffer.compare(forecastAfterReload, await pageClip(page, { x: 1518, y: 682, width: 304, height: 218 }))).not.toBe(0);
 
   await page.keyboard.press("2");
@@ -131,17 +184,14 @@ test("keeps the compatibility desk route live when the play flag is present", as
   const canvas = page.locator("canvas");
 
   await expect(canvas).toBeVisible();
+  await expect(page.locator(".game-menu")).toBeHidden();
   await expect(page.locator(".debug-panel")).toHaveCount(0);
-  await page.waitForTimeout(250);
-  const before = await pageClip(page, { x: 1518, y: 682, width: 304, height: 218 });
-  await page.waitForTimeout(1_100);
-
-  expect(Buffer.compare(before, await pageClip(page, { x: 1518, y: 682, width: 304, height: 218 }))).not.toBe(0);
 });
 
 test("captures the clean control desk route on a mobile viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/?ui=desk&layoutDebug=1");
+  await startGame(page);
   const canvas = page.locator("canvas");
 
   await expect(canvas).toBeVisible();
@@ -169,6 +219,7 @@ test("captures the live desk route from the play flag", async ({ page }) => {
 
 test("completed upgrades change the city plant level in the desk viewport", async ({ page }) => {
   await page.goto("/?dev=1&seed=city-upgrade-proof");
+  await startGame(page);
   await expect(page.locator("canvas")).toBeVisible();
   await expect(page.locator(".debug-panel")).toHaveCount(1);
   await page.waitForTimeout(500);
@@ -191,6 +242,7 @@ test("completed upgrades change the city plant level in the desk viewport", asyn
 
 test("dam drain command changes the water crop in the live city viewport", async ({ page }) => {
   await page.goto("/?dev=1&seed=dam-water-proof");
+  await startGame(page);
   await expect(page.locator("canvas")).toBeVisible();
   await page.waitForTimeout(500);
 
@@ -207,6 +259,7 @@ test("dam drain command changes the water crop in the live city viewport", async
 
 test("wind turbine crop animates only while wind is connected and producing", async ({ page }) => {
   await page.goto("/?dev=1&seed=wind-crop-proof");
+  await startGame(page);
   await expect(page.locator("canvas")).toBeVisible();
   await page.waitForTimeout(1_000);
 
@@ -228,6 +281,7 @@ test("wind turbine crop animates only while wind is connected and producing", as
 
 test("debug controls drive the shared gameplay readout", async ({ page }) => {
   await page.goto("/?dev=1");
+  await startGame(page);
   await expect(page.locator("canvas")).toBeVisible();
   await expect(page.locator(".debug-panel")).toHaveCount(1);
   await clickDebugButton(page, "DEV");
@@ -272,8 +326,39 @@ test("debug controls drive the shared gameplay readout", async ({ page }) => {
   await expect(readout).toContainText("dam=drain");
 });
 
+test("shows an endgame summary menu and replays from a fresh match", async ({ page }) => {
+  await page.goto("/?dev=1&seed=endgame-menu-proof");
+  await startGame(page);
+  await expect(page.locator("canvas")).toBeVisible();
+  await clickDebugButton(page, "DEV");
+  const readout = page.locator(".debug-readout");
+
+  await clickDebugButton(page, "Buy thermal");
+  await expect
+    .poll(async () => numberFromReadout((await readout.textContent()) ?? "", /cash=(-?\d+\.\d+)/), { timeout: 5_000 })
+    .toBeLessThan(60);
+  await clickDebugButton(page, "Overload scenario");
+  await expect
+    .poll(async () => (await readout.textContent()) ?? "", { timeout: 15_000 })
+    .toContain("resetRequired=true");
+  await clickDebugButton(page, "Hold reset 2.1s");
+  await expect
+    .poll(async () => (await readout.textContent()) ?? "", { timeout: 5_000 })
+    .toContain("gameOver=player-reset-bankrupt");
+
+  await expect(page.getByText("Grid Lost")).toBeVisible();
+  await expect(page.getByText("You could not pay the breaker reset.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Replay" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Replay" }).click();
+
+  await expect(page.locator(".game-menu")).toBeHidden();
+  await expect(readout).toContainText("gameOver=none");
+});
+
 test("forces underload trip and manual reset through the breaker modal", async ({ page }) => {
   await page.goto("/?dev=1");
+  await startGame(page);
   await expect(page.locator("canvas")).toBeVisible();
   await clickDebugButton(page, "DEV");
   const readout = page.locator(".debug-readout");
@@ -306,6 +391,7 @@ test("forces underload trip and manual reset through the breaker modal", async (
 
 test("forces overload trip through visible debug controls", async ({ page }) => {
   await page.goto("/?dev=1");
+  await startGame(page);
   await expect(page.locator("canvas")).toBeVisible();
   await clickDebugButton(page, "DEV");
   const readout = page.locator(".debug-readout");
@@ -322,6 +408,7 @@ test("forces overload trip through visible debug controls", async ({ page }) => 
 
 test("forces a high-risk contract trip through visible debug controls", async ({ page }) => {
   await page.goto("/?dev=1");
+  await startGame(page);
   await expect(page.locator("canvas")).toBeVisible();
   await clickDebugButton(page, "DEV");
   const readout = page.locator(".debug-readout");

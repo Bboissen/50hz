@@ -9,6 +9,7 @@ import {
   WORLD_CAMERA,
 } from "./citySceneConfig";
 import { CitySlot } from "./CitySlot";
+import type { CityEditorElementId, CityEditorLayout } from "./cityEditorLayout";
 import type { CityLevel, CitySectorOverlayState, CitySectorSlotId, CitySlotId, CityViewState } from "./cityTypes";
 import { DamWaterObject, type DamWaterTextures, type DamWaterVisualState } from "./DamWaterObject";
 
@@ -24,11 +25,16 @@ export class CityScene extends Container {
   private readonly viewportLayer = new Container({ label: "city-view-viewport-layer" });
   private readonly world = new Container({ label: "city-view-world" });
   private readonly slots = new Map<CitySlotId, CitySlot>();
+  private readonly terrainSprites: Sprite[] = [];
+  private readonly decorations = new Map<string, Sprite>();
   private readonly damWater: DamWaterObject;
   private readonly turbineField: AnimatedTurbineField;
   private readonly viewportMask = new Graphics({ label: "city-view-mask" });
   private readonly brownoutOverlay = new Graphics({ label: "city-view-brownout-overlay" });
   private readonly sectorOverlay = new Graphics({ label: "city-view-sector-overlay" });
+  private readonly editorDebugLayer = new Graphics({ label: "city-view-editor-debug-layer" });
+  private editorSelectedElement: CityEditorElementId = "terrain";
+  private editorDebugVisible = false;
   private sectorOverlays: CityViewState["sectorOverlays"] = emptySectorOverlays();
   private sectorOverlayAlpha: Record<CitySectorSlotId, number> = {
     household: 0,
@@ -55,6 +61,7 @@ export class CityScene extends Container {
       terrain.scale.set(terrainConfig.scale);
       terrain.zIndex = terrainConfig.zIndex;
       terrain.eventMode = "none";
+      this.terrainSprites.push(terrain);
       this.world.addChild(terrain);
     }
 
@@ -68,6 +75,7 @@ export class CityScene extends Container {
       decoration.scale.set(decorationConfig.scale);
       decoration.zIndex = decorationConfig.zIndex;
       decoration.eventMode = "none";
+      this.decorations.set(decorationConfig.id, decoration);
       this.world.addChild(decoration);
     }
 
@@ -94,7 +102,8 @@ export class CityScene extends Container {
       this.world.addChild(slot);
     }
     this.sectorOverlay.zIndex = 2_000;
-    this.world.addChild(this.sectorOverlay);
+    this.editorDebugLayer.zIndex = 3_000;
+    this.world.addChild(this.sectorOverlay, this.editorDebugLayer);
 
     this.addChild(this.viewportLayer, this.viewportMask, this.brownoutOverlay);
     this.renderMask();
@@ -154,6 +163,48 @@ export class CityScene extends Container {
     return this.sectorOverlayAlpha[slotId];
   }
 
+  public applyEditorLayout(layout: CityEditorLayout): void {
+    for (const terrain of this.terrainSprites) {
+      applyTransform(terrain, layout.terrain);
+    }
+    const openAiSign = this.decorations.get("openAiSign");
+    if (openAiSign) {
+      applyTransform(openAiSign, layout.openAiSign);
+    }
+    for (const [slotId, slot] of this.slots) {
+      slot.setEditorTransform(layout[slotId]);
+    }
+    const dam = layout.dam;
+    this.damWater.position.set(dam.x, dam.y);
+    this.damWater.scale.set(dam.scale);
+    this.damWater.zIndex = dam.zIndex - 0.5;
+    const wind = layout.wind;
+    this.turbineField.position.set(wind.x, wind.y);
+    this.turbineField.scale.set(wind.scale);
+    this.turbineField.zIndex = wind.zIndex + 0.5;
+    this.renderSectorOverlays();
+    this.renderEditorDebug();
+  }
+
+  public setEditorSelection(elementId: CityEditorElementId, visible: boolean): void {
+    this.editorSelectedElement = elementId;
+    this.editorDebugVisible = visible;
+    this.renderEditorDebug();
+  }
+
+  public debugEditorElementTransform(elementId: CityEditorElementId): { x: number; y: number; scale: number; zIndex: number } | undefined {
+    const target = this.editorTarget(elementId);
+    if (!target) {
+      return undefined;
+    }
+    return {
+      x: target.x,
+      y: target.y,
+      scale: target.scale.x,
+      zIndex: target.zIndex,
+    };
+  }
+
   private renderMask(): void {
     this.viewportMask.clear();
     this.viewportMask
@@ -195,6 +246,46 @@ export class CityScene extends Container {
         .stroke({ color, alpha: Math.min(0.9, alpha + 0.2), width: state.isDemandCritical ? 5 : 3 });
     }
   }
+
+  private renderEditorDebug(): void {
+    this.editorDebugLayer.clear();
+    if (!this.editorDebugVisible) {
+      return;
+    }
+
+    const selectedTarget = this.editorTarget(this.editorSelectedElement);
+    for (const elementId of ["terrain", "openAiSign", ...CITY_SLOT_CONFIGS.map((config) => config.id)] as CityEditorElementId[]) {
+      const target = this.editorTarget(elementId);
+      if (!target) {
+        continue;
+      }
+      const selected = target === selectedTarget;
+      this.editorDebugLayer
+        .moveTo(target.x - 20, target.y)
+        .lineTo(target.x + 20, target.y)
+        .moveTo(target.x, target.y - 20)
+        .lineTo(target.x, target.y + 20)
+        .stroke({ color: selected ? 0xffbd45 : 0x8dfc7a, alpha: selected ? 0.96 : 0.62, width: selected ? 5 : 2 })
+        .circle(target.x, target.y, selected ? 28 : 18)
+        .stroke({ color: selected ? 0xffbd45 : 0x8dfc7a, alpha: selected ? 0.96 : 0.62, width: selected ? 4 : 2 });
+    }
+  }
+
+  private editorTarget(elementId: CityEditorElementId): Container | Sprite | undefined {
+    if (elementId === "terrain") {
+      return this.terrainSprites[0];
+    }
+    if (elementId === "openAiSign") {
+      return this.decorations.get("openAiSign");
+    }
+    return this.slots.get(elementId);
+  }
+}
+
+function applyTransform(target: Container | Sprite, config: { x: number; y: number; scale: number; zIndex: number }): void {
+  target.position.set(config.x, config.y);
+  target.scale.set(config.scale);
+  target.zIndex = config.zIndex;
 }
 
 function emptySectorOverlays(): CityViewState["sectorOverlays"] {

@@ -45,12 +45,15 @@ export type UpgradeRowLayout = {
   label: Point;
   ledStrip: LedStripLayout;
   upgradeArrow: Point & { scale: number };
+  price: TextLayout;
   hitZone: Rect;
 };
 
 export type ControlDeskLayout = {
   canvas: { width: 1920; height: 1080 };
   backplate: Rect;
+  deskTransform: { x: number; y: number; scaleX: number; scaleY: number };
+  topStatusBand: Rect;
   gauges: {
     capacity: NeedleLayout;
     supplyDelta: NeedleLayout;
@@ -66,6 +69,7 @@ export type ControlDeskLayout = {
     plot: Rect;
     labels: Record<"now" | "soon" | "later", Point>;
   };
+  demandMonitor: Rect;
   upgradeRows: UpgradeRowLayout[];
   text: Record<
     | "cash"
@@ -77,6 +81,8 @@ export type ControlDeskLayout = {
     | "breaker"
     | "share"
     | "weather"
+    | "incidents"
+    | "city"
     | "reactor"
     | "boiler"
     | "wind"
@@ -100,6 +106,8 @@ const horizontalLed = (x: number, y: number, cells: number): LedStripLayout => (
 export const CONTROL_DESK_LAYOUT: ControlDeskLayout = {
   canvas: { width: 1920, height: 1080 },
   backplate: { x: 0, y: 0, w: 1920, h: 1080 },
+  deskTransform: { x: 0, y: 70, scaleX: 1, scaleY: 1010 / 1080 },
+  topStatusBand: { x: 24, y: 6, w: 1872, h: 58 },
   gauges: {
     capacity: {
       center: { x: 718, y: 836 },
@@ -140,53 +148,60 @@ export const CONTROL_DESK_LAYOUT: ControlDeskLayout = {
     dam: { center: { x: 1735, y: 562 }, radius: 68, scale: 0.34, labelY: 626 },
   },
   forecast: {
-    plot: { x: 1518, y: 682, w: 304, h: 218 },
+    plot: { x: 342, y: 10, w: 420, h: 50 },
     labels: {
-      now: { x: 1530, y: 914 },
-      soon: { x: 1640, y: 914 },
-      later: { x: 1748, y: 914 },
+      now: { x: 356, y: 62 },
+      soon: { x: 500, y: 62 },
+      later: { x: 644, y: 62 },
     },
   },
+  demandMonitor: { x: 1488, y: 660, w: 386, h: 338 },
   upgradeRows: [
     {
       key: "reactor",
-      label: { x: 118, y: 714 },
-      ledStrip: horizontalLed(296, 716, 3),
-      upgradeArrow: { x: 430, y: 716, scale: 0.34 },
-      hitZone: { x: 88, y: 690, w: 400, h: 58 },
+      label: { x: 82, y: 714 },
+      ledStrip: horizontalLed(250, 716, 3),
+      upgradeArrow: { x: 382, y: 716, scale: 0.34 },
+      price: { x: 388, y: 710, fontSize: 20, align: "right", maxWidth: 72 },
+      hitZone: { x: 52, y: 690, w: 410, h: 58 },
     },
     {
       key: "boiler",
-      label: { x: 118, y: 774 },
-      ledStrip: horizontalLed(296, 776, 3),
-      upgradeArrow: { x: 430, y: 776, scale: 0.34 },
-      hitZone: { x: 88, y: 750, w: 400, h: 58 },
+      label: { x: 82, y: 774 },
+      ledStrip: horizontalLed(250, 776, 3),
+      upgradeArrow: { x: 382, y: 776, scale: 0.34 },
+      price: { x: 388, y: 770, fontSize: 20, align: "right", maxWidth: 72 },
+      hitZone: { x: 52, y: 750, w: 410, h: 58 },
     },
     {
       key: "renewables",
-      label: { x: 118, y: 834 },
-      ledStrip: horizontalLed(296, 836, 3),
-      upgradeArrow: { x: 430, y: 836, scale: 0.34 },
-      hitZone: { x: 88, y: 810, w: 400, h: 58 },
+      label: { x: 82, y: 834 },
+      ledStrip: horizontalLed(250, 836, 3),
+      upgradeArrow: { x: 382, y: 836, scale: 0.34 },
+      price: { x: 388, y: 830, fontSize: 20, align: "right", maxWidth: 72 },
+      hitZone: { x: 52, y: 810, w: 410, h: 58 },
     },
     {
       key: "waterDam",
-      label: { x: 118, y: 894 },
-      ledStrip: horizontalLed(296, 896, 3),
-      upgradeArrow: { x: 430, y: 896, scale: 0.34 },
-      hitZone: { x: 88, y: 870, w: 400, h: 58 },
+      label: { x: 82, y: 894 },
+      ledStrip: horizontalLed(250, 896, 3),
+      upgradeArrow: { x: 382, y: 896, scale: 0.34 },
+      price: { x: 388, y: 890, fontSize: 20, align: "right", maxWidth: 72 },
+      hitZone: { x: 52, y: 870, w: 410, h: 58 },
     },
   ],
   text: {
-    cash: { x: 70, y: 622, fontSize: 22, maxWidth: 220 },
-    score: { x: 70, y: 648, fontSize: 20, maxWidth: 220 },
-    tariff: { x: 310, y: 622, fontSize: 20, maxWidth: 210 },
-    rivalTariff: { x: 310, y: 648, fontSize: 20, maxWidth: 210 },
-    weather: { x: 540, y: 622, fontSize: 19, maxWidth: 410 },
-    load: { x: 540, y: 648, fontSize: 19, maxWidth: 410 },
-    generation: { x: 990, y: 622, fontSize: 20, maxWidth: 260 },
-    breaker: { x: 990, y: 648, fontSize: 19, maxWidth: 260 },
-    share: { x: 1266, y: 638, fontSize: 19, maxWidth: 238 },
+    cash: { x: 42, y: 14, fontSize: 24, maxWidth: 126 },
+    score: { x: 42, y: 42, fontSize: 16, maxWidth: 126 },
+    tariff: { x: 172, y: 14, fontSize: 16, maxWidth: 132 },
+    rivalTariff: { x: 172, y: 42, fontSize: 16, maxWidth: 132 },
+    weather: { x: 778, y: 23, fontSize: 16, maxWidth: 126 },
+    incidents: { x: 940, y: 13, fontSize: 17, maxWidth: 240 },
+    city: { x: 1218, y: 23, fontSize: 17, maxWidth: 260 },
+    load: { x: 540, y: 974, fontSize: 18, maxWidth: 410 },
+    generation: { x: 990, y: 974, fontSize: 18, maxWidth: 260 },
+    breaker: { x: 990, y: 998, fontSize: 17, maxWidth: 260 },
+    share: { x: 1266, y: 998, fontSize: 17, maxWidth: 238 },
     reactor: { x: 1518, y: 72, fontSize: 24, maxWidth: 186 },
     boiler: { x: 1690, y: 72, fontSize: 24, maxWidth: 210 },
     wind: { x: 1530, y: 270, fontSize: 24, maxWidth: 160 },

@@ -345,6 +345,59 @@ describe("match", () => {
     expect(production.supplyDemandMismatch).toBeCloseTo(0);
   });
 
+  it("post-reset relief suppresses breaker risk long enough for comeback control", () => {
+    let state = forceUnderloadTrip();
+
+    state = applyPlayerCommand(state, { type: "setNuclearTarget", playerId: "player", targetMW: 0 });
+    state = applyPlayerCommand(state, { type: "setThermalThrottle", playerId: "player", throttle: 0 });
+    state = applyPlayerCommand(state, { type: "setWindEnabled", playerId: "player", enabled: false });
+    state = applyPlayerCommand(state, { type: "holdBreakerReset", playerId: "player", seconds: 2.1 });
+    const strikesAfterReset = state.players.player.strikes;
+    state = tickMatch(state, 10);
+
+    const production = selectProductionConsoleState(state);
+    expect(production.isGridDown).toBe(false);
+    expect(production.gridShutdownReliefSeconds).toBeGreaterThan(0);
+    expect(state.players.player.strikes).toBe(strikesAfterReset);
+    expect(production.breakerTimer).toBe(0);
+    expect(production.breakerStatusText).toContain("RELIEF");
+  });
+
+  it("keeps city building progression deterministic while grid is down", () => {
+    let state = createInitialMatchState({ seed: "grid-down-city-progression" });
+    state = tickMatch(state, GAME_CONFIG.demand.progressionEndSeconds + GAME_CONFIG.demand.progressionJitterSeconds + 1);
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        player: {
+          ...state.players.player,
+          runtime: {
+            ...state.players.player.runtime,
+            breakerTrippedSeconds: 8,
+            lastBreakerReason: "underload",
+          },
+        },
+      },
+    };
+
+    const dispatch = selectDispatchConsoleState(state);
+    expect(dispatch.isGridDown).toBe(true);
+    expect(dispatch.sectors.homes.demandLevel).toBe(3);
+    expect(dispatch.sectors.services.demandLevel).toBe(3);
+    expect(dispatch.sectors.dataCenters.demandLevel).toBe(3);
+    expect(dispatch.sectors.homes.isBrownedOut).toBe(true);
+    expect(dispatch.currentDemandMW).toBe(0);
+  });
+
+  it("forecasts upcoming public incidents before impact", () => {
+    const state = tickFor(1);
+    const dispatch = selectDispatchConsoleState(state);
+
+    expect(dispatch.incidents[0]?.label).toContain("FOOTBALL FINAL");
+    expect(dispatch.incidents[0]?.remainingSeconds).toBeGreaterThan(0);
+  });
+
   it("unaffordable breaker reset ends the match", () => {
     let state = forceUnderloadTrip();
     state = {

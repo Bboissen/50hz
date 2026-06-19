@@ -37,6 +37,12 @@ export class CitySlot extends Container {
     return this.currentLevel;
   }
 
+  public setEditorTransform(config: { x: number; y: number; scale: number; zIndex: number }): void {
+    this.position.set(config.x, config.y);
+    this.scale.set(config.scale);
+    this.zIndex = config.zIndex;
+  }
+
   public slotId(): string {
     return this.config.id;
   }

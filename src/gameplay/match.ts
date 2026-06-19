@@ -9,7 +9,7 @@ import {
   currentContractLoadMW,
   deterministicMaxCapacityMW,
 } from "./efficiency";
-import { buildEventTrace, sampleEventEnvironment } from "./events";
+import { buildEventTrace, forecastEventQueue, sampleEventEnvironment } from "./events";
 import { clamp, clamp01 } from "./math";
 import { priceFromEfficiency, updateSubscribedLoadShare } from "./market";
 import { createInitialPlayerState } from "./playerState";
@@ -356,6 +356,15 @@ function tickOnePlayer(
         gridShutdownReliefSeconds: 0,
       },
     };
+  } else if (inShutdownRelief) {
+    next = {
+      ...next,
+      runtime: {
+        ...next.runtime,
+        capacityOverloadTimer: 0,
+        balanceBreakerTimer: 0,
+      },
+    };
   } else if (next.runtime.breakerTrippedSeconds <= 0) {
     const breaker = updateBreakerRisk({
       capacityUtilization,
@@ -591,6 +600,9 @@ function breakerLifecycle(player: PlayerState): BreakerLifecycleState {
   if (player.runtime.breakerTrippedSeconds > 0) {
     return "awaiting-reset";
   }
+  if (player.runtime.gridShutdownReliefSeconds > 0) {
+    return "recovered";
+  }
   if (player.runtime.capacityOverloadTimer > 0 || player.runtime.balanceBreakerTimer > 0) {
     return "warning";
   }
@@ -648,24 +660,24 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
   const activeEventId = state.activeEvents[0]?.id;
   const sectors: Record<"homes" | "services" | "dataCenters", SectorVisualState> = {
     homes: {
-      demandLevel: isGridDown ? 0 : demand.levels.households,
+      demandLevel: demand.levels.households,
       isSpiking: state.activeEvents.some((event) => event.id === "footballFinal" && event.phase === "impact"),
       isDemandCritical: demand.levels.households === 3 || demand.householdsMW > GAME_CONFIG.demand.sectors.householdsMW[2],
-      isBrownedOut: player.strikes > 0 && player.lastSupplyDemandMismatch < -0.15,
+      isBrownedOut: isGridDown || (player.strikes > 0 && player.lastSupplyDemandMismatch < -0.15),
       activeEventId,
     },
     services: {
-      demandLevel: isGridDown ? 0 : demand.levels.business,
+      demandLevel: demand.levels.business,
       isSpiking: false,
       isDemandCritical: demand.levels.business === 3,
-      isBrownedOut: false,
+      isBrownedOut: isGridDown,
       activeEventId: undefined,
     },
     dataCenters: {
-      demandLevel: isGridDown ? 0 : demand.levels.dataCenters,
+      demandLevel: demand.levels.dataCenters,
       isSpiking: state.activeEvents.some((event) => event.id === "dataCenterBurst" && event.phase === "impact"),
       isDemandCritical: demand.levels.dataCenters === 3 || demand.dataCentersMW > GAME_CONFIG.demand.sectors.dataCentersMW[2],
-      isBrownedOut: player.strikes > 0 && player.lastSupplyDemandMismatch < -0.15,
+      isBrownedOut: isGridDown || (player.strikes > 0 && player.lastSupplyDemandMismatch < -0.15),
       activeEventId,
     },
   };
@@ -733,7 +745,7 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
     plants: buildPlantUpgradeStates(player),
     sectors,
     forecast: forecastWeather(state.seed, state.timeSeconds),
-    incidents: state.activeEvents,
+    incidents: forecastEventQueue(state.timeSeconds),
     eventTrace: buildEventTrace({
       seed: state.seed,
       demandSchedule: state.demandSchedule,

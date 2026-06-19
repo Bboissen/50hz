@@ -24,6 +24,12 @@ const TURBINE_MOUNTS: TurbineMount[] = [
   { x: 718, y: 339, scale: 0.86, phase: 6 },
 ];
 
+const ACTIVE_TURBINE_MOUNTS_BY_LEVEL: Record<CityLevel, number[]> = {
+  1: [1, 3],
+  2: [0, 1, 3],
+  3: [0, 1, 2, 3],
+};
+
 export class AnimatedTurbineField extends Container {
   private readonly turbines: AnimatedTurbine[];
   private framePosition = 0;
@@ -77,6 +83,10 @@ export class AnimatedTurbineField extends Container {
     return this.turbines.filter((turbine) => turbine.visible).length;
   }
 
+  public debugVisibleMountIndices(): number[] {
+    return this.turbines.flatMap((turbine, index) => (turbine.visible ? [index] : []));
+  }
+
   public debugFirstFrameIndex(): number {
     return this.turbines[0]?.debugFrameIndex() ?? 0;
   }
@@ -95,9 +105,9 @@ export class AnimatedTurbineField extends Container {
   }
 
   private syncActiveTurbines(): void {
-    const activeCount = this.visualState.renewableLevel === 1 ? 1 : this.visualState.renewableLevel === 2 ? 2 : 4;
+    const activeMounts = new Set(ACTIVE_TURBINE_MOUNTS_BY_LEVEL[this.visualState.renewableLevel]);
     this.turbines.forEach((turbine, index) => {
-      turbine.visible = index < activeCount;
+      turbine.visible = activeMounts.has(index);
     });
   }
 }

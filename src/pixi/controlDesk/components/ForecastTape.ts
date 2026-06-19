@@ -51,6 +51,9 @@ export class ForecastTape extends Container {
   private readonly cellW: number;
   private readonly tileW: number;
   private readonly cellY: number;
+  private readonly cellH: number;
+  private readonly leftPad: number;
+  private readonly compact: boolean;
   private readonly pointerX: number;
   private lastSeed = "";
   private nextSlotIndex = 0;
@@ -60,13 +63,16 @@ export class ForecastTape extends Container {
     super({ label: "ForecastTape" });
     this.eventMode = "none";
     this.interactiveChildren = false;
-    this.cellW = (bounds.w - 44) / 4;
-    this.tileW = this.cellW - 14;
-    this.cellY = bounds.y + 24;
-    this.pointerX = bounds.x + 22 + this.cellW * 0.5;
+    this.compact = bounds.h < 80;
+    this.leftPad = this.compact ? 16 : 22;
+    this.cellW = (bounds.w - this.leftPad * 2) / 4;
+    this.tileW = this.cellW - (this.compact ? 10 : 14);
+    this.cellY = bounds.y + (this.compact ? 10 : 24);
+    this.cellH = bounds.h - (this.compact ? 20 : 62);
+    this.pointerX = bounds.x + this.leftPad + this.cellW * 0.5;
     this.tileViews = Array.from(
       { length: FORECAST_TILE_COUNT },
-      (_, index) => new ForecastBucketView(index, this.tileW, bounds.h - 62, iconTextures),
+      (_, index) => new ForecastBucketView(index, this.tileW, this.cellH, iconTextures),
     );
     this.track.addChild(...this.tileViews);
     this.track.mask = this.trackMask;
@@ -90,9 +96,9 @@ export class ForecastTape extends Container {
     const visibleBuckets: ForecastBucket[] = [];
     for (const tile of this.tileViews) {
       const slotOffset = tile.slotIndex - currentSlotIndex;
-      const x = this.bounds.x + 22 + slotOffset * this.cellW - this.offsetPixels;
+      const x = this.bounds.x + this.leftPad + slotOffset * this.cellW - this.offsetPixels;
       tile.position.set(Math.round(x), this.cellY);
-      tile.visible = x + this.cellW > this.bounds.x + 22 && x < this.bounds.x + this.bounds.w - 22;
+      tile.visible = x + this.cellW > this.bounds.x + this.leftPad && x < this.bounds.x + this.bounds.w - this.leftPad;
       if (tile.visible) {
         visibleBuckets.push(tile.bucket);
       }
@@ -141,15 +147,16 @@ export class ForecastTape extends Container {
 
   private renderFrame(): void {
     const bounds = this.bounds;
+    const innerPad = this.compact ? 6 : 10;
     this.frame
       .clear()
       .rect(bounds.x, bounds.y, bounds.w, bounds.h)
       .fill({ color: PIXEL.black })
-      .rect(bounds.x + 10, bounds.y + 10, bounds.w - 20, bounds.h - 20)
+      .rect(bounds.x + innerPad, bounds.y + innerPad, bounds.w - innerPad * 2, bounds.h - innerPad * 2)
       .fill({ color: PIXEL.copper })
-      .rect(bounds.x + 22, bounds.y + 24, bounds.w - 44, bounds.h - 62)
+      .rect(bounds.x + this.leftPad, this.cellY, bounds.w - this.leftPad * 2, this.cellH)
       .fill({ color: PIXEL.screen })
-      .rect(bounds.x + 22, bounds.y + bounds.h - 32, bounds.w - 44, 14)
+      .rect(bounds.x + this.leftPad, bounds.y + bounds.h - (this.compact ? 12 : 32), bounds.w - this.leftPad * 2, this.compact ? 5 : 14)
       .fill({ color: 0x5b2a19 });
   }
 
@@ -157,26 +164,29 @@ export class ForecastTape extends Container {
     const bounds = this.bounds;
     this.trackMask
       .clear()
-      .rect(bounds.x + 22, bounds.y + 24, bounds.w - 44, bounds.h - 38)
+      .rect(bounds.x + this.leftPad, this.cellY, bounds.w - this.leftPad * 2, this.cellH)
       .fill({ color: 0xffffff });
   }
 
   private renderMarker(): void {
     const x = this.pointerX;
-    const y = this.bounds.y - 10;
+    const y = this.bounds.y + (this.compact ? -2 : -10);
+    const markerHalfWidth = this.compact ? 14 : 24;
+    const markerTabHeight = this.compact ? 14 : 26;
+    const markerPointHeight = this.compact ? 24 : 42;
     this.marker
       .clear()
-      .moveTo(x - 24, y)
-      .lineTo(x + 24, y)
-      .lineTo(x + 24, y + 26)
-      .lineTo(x + 8, y + 26)
-      .lineTo(x, y + 42)
-      .lineTo(x - 8, y + 26)
-      .lineTo(x - 24, y + 26)
+      .moveTo(x - markerHalfWidth, y)
+      .lineTo(x + markerHalfWidth, y)
+      .lineTo(x + markerHalfWidth, y + markerTabHeight)
+      .lineTo(x + 5, y + markerTabHeight)
+      .lineTo(x, y + markerPointHeight)
+      .lineTo(x - 5, y + markerTabHeight)
+      .lineTo(x - markerHalfWidth, y + markerTabHeight)
       .closePath()
       .fill({ color: PIXEL.amber, alpha: 0.9 })
-      .stroke({ color: PIXEL.black, width: 4 })
-      .rect(x - 3, this.bounds.y + 24, 6, this.bounds.h - 56)
+      .stroke({ color: PIXEL.black, width: this.compact ? 3 : 4 })
+      .rect(x - 2, this.cellY, 4, this.cellH)
       .fill({ color: PIXEL.amber, alpha: 0.74 });
   }
 }
@@ -225,8 +235,8 @@ class ForecastBucketView extends Container {
       .fill({ color: 0xffffff, alpha: 0.18 });
 
     this.icon.texture = this.iconTextures[bucket.icon];
-    fitSprite(this.icon, 58, 64);
-    this.icon.position.set(Math.round(this.cellW * 0.5), 42);
+    fitSprite(this.icon, Math.min(58, this.cellW * 0.54), Math.min(64, Math.max(16, this.cellH - 5)));
+    this.icon.position.set(Math.round(this.cellW * 0.5), Math.round(this.cellH * 0.5));
   }
 }
 

@@ -1,5 +1,6 @@
 import { Container, Graphics, Sprite } from "pixi.js";
 
+import { GAME_CONFIG } from "../../gameplay/config";
 import type { PlayerCommand, ProductionConsoleState, WaterDamMode } from "../../gameplay/types";
 import type { AssetResolver } from "../assets";
 import { CityScene } from "../city/CityScene";
@@ -9,6 +10,7 @@ import type { CitySectorOverlayState, CitySectorSlotId, CitySlotId } from "../ci
 import type { DamWaterVisualState } from "../city/DamWaterObject";
 import { CONTROL_DESK_LAYOUT, type CircleLayout, type ControlDeskLayout, type Point, type Rect } from "../controlDesk/controlDeskLayout";
 import { Backplate } from "../controlDesk/components/Backplate";
+import { DemandForecastMonitor, type DemandForecastMonitorDebugState } from "../controlDesk/components/DemandForecastMonitor";
 import { ForecastTape, type ForecastTapeDebugState } from "../controlDesk/components/ForecastTape";
 import { GaugeNeedle } from "../controlDesk/components/GaugeNeedle";
 import { HitZone } from "../controlDesk/components/HitZone";
@@ -25,10 +27,27 @@ export type ControlDeskScreenOptions = {
   showLayoutDebug?: boolean;
 };
 
+export type ControlDeskLayoutEditorValue = {
+  x: number;
+  y: number;
+  scaleX: number;
+  scaleY: number;
+};
+
+export type ControlDeskLayoutEditorTarget = {
+  id: string;
+  label: string;
+  getValue: () => ControlDeskLayoutEditorValue;
+  applyDelta: (delta: { x?: number; y?: number; scale?: number }) => void;
+  setSelected: (selected: boolean) => void;
+};
+
 type ReadoutKey = keyof ControlDeskLayout["text"];
 type WindSwitchMode = "off" | "on";
 
 export class ControlDeskScreen extends Container {
+  public readonly deskContentLayer = new Container({ label: "DeskContentLayer" });
+  public readonly topStatusLayer = new Container({ label: "TopStatusLayer" });
   public readonly worldViewportLayer = new Container({ label: "WorldViewportLayer" });
   public readonly deskBackplateLayer = new Container({ label: "DeskBackplateLayer" });
   public readonly staticTextLayer = new Container({ label: "StaticTextLayer" });
@@ -36,8 +55,10 @@ export class ControlDeskScreen extends Container {
   public readonly hitZoneLayer = new Container({ label: "HitZoneLayer" });
   public readonly alignmentDebugLayer = new Container({ label: "AlignmentDebugLayer" });
   public readonly referenceOverlayLayer = new Container({ label: "ReferenceOverlayLayer" });
+  public readonly layoutSelectionLayer = new Graphics({ label: "LayoutSelectionLayer" });
 
   private readonly layout: ControlDeskLayout;
+  private readonly coordinateMapper: DeskCoordinateMapper;
   private readonly capacityNeedle: GaugeNeedle;
   private readonly supplyDeltaNeedle: GaugeNeedle;
   private readonly reactorStrip: SpriteLedStrip;
@@ -50,9 +71,11 @@ export class ControlDeskScreen extends Container {
   private readonly windSwitch: ModeRotarySwitch<WindSwitchMode>;
   private readonly damRotary: ModeRotarySwitch<WaterDamMode>;
   private readonly forecastTape?: ForecastTape;
+  private readonly demandMonitor: DemandForecastMonitor;
   private readonly upgradeRows: UpgradeRow[];
   private readonly readouts = new Map<ReadoutKey, TextReadout>();
   private readonly cityScene?: CityScene;
+  private selectedLayoutTarget?: Container;
   private latestState?: ProductionConsoleState;
 
   public constructor(
@@ -68,6 +91,13 @@ export class ControlDeskScreen extends Container {
     this.referenceOverlayLayer.interactiveChildren = false;
     this.alignmentDebugLayer.eventMode = "none";
     this.alignmentDebugLayer.interactiveChildren = false;
+    this.topStatusLayer.eventMode = "none";
+    this.topStatusLayer.interactiveChildren = false;
+    this.layoutSelectionLayer.eventMode = "none";
+    this.layoutSelectionLayer.interactiveChildren = false;
+    this.deskContentLayer.position.set(this.layout.deskTransform.x, this.layout.deskTransform.y);
+    this.deskContentLayer.scale.set(this.layout.deskTransform.scaleX, this.layout.deskTransform.scaleY);
+    this.coordinateMapper = new DeskCoordinateMapper(this.deskContentLayer);
 
     const cityTextures = citySceneTexturesFromResolver(assets);
     if (cityTextures) {
@@ -75,7 +105,7 @@ export class ControlDeskScreen extends Container {
       this.worldViewportLayer.addChild(this.cityScene);
     }
     this.deskBackplateLayer.addChild(new Backplate(assets.texture("desk_background"), this.layout.backplate));
-    this.addChild(
+    this.deskContentLayer.addChild(
       this.worldViewportLayer,
       this.deskBackplateLayer,
       this.staticTextLayer,
@@ -84,6 +114,7 @@ export class ControlDeskScreen extends Container {
       this.alignmentDebugLayer,
       this.referenceOverlayLayer,
     );
+    this.addChild(this.deskContentLayer, this.topStatusLayer, this.layoutSelectionLayer);
 
     this.capacityNeedle = new GaugeNeedle(assets.texture("gauge_needle"), this.layout.gauges.capacity);
     this.supplyDeltaNeedle = new GaugeNeedle(assets.texture("gauge_needle"), this.layout.gauges.supplyDelta);
@@ -133,6 +164,7 @@ export class ControlDeskScreen extends Container {
     if (weatherIconTextures) {
       this.forecastTape = new ForecastTape(this.layout.forecast.plot, weatherIconTextures);
     }
+    this.demandMonitor = new DemandForecastMonitor(this.layout.demandMonitor, assets.fontFamily);
     this.upgradeRows = this.layout.upgradeRows.map(
       (row) => new UpgradeRow(row, assets, sink, assets.fontFamily, options.showLayoutDebug === true),
     );
@@ -149,14 +181,22 @@ export class ControlDeskScreen extends Container {
       this.boilerKnob,
       this.windSwitch,
       this.damRotary,
-      ...(this.forecastTape ? [this.forecastTape] : []),
+      this.demandMonitor,
       ...this.upgradeRows,
     );
 
+    this.topStatusLayer.addChild(createTopStatusBand(this.layout.topStatusBand));
+    if (this.forecastTape) {
+      this.topStatusLayer.addChild(this.forecastTape);
+    }
     for (const key of Object.keys(this.layout.text) as ReadoutKey[]) {
       const readout = new TextReadout(this.layout.text[key], assets.fontFamily);
       this.readouts.set(key, readout);
-      this.staticTextLayer.addChild(readout);
+      if (TOP_STATUS_READOUT_KEYS.has(key)) {
+        this.topStatusLayer.addChild(readout);
+      } else {
+        this.staticTextLayer.addChild(readout);
+      }
     }
 
     this.addHitZones(options.showLayoutDebug === true);
@@ -185,6 +225,12 @@ export class ControlDeskScreen extends Container {
     this.windSwitch.update(state.windEnabled ? "on" : "off");
     this.damRotary.update(state.waterDamMode);
     this.forecastTape?.update({ seed: state.matchSeed, timeSeconds: state.timeSeconds });
+    this.demandMonitor.update({
+      eventTrace: state.eventTrace,
+      generationMW: state.generationMW,
+      currentDemandMW: state.currentDemandMW,
+      safeBalanceBand: GAME_CONFIG.breaker.safeBalanceBand,
+    });
     for (const row of this.upgradeRows) {
       row.update(state.plants[row.plantKey]);
     }
@@ -193,8 +239,10 @@ export class ControlDeskScreen extends Container {
     this.readouts.get("score")?.update(`SCORE ${Math.floor(state.score)}`);
     this.readouts.get("tariff")?.update(`TARIFF ${state.playerTariffCents.toFixed(1)}c`);
     this.readouts.get("rivalTariff")?.update(`RIVAL ${state.rivalTariffCents.toFixed(1)}c`);
-    this.readouts.get("weather")?.update(`WEATHER ${state.currentWeather.condition.toUpperCase()} ${state.currentWindKmh.toFixed(0)} KMH`);
-    this.readouts.get("load")?.update(`LOAD ${state.currentDemandMW.toFixed(1)} MW`);
+    this.readouts.get("weather")?.update(formatWeatherTimelineReadout(state));
+    this.readouts.get("incidents")?.update(formatIncidentReadout(state));
+    this.readouts.get("city")?.update(formatCityReadout(state));
+    this.readouts.get("load")?.update(formatDemandForecastReadout(state));
     this.readouts.get("generation")?.update(`GEN ${state.generationMW.toFixed(1)} MW`);
     this.readouts.get("breaker")?.update(state.breakerStatusText);
     this.readouts
@@ -239,6 +287,10 @@ export class ControlDeskScreen extends Container {
     return this.forecastTape?.debugState();
   }
 
+  public debugDemandForecastMonitorState(): DemandForecastMonitorDebugState | undefined {
+    return this.demandMonitor.debugState();
+  }
+
   public debugWindLedCount(): number {
     return this.windStrip.debugActiveCount();
   }
@@ -280,6 +332,29 @@ export class ControlDeskScreen extends Container {
     return this.cityScene?.debugSectorOverlayState(slotId);
   }
 
+  public cityEditorScene(): CityScene | undefined {
+    return this.cityScene;
+  }
+
+  public createLayoutEditorTargets(): ControlDeskLayoutEditorTarget[] {
+    const targets: ControlDeskLayoutEditorTarget[] = [];
+    for (const [key, readout] of this.readouts.entries()) {
+      targets.push(this.createLayoutEditorTarget(`text.${key}`, `Text ${key}`, readout));
+    }
+    if (this.forecastTape) {
+      targets.push(this.createLayoutEditorTarget("forecast.weatherTape", "Weather tape", this.forecastTape));
+    }
+    targets.push(this.createLayoutEditorTarget("forecast.demandMonitor", "Demand monitor", this.demandMonitor));
+    this.upgradeRows.forEach((row, index) => {
+      targets.push(this.createLayoutEditorTarget(`upgrade.${row.plantKey}`, `Upgrade ${row.plantKey}`, row, index + 1));
+    });
+    targets.push(
+      this.createLayoutEditorTarget("desk.content", "Desk content", this.deskContentLayer),
+      this.createLayoutEditorTarget("top.status", "Top status", this.topStatusLayer),
+    );
+    return targets;
+  }
+
   private createLedStrip(key: keyof ControlDeskLayout["ledStrips"], cells: 3 | 10): SpriteLedStrip {
     return new SpriteLedStrip(this.layout.ledStrips[key], {
       base: this.assets.texture(cells === 10 ? "led_empty_10" : "led_empty_3"),
@@ -295,8 +370,8 @@ export class ControlDeskScreen extends Container {
       new HitZone(
         this.layout.hitZones.reactor,
         {
-          down: (event) => this.reactorKnob.beginAdjustment(event.global),
-          move: (event) => this.reactorKnob.adjustToGlobalPoint(event.global),
+          down: (event) => this.reactorKnob.beginAdjustment(this.toDeskLocalPoint(event.global)),
+          move: (event) => this.reactorKnob.adjustToGlobalPoint(this.toDeskLocalPoint(event.global)),
           up: () => this.reactorKnob.endAdjustment(),
         },
         showDebug,
@@ -304,8 +379,8 @@ export class ControlDeskScreen extends Container {
       new HitZone(
         this.layout.hitZones.boiler,
         {
-          down: (event) => this.boilerKnob.beginAdjustment(event.global),
-          move: (event) => this.boilerKnob.adjustToGlobalPoint(event.global),
+          down: (event) => this.boilerKnob.beginAdjustment(this.toDeskLocalPoint(event.global)),
+          move: (event) => this.boilerKnob.adjustToGlobalPoint(this.toDeskLocalPoint(event.global)),
           up: () => this.boilerKnob.endAdjustment(),
         },
         showDebug,
@@ -314,8 +389,8 @@ export class ControlDeskScreen extends Container {
         this.layout.hitZones.wind,
         {
           tap: () => this.windSwitch.cycleFromCenter(),
-          down: (event) => this.windSwitch.beginDrag(event.global),
-          move: (event) => this.windSwitch.dragTo(event.global),
+          down: (event) => this.windSwitch.beginDrag(this.toDeskLocalPoint(event.global)),
+          move: (event) => this.windSwitch.dragTo(this.toDeskLocalPoint(event.global)),
           up: () => this.windSwitch.endDrag(),
         },
         showDebug,
@@ -324,8 +399,8 @@ export class ControlDeskScreen extends Container {
         this.layout.hitZones.damFill,
         {
           tap: () => this.damRotary.cycleFromCenter(),
-          down: (event) => this.damRotary.beginDrag(event.global),
-          move: (event) => this.damRotary.dragTo(event.global),
+          down: (event) => this.damRotary.beginDrag(this.toDeskLocalPoint(event.global)),
+          move: (event) => this.damRotary.dragTo(this.toDeskLocalPoint(event.global)),
           up: () => this.damRotary.endDrag(),
         },
         showDebug,
@@ -334,8 +409,8 @@ export class ControlDeskScreen extends Container {
         this.layout.hitZones.damHold,
         {
           tap: () => this.damRotary.cycleFromCenter(),
-          down: (event) => this.damRotary.beginDrag(event.global),
-          move: (event) => this.damRotary.dragTo(event.global),
+          down: (event) => this.damRotary.beginDrag(this.toDeskLocalPoint(event.global)),
+          move: (event) => this.damRotary.dragTo(this.toDeskLocalPoint(event.global)),
           up: () => this.damRotary.endDrag(),
         },
         showDebug,
@@ -344,8 +419,8 @@ export class ControlDeskScreen extends Container {
         this.layout.hitZones.damDrain,
         {
           tap: () => this.damRotary.cycleFromCenter(),
-          down: (event) => this.damRotary.beginDrag(event.global),
-          move: (event) => this.damRotary.dragTo(event.global),
+          down: (event) => this.damRotary.beginDrag(this.toDeskLocalPoint(event.global)),
+          move: (event) => this.damRotary.dragTo(this.toDeskLocalPoint(event.global)),
           up: () => this.damRotary.endDrag(),
         },
         showDebug,
@@ -389,6 +464,7 @@ export class ControlDeskScreen extends Container {
     };
 
     outlineRect(this.layout.forecast.plot, 0x44d7ff);
+    outlineRect(this.layout.demandMonitor, 0x44d7ff);
     markPoint(this.layout.gauges.capacity.center, 0xff7044);
     markPoint(this.layout.gauges.supplyDelta.center, 0xff7044);
     markPoint(this.layout.knobs.reactor.center, 0xffd447);
@@ -410,10 +486,83 @@ export class ControlDeskScreen extends Container {
       }
     }
   }
+
+  private toDeskLocalPoint(point: Point): Point {
+    return this.coordinateMapper.toLayoutPoint(point);
+  }
+
+  private createLayoutEditorTarget(
+    id: string,
+    label: string,
+    displayObject: Container,
+    order = 0,
+  ): ControlDeskLayoutEditorTarget {
+    const applyDelta = (delta: { x?: number; y?: number; scale?: number }): void => {
+      displayObject.position.set(displayObject.x + (delta.x ?? 0), displayObject.y + (delta.y ?? 0));
+      if (delta.scale !== undefined && delta.scale !== 0) {
+        const nextX = clamp(displayObject.scale.x + delta.scale, 0.25, 3);
+        const nextY = clamp(displayObject.scale.y + delta.scale, 0.25, 3);
+        displayObject.scale.set(nextX, nextY);
+      }
+      if (this.selectedLayoutTarget === displayObject) {
+        this.drawLayoutSelection(displayObject);
+      }
+    };
+    return {
+      id,
+      label: `${order > 0 ? `${order}. ` : ""}${label}`,
+      getValue: () => ({
+        x: round(displayObject.x),
+        y: round(displayObject.y),
+        scaleX: round(displayObject.scale.x),
+        scaleY: round(displayObject.scale.y),
+      }),
+      applyDelta,
+      setSelected: (selected) => {
+        if (selected) {
+          this.selectedLayoutTarget = displayObject;
+          this.drawLayoutSelection(displayObject);
+        } else if (this.selectedLayoutTarget === displayObject) {
+          this.selectedLayoutTarget = undefined;
+          this.layoutSelectionLayer.clear();
+        }
+      },
+    };
+  }
+
+  private drawLayoutSelection(displayObject: Container): void {
+    const bounds = displayObject.getBounds();
+    this.layoutSelectionLayer
+      .clear()
+      .rect(bounds.x, bounds.y, bounds.width, bounds.height)
+      .stroke({ color: 0xffd447, alpha: 0.92, width: 3 });
+  }
 }
+
+const TOP_STATUS_READOUT_KEYS = new Set<ReadoutKey>(["cash", "score", "tariff", "rivalTariff", "weather", "incidents", "city"]);
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
+}
+
+function round(value: number): number {
+  return Math.round(value * 1000) / 1000;
+}
+
+class DeskCoordinateMapper {
+  public constructor(private readonly layoutLayer: Container) {}
+
+  public toLayoutPoint(point: Point): Point {
+    const local = this.layoutLayer.toLocal(point);
+    return { x: local.x, y: local.y };
+  }
+}
+
+function createTopStatusBand(bounds: Rect): Graphics {
+  return new Graphics({ label: "TopStatusBand" })
+    .rect(bounds.x, bounds.y, bounds.w, bounds.h)
+    .fill({ color: 0xe7d0a8, alpha: 0.58 })
+    .stroke({ color: 0x1a130d, alpha: 0.52, width: 4 });
 }
 
 function formatDamReadout(state: ProductionConsoleState): string {
@@ -424,4 +573,40 @@ function formatDamReadout(state: ProductionConsoleState): string {
     return `DAM FILL ${state.damAbsorbMW.toFixed(0)} MW`;
   }
   return `DAM ${state.waterDamMode.toUpperCase()} 0 MW`;
+}
+
+function formatWeatherTimelineReadout(state: ProductionConsoleState): string {
+  return `WX ${state.currentWeather.condition.toUpperCase()} ${state.currentWindKmh.toFixed(0)}K / ${timeOfDayLabel(state.timeOfDayRatio)}`;
+}
+
+function formatDemandForecastReadout(state: ProductionConsoleState): string {
+  const now = state.eventTrace.find((point) => point.timeOffsetSeconds === 0)?.demandMW ?? state.cityDemandMW;
+  const soon = state.eventTrace.find((point) => point.timeOffsetSeconds === 15)?.demandMW ?? now;
+  const later = state.eventTrace.find((point) => point.timeOffsetSeconds === 30)?.demandMW ?? soon;
+  return `DEMAND ${now.toFixed(0)} > ${soon.toFixed(0)} > ${later.toFixed(0)} MW`;
+}
+
+function formatIncidentReadout(state: ProductionConsoleState): string {
+  const incident = state.incidents[0];
+  if (!incident) {
+    return "INCIDENT CLEAR";
+  }
+  return `INCIDENT ${incident.label} ${incident.remainingSeconds.toFixed(0)}s`;
+}
+
+function formatCityReadout(state: ProductionConsoleState): string {
+  return `CITY H${state.sectors.homes.demandLevel} B${state.sectors.services.demandLevel} D${state.sectors.dataCenters.demandLevel}`;
+}
+
+function timeOfDayLabel(ratio: number): string {
+  if (ratio < 0.125 || ratio >= 0.875) {
+    return "DAWN";
+  }
+  if (ratio < 0.375) {
+    return "DAY";
+  }
+  if (ratio < 0.625) {
+    return "DUSK";
+  }
+  return "NIGHT";
 }

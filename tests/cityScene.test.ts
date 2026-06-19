@@ -9,6 +9,7 @@ import { createInitialMatchState, selectProductionConsoleState } from "../src/ga
 import { AnimatedTurbineField } from "../src/pixi/city/AnimatedTurbineField";
 import { CITY_ASSET_SOURCES, CITY_LEVELS, CITY_SLOT_IDS } from "../src/pixi/city/cityAssets";
 import { CityScene, type CitySceneTextures } from "../src/pixi/city/CityScene";
+import { CITY_DECORATION_CONFIGS, CITY_SLOT_CONFIGS } from "../src/pixi/city/citySceneConfig";
 import type { CityLevel, CitySlotId } from "../src/pixi/city/cityTypes";
 import { cityViewStateFromProductionState, selectDamWaterVisualState, selectWindFarmVisualState } from "../src/pixi/city/cityState";
 
@@ -254,7 +255,8 @@ describe("city view production integration", () => {
       currentWindKmh: 30,
     });
     field.tick(1000);
-    expect(field.debugActiveTurbineCount()).toBe(1);
+    expect(field.debugActiveTurbineCount()).toBe(2);
+    expect(field.debugVisibleMountIndices()).toEqual([1, 3]);
     expect(field.debugFramePosition()).toBe(0);
 
     field.setVisualState({
@@ -267,7 +269,8 @@ describe("city view production integration", () => {
       currentWindKmh: 30,
     });
     field.tick(1000);
-    expect(field.debugActiveTurbineCount()).toBe(2);
+    expect(field.debugActiveTurbineCount()).toBe(3);
+    expect(field.debugVisibleMountIndices()).toEqual([0, 1, 3]);
     expect(field.debugFramePosition()).toBe(0);
 
     field.setVisualState({
@@ -282,6 +285,7 @@ describe("city view production integration", () => {
     field.tick(1000);
     const slowPosition = field.debugFramePosition();
     expect(field.debugActiveTurbineCount()).toBe(4);
+    expect(field.debugVisibleMountIndices()).toEqual([0, 1, 2, 3]);
     expect(slowPosition).toBeGreaterThan(0);
 
     field.setVisualState({
@@ -328,5 +332,20 @@ describe("city view production integration", () => {
     for (const file of productionFiles) {
       expect(readFileSync(join(process.cwd(), file), "utf8"), file).not.toContain(forbiddenExperimentPath);
     }
+  });
+
+  it("uses larger readable city tiles while shrinking the OpenAI sign", () => {
+    const slotScale = Object.fromEntries(CITY_SLOT_CONFIGS.map((slot) => [slot.id, slot.scale]));
+    const openAiScale = CITY_DECORATION_CONFIGS.find((decoration) => decoration.id === "openAiSign")?.scale;
+
+    expect(slotScale.dam).toBeCloseTo(0.205 * 1.5, 3);
+    expect(slotScale.nuclear).toBeCloseTo(0.29 * 1.5, 3);
+    expect(slotScale.wind).toBeCloseTo(0.25 * 1.5, 3);
+    expect(slotScale.solar).toBeCloseTo(0.25 * 1.5, 3);
+    expect(slotScale.thermal).toBeCloseTo(0.193 * 2, 3);
+    expect(slotScale.business).toBeCloseTo(0.27 * 1.5, 3);
+    expect(slotScale.household).toBeCloseTo(0.255 * 1.5, 3);
+    expect(slotScale.datacenter).toBeCloseTo(0.233 * 1.5, 3);
+    expect(openAiScale).toBeCloseTo(0.315 * 0.7, 3);
   });
 });

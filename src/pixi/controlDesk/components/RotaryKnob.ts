@@ -1,4 +1,4 @@
-import { Circle, Container, FederatedPointerEvent, Sprite, type Texture } from "pixi.js";
+import { Container, Sprite, type Texture } from "pixi.js";
 
 import type { RotaryLayout } from "../controlDeskLayout";
 
@@ -14,9 +14,8 @@ export class RotaryKnob extends Container {
   ) {
     super({ label: "RotaryKnob" });
     this.position.set(layout.center.x, layout.center.y);
-    this.eventMode = "static";
-    this.cursor = "pointer";
-    this.hitArea = new Circle(0, 0, layout.radius);
+    this.eventMode = "none";
+    this.interactiveChildren = false;
 
     if (texture) {
       const knob = new Sprite({ texture, label: "rotary-knob-sprite" });
@@ -25,10 +24,6 @@ export class RotaryKnob extends Container {
       this.addChild(knob);
     }
 
-    this.on("pointerdown", (event: FederatedPointerEvent) => this.beginAdjustment(event.global));
-    this.on("globalpointermove", (event: FederatedPointerEvent) => this.adjustToGlobalPoint(event.global));
-    this.on("pointerup", () => this.endAdjustment());
-    this.on("pointerupoutside", () => this.endAdjustment());
   }
 
   public update(valueRatio: number): void {

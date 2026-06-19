@@ -42,6 +42,157 @@ canvas {
   image-rendering: pixelated;
 }
 
+.game-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: none;
+  place-items: center;
+  padding: 24px;
+  color: #c8b982;
+  background:
+    linear-gradient(rgba(16, 23, 17, 0.82), rgba(16, 23, 17, 0.9)),
+    repeating-linear-gradient(90deg, rgba(141, 252, 122, 0.05) 0 1px, transparent 1px 18px);
+}
+
+.game-menu.is-visible {
+  display: grid;
+}
+
+.game-menu__panel {
+  width: min(560px, 100%);
+  padding: 32px;
+  background: rgba(31, 43, 34, 0.96);
+  border: 2px solid rgba(200, 185, 130, 0.8);
+  box-shadow:
+    0 22px 70px rgba(0, 0, 0, 0.52),
+    inset 0 0 0 1px rgba(141, 252, 122, 0.16);
+}
+
+.game-menu__title {
+  margin: 0;
+  color: #8dfc7a;
+  font-family: "Courier New", monospace;
+  font-size: 56px;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.game-menu__status {
+  margin: 12px 0 28px;
+  color: #f2dd8a;
+  font-size: 16px;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.game-menu__button {
+  width: 100%;
+  min-height: 64px;
+  color: #101711;
+  background: #ffbd45;
+  border: 0;
+  box-shadow: inset 0 -6px 0 rgba(16, 23, 17, 0.26);
+  cursor: pointer;
+  font: 700 22px/1 "Courier New", monospace;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.game-menu__button:hover,
+.game-menu__button:focus-visible {
+  background: #8dfc7a;
+  outline: 3px solid #f2dd8a;
+  outline-offset: 4px;
+}
+
+.game-menu__summary {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.8fr) minmax(0, 1.2fr);
+  gap: 10px 18px;
+  margin: 0 0 28px;
+  padding: 18px 0;
+  border-top: 1px solid rgba(200, 185, 130, 0.45);
+  border-bottom: 1px solid rgba(200, 185, 130, 0.45);
+}
+
+.game-menu__summary dt,
+.game-menu__summary dd {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.game-menu__summary dt {
+  color: #8d9380;
+}
+
+.game-menu__summary dd {
+  color: #c8b982;
+  text-align: right;
+}
+
+.city-editor {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  z-index: 15;
+  display: grid;
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  gap: 10px;
+  overflow: auto;
+  padding: 14px;
+  color: #c8b982;
+  background: rgba(16, 23, 17, 0.92);
+  border: 1px solid rgba(141, 252, 122, 0.5);
+  box-shadow: 0 16px 60px rgba(0, 0, 0, 0.45);
+}
+
+.city-editor h2 {
+  margin: 0;
+  color: #8dfc7a;
+  font-size: 18px;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.city-editor__selected,
+.city-editor__values {
+  display: block;
+  color: #f2dd8a;
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+.city-editor__export {
+  min-height: 260px;
+  resize: vertical;
+  color: #c8b982;
+  background: #101711;
+  border: 1px solid rgba(200, 185, 130, 0.45);
+  font: 12px/1.35 "Courier New", monospace;
+}
+
+.city-editor button {
+  min-height: 34px;
+  color: #101711;
+  background: #c8b982;
+  border: 0;
+  cursor: pointer;
+  font: 700 13px/1 "Courier New", monospace;
+  text-transform: uppercase;
+}
+
+.city-editor button:hover,
+.city-editor button:focus-visible {
+  background: #8dfc7a;
+  outline: 2px solid #f2dd8a;
+  outline-offset: 2px;
+}
+
 .debug-panel {
   position: absolute;
   right: 16px;
@@ -97,4 +248,56 @@ canvas {
   padding: 6px 8px;
   font: inherit;
   text-transform: uppercase;
+}
+
+.layout-editor {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: 16;
+  display: grid;
+  width: min(360px, calc(100vw - 32px));
+  gap: 8px;
+  padding: 12px;
+  color: #c8b982;
+  background: rgba(16, 23, 17, 0.9);
+  border: 1px solid rgba(255, 212, 71, 0.62);
+  box-shadow: 0 16px 60px rgba(0, 0, 0, 0.45);
+}
+
+.layout-editor h2 {
+  margin: 0;
+  color: #ffd447;
+  font-size: 17px;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.layout-editor__selected,
+.layout-editor__hint {
+  margin: 0;
+  color: #f2dd8a;
+  font-size: 12px;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+.layout-editor__values {
+  min-height: 76px;
+  margin: 0;
+  padding: 8px;
+  overflow: auto;
+  color: #8dfc7a;
+  background: #101711;
+  border: 1px solid rgba(200, 185, 130, 0.38);
+  font: 12px/1.35 "Courier New", monospace;
+}
+
+.layout-editor__export {
+  min-height: 104px;
+  resize: vertical;
+  color: #c8b982;
+  background: #101711;
+  border: 1px solid rgba(200, 185, 130, 0.38);
+  font: 12px/1.35 "Courier New", monospace;
 }

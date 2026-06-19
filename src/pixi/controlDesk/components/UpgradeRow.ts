@@ -9,6 +9,7 @@ import { SpriteLedStrip } from "./SpriteLedStrip";
 export class UpgradeRow extends Container {
   public readonly plantKey: PlantUpgradeState["key"];
   private readonly labelNode: Text;
+  private readonly priceNode: Text;
   private readonly strip: SpriteLedStrip;
   private readonly arrow?: Sprite;
   private state?: PlantUpgradeState;
@@ -27,12 +28,26 @@ export class UpgradeRow extends Container {
       text: "",
       style: {
         fontFamily,
-        fontSize: 18,
+        fontSize: 21,
         fill: 0x1a130d,
-        fontWeight: "700",
+        fontWeight: "900",
       },
     });
     this.labelNode.position.set(layout.label.x, layout.label.y);
+    this.priceNode = new Text({
+      text: "",
+      style: {
+        fontFamily,
+        fontSize: layout.price.fontSize,
+        fill: 0x1a130d,
+        fontWeight: "900",
+        align: layout.price.align ?? "right",
+        wordWrap: layout.price.maxWidth !== undefined,
+        wordWrapWidth: layout.price.maxWidth,
+      },
+    });
+    this.priceNode.anchor.set(1, 0);
+    this.priceNode.position.set(layout.price.x + (layout.price.maxWidth ?? 0), layout.price.y);
     this.strip = new SpriteLedStrip(layout.ledStrip, {
       base: assets.texture("led_empty_3"),
       green: assets.texture("led_green"),
@@ -49,7 +64,7 @@ export class UpgradeRow extends Container {
       this.arrow.position.set(layout.upgradeArrow.x, layout.upgradeArrow.y);
     }
 
-    this.addChild(this.labelNode, this.strip);
+    this.addChild(this.labelNode, this.priceNode, this.strip);
     if (this.arrow) {
       this.addChild(this.arrow);
     }
@@ -69,7 +84,8 @@ export class UpgradeRow extends Container {
   public update(state: PlantUpgradeState): void {
     this.state = state;
     const displayedLevel = Math.max(state.level, state.purchasedLevel);
-    this.labelNode.text = `${state.shortLabel} L${displayedLevel} ${state.statusText}`;
+    this.labelNode.text = `${state.shortLabel} L${displayedLevel}`;
+    this.priceNode.text = state.statusText;
     this.strip.update(displayedLevel / state.maxLevel, "green");
     if (this.arrow) {
       this.arrow.alpha = state.isMaxed ? 0.28 : 1;
@@ -84,12 +100,20 @@ export class UpgradeRow extends Container {
     return this.labelNode.text;
   }
 
+  public debugPriceText(): string {
+    return this.priceNode.text;
+  }
+
   public debugActiveLedColors(): string[] {
     return this.strip.debugActiveColors();
   }
 
   public debugLabelFill(): unknown {
     return this.labelNode.style.fill;
+  }
+
+  public debugPriceFill(): unknown {
+    return this.priceNode.style.fill;
   }
 
   public debugArrowAlpha(): number | undefined {

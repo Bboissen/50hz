@@ -45,13 +45,23 @@ function emptyWeatherIconTextures(): WeatherIconTextures {
   return Object.fromEntries(WEATHER_ICON_CONDITIONS.map((condition) => [condition, Texture.EMPTY])) as WeatherIconTextures;
 }
 
+function deskGlobalPoint(point: { x: number; y: number }): Point {
+  return deskGlobalPointFor(CONTROL_DESK_LAYOUT, point);
+}
+
+function deskGlobalPointFor(layout: ControlDeskLayout, point: { x: number; y: number }): Point {
+  const transform = layout.deskTransform;
+  return new Point(point.x * transform.scaleX + transform.x, point.y * transform.scaleY + transform.y);
+}
+
 describe("ControlDeskScreen", () => {
   it("builds the required sprite-overlay control desk layers", () => {
     const { resolver } = recordingAssets({ desk_background: true });
     const screen = new ControlDeskScreen(resolver, () => undefined);
 
     expect(screen.label).toBe("ControlDeskRoot");
-    expect(screen.debugComponentLabels()).toEqual([
+    expect(screen.debugComponentLabels()).toEqual(["DeskContentLayer", "TopStatusLayer", "LayoutSelectionLayer"]);
+    expect(screen.deskContentLayer.children.map((child) => child.label)).toEqual([
       "WorldViewportLayer",
       "DeskBackplateLayer",
       "StaticTextLayer",
@@ -60,6 +70,8 @@ describe("ControlDeskScreen", () => {
       "AlignmentDebugLayer",
       "ReferenceOverlayLayer",
     ]);
+    expect(screen.deskContentLayer.position.y).toBe(CONTROL_DESK_LAYOUT.deskTransform.y);
+    expect(screen.deskContentLayer.scale.y).toBeCloseTo(CONTROL_DESK_LAYOUT.deskTransform.scaleY);
     expect(screen.deskBackplateLayer.children).toHaveLength(1);
     expect(screen.deskBackplateLayer.children[0]?.label).toBe("DeskBackplate");
     expect(screen.deskBackplateLayer.children[0]?.children).toHaveLength(1);
@@ -205,12 +217,12 @@ describe("ControlDeskScreen", () => {
     const state = productionState();
 
     screen.update(state);
-    screen.hitZoneLayer.children[0]?.emit("pointerdown", { global: new Point(1588, 136) } as never);
-    screen.hitZoneLayer.children[0]?.emit("globalpointermove", { global: new Point(1550, 170) } as never);
-    screen.hitZoneLayer.children[0]?.emit("pointerup", { global: new Point(1550, 170) } as never);
-    screen.hitZoneLayer.children[1]?.emit("pointerdown", { global: new Point(1767, 136) } as never);
-    screen.hitZoneLayer.children[1]?.emit("globalpointermove", { global: new Point(1800, 96) } as never);
-    screen.hitZoneLayer.children[1]?.emit("pointerup", { global: new Point(1800, 96) } as never);
+    screen.hitZoneLayer.children[0]?.emit("pointerdown", { global: deskGlobalPoint({ x: 1588, y: 136 }) } as never);
+    screen.hitZoneLayer.children[0]?.emit("globalpointermove", { global: deskGlobalPoint({ x: 1550, y: 170 }) } as never);
+    screen.hitZoneLayer.children[0]?.emit("pointerup", { global: deskGlobalPoint({ x: 1550, y: 170 }) } as never);
+    screen.hitZoneLayer.children[1]?.emit("pointerdown", { global: deskGlobalPoint({ x: 1767, y: 136 }) } as never);
+    screen.hitZoneLayer.children[1]?.emit("globalpointermove", { global: deskGlobalPoint({ x: 1800, y: 96 }) } as never);
+    screen.hitZoneLayer.children[1]?.emit("pointerup", { global: deskGlobalPoint({ x: 1800, y: 96 }) } as never);
 
     const nuclearCommand = commands.find((command) => command.type === "setNuclearTarget");
     const thermalCommand = commands.find((command) => command.type === "setThermalThrottle");
@@ -224,14 +236,14 @@ describe("ControlDeskScreen", () => {
     const screen = new ControlDeskScreen(resolver, (command) => commands.push(command));
 
     screen.update(productionState());
-    screen.hitZoneLayer.children[2]?.emit("globalpointermove", { global: new Point(1200, 136) } as never);
-    screen.hitZoneLayer.children[2]?.emit("globalpointermove", { global: new Point(1000, 136) } as never);
+    screen.hitZoneLayer.children[2]?.emit("globalpointermove", { global: deskGlobalPoint({ x: 1200, y: 136 }) } as never);
+    screen.hitZoneLayer.children[2]?.emit("globalpointermove", { global: deskGlobalPoint({ x: 1000, y: 136 }) } as never);
 
     expect(commands).toEqual([]);
 
-    screen.hitZoneLayer.children[2]?.emit("pointerdown", { global: new Point(1200, 136) } as never);
-    screen.hitZoneLayer.children[2]?.emit("globalpointermove", { global: new Point(1000, 136) } as never);
-    screen.hitZoneLayer.children[2]?.emit("pointerup", { global: new Point(1000, 136) } as never);
+    screen.hitZoneLayer.children[2]?.emit("pointerdown", { global: deskGlobalPoint({ x: 1200, y: 136 }) } as never);
+    screen.hitZoneLayer.children[2]?.emit("globalpointermove", { global: deskGlobalPoint({ x: 1000, y: 136 }) } as never);
+    screen.hitZoneLayer.children[2]?.emit("pointerup", { global: deskGlobalPoint({ x: 1000, y: 136 }) } as never);
 
     expect(commands).toContainEqual({ type: "setWindEnabled", playerId: "player", enabled: false });
   });
@@ -259,15 +271,34 @@ describe("ControlDeskScreen", () => {
     const screen = new ControlDeskScreen(resolver, (command) => commands.push(command));
 
     screen.update(productionState());
-    screen.hitZoneLayer.children[2]?.emit("pointerdown", { global: new Point(1560, 390) } as never);
-    screen.hitZoneLayer.children[2]?.emit("globalpointermove", { global: new Point(1508, 390) } as never);
-    screen.hitZoneLayer.children[2]?.emit("pointerup", { global: new Point(1508, 390) } as never);
-    screen.hitZoneLayer.children[4]?.emit("pointerdown", { global: new Point(1735, 562) } as never);
-    screen.hitZoneLayer.children[4]?.emit("globalpointermove", { global: new Point(1800, 562) } as never);
-    screen.hitZoneLayer.children[4]?.emit("pointerup", { global: new Point(1800, 562) } as never);
+    screen.hitZoneLayer.children[2]?.emit("pointerdown", { global: deskGlobalPoint({ x: 1560, y: 390 }) } as never);
+    screen.hitZoneLayer.children[2]?.emit("globalpointermove", { global: deskGlobalPoint({ x: 1508, y: 390 }) } as never);
+    screen.hitZoneLayer.children[2]?.emit("pointerup", { global: deskGlobalPoint({ x: 1508, y: 390 }) } as never);
+    screen.hitZoneLayer.children[4]?.emit("pointerdown", { global: deskGlobalPoint({ x: 1735, y: 562 }) } as never);
+    screen.hitZoneLayer.children[4]?.emit("globalpointermove", { global: deskGlobalPoint({ x: 1800, y: 562 }) } as never);
+    screen.hitZoneLayer.children[4]?.emit("pointerup", { global: deskGlobalPoint({ x: 1800, y: 562 }) } as never);
 
     expect(commands).toContainEqual({ type: "setWindEnabled", playerId: "player", enabled: false });
     expect(commands).toContainEqual({ type: "setWaterDamMode", playerId: "player", mode: "drain" });
+  });
+
+  it("keeps knob drags stable when the whole desk is moved and resized", () => {
+    const commands: PlayerCommand[] = [];
+    const customLayout: ControlDeskLayout = {
+      ...CONTROL_DESK_LAYOUT,
+      deskTransform: { x: 80, y: 42, scaleX: 0.72, scaleY: 0.63 },
+    };
+    const { resolver } = recordingAssets({ knob: true });
+    const screen = new ControlDeskScreen(resolver, (command) => commands.push(command), { layout: customLayout });
+    const state = productionState();
+
+    screen.update(state);
+    screen.hitZoneLayer.children[0]?.emit("pointerdown", { global: deskGlobalPointFor(customLayout, { x: 1588, y: 136 }) } as never);
+    screen.hitZoneLayer.children[0]?.emit("globalpointermove", { global: deskGlobalPointFor(customLayout, { x: 1550, y: 170 }) } as never);
+    screen.hitZoneLayer.children[0]?.emit("pointerup", { global: deskGlobalPointFor(customLayout, { x: 1550, y: 170 }) } as never);
+
+    const nuclearCommand = commands.find((command) => command.type === "setNuclearTarget");
+    expect(nuclearCommand?.targetMW).toBeLessThan(state.nuclearTargetMW);
   });
 
   it("emits existing upgrade commands from affordable upgrade-row hit zones", () => {
@@ -309,6 +340,43 @@ describe("ControlDeskScreen", () => {
     );
   });
 
+  it("renders the bottom-right power demand forecast with a static supply marker", () => {
+    const { resolver } = recordingAssets();
+    const screen = new ControlDeskScreen(resolver, () => undefined);
+    const state = {
+      ...productionState(),
+      currentDemandMW: 100,
+      generationMW: 103,
+      eventTrace: [
+        { timeOffsetSeconds: 0, demandMW: 100, renewableSupplyMW: 0, eventIntensity: 0 },
+        { timeOffsetSeconds: 15, demandMW: 124, renewableSupplyMW: 0, eventIntensity: 0 },
+        { timeOffsetSeconds: 30, demandMW: 112, renewableSupplyMW: 0, eventIntensity: 0 },
+      ],
+    };
+
+    screen.update(state);
+    const first = screen.debugDemandForecastMonitorState();
+    screen.update({
+      ...state,
+      eventTrace: [
+        { timeOffsetSeconds: 0, demandMW: 98, renewableSupplyMW: 0, eventIntensity: 0 },
+        { timeOffsetSeconds: 15, demandMW: 118, renewableSupplyMW: 0, eventIntensity: 0 },
+        { timeOffsetSeconds: 30, demandMW: 106, renewableSupplyMW: 0, eventIntensity: 0 },
+      ],
+    });
+    const second = screen.debugDemandForecastMonitorState();
+
+    expect(first?.plot).toEqual({
+      x: CONTROL_DESK_LAYOUT.demandMonitor.x + 40,
+      y: CONTROL_DESK_LAYOUT.demandMonitor.y + 70,
+      w: CONTROL_DESK_LAYOUT.demandMonitor.w - 74,
+      h: CONTROL_DESK_LAYOUT.demandMonitor.h - 122,
+    });
+    expect(first?.demandPoints).toHaveLength(3);
+    expect(first?.supplyPoint.x).toBe(second?.supplyPoint.x);
+    expect(first?.safeRange.minY).not.toBe(first?.safeRange.maxY);
+  });
+
   it("recycles forecast tape tiles while keeping stable slot indices", () => {
     const seed = "forecast-recycle-proof";
     const tape = new ForecastTape(CONTROL_DESK_LAYOUT.forecast.plot, emptyWeatherIconTextures());
@@ -333,7 +401,10 @@ describe("ControlDeskScreen", () => {
     screen.update(productionState());
 
     expect(screen.debugReadoutText("share")).toBe("SHARE YOU 50% RIVAL 50%");
-    expect(screen.debugReadoutText("weather")).toContain("WEATHER");
+    expect(screen.debugReadoutText("weather")).toContain("WX");
+    expect(screen.debugReadoutText("incidents")).toContain("INCIDENT");
+    expect(screen.debugReadoutText("city")).toMatch(/^CITY H\d B\d D\d$/);
+    expect(screen.debugReadoutText("load")).toMatch(/^DEMAND \d+ > \d+ > \d+ MW$/);
     expect(screen.debugReadoutText("reactor")).toMatch(/MW$/);
     expect(screen.debugReadoutText("boiler")).toMatch(/MW$/);
     expect(screen.debugReadoutText("wind")).toMatch(/MW$/);
@@ -372,7 +443,7 @@ describe("ControlDeskScreen", () => {
     screen.update(state);
 
     expect(screen.debugReadoutText("generation")).toBe("GEN 120.0 MW");
-    expect(screen.debugReadoutText("weather")).toBe("WEATHER WIND 36 KMH");
+    expect(screen.debugReadoutText("weather")).toBe("WX WIND 36K / DAWN");
     expect(screen.debugReadoutText("reactor")).toBe("REACT 35/20 MW");
     expect(screen.debugReadoutText("boiler")).toBe("BOILER 17 MW");
     expect(screen.debugReadoutText("wind")).toBe("WIND 36K 0/11MW");
@@ -429,12 +500,20 @@ describe("ControlDeskScreen", () => {
     const rowLabels = screen.instrumentOverlayLayer.children
       .filter((child): child is UpgradeRow => child instanceof UpgradeRow)
       .map((child) => child.debugLabelText());
-    expect(rowLabels).toContain("DAM L1 €50");
-    expect(rowLabels).toContain("REACTOR L1 €85");
-    expect(rowLabels).toContain("BOILER L1 €40");
-    expect(rowLabels.every((label) => /€\d+|BUILD \d+s|MAX/.test(label))).toBe(true);
+    const rowPrices = screen.instrumentOverlayLayer.children
+      .filter((child): child is UpgradeRow => child instanceof UpgradeRow)
+      .map((child) => child.debugPriceText());
+    expect(rowLabels).toContain("DAM L1");
+    expect(rowLabels).toContain("REACTOR L1");
+    expect(rowLabels).toContain("BOILER L1");
+    expect(rowPrices).toContain("€50");
+    expect(rowPrices).toContain("€85");
+    expect(rowPrices).toContain("€40");
+    expect(rowPrices.every((price) => /€\d+|BUILD \d+s|MAX/.test(price))).toBe(true);
     expect(rowLabels.every((label) => !label.includes("/"))).toBe(true);
-    expect(rowLabels.every((label) => label.length <= 15)).toBe(true);
+    expect(rowLabels.every((label) => !label.includes("€"))).toBe(true);
+    expect(CONTROL_DESK_LAYOUT.upgradeRows.every((row) => row.price.x + (row.price.maxWidth ?? 0) <= 462)).toBe(true);
+    expect(CONTROL_DESK_LAYOUT.upgradeRows.every((row) => row.price.x > row.upgradeArrow.x)).toBe(true);
     expect(CONTROL_DESK_LAYOUT.upgradeRows.at(-1)?.label.y).toBeLessThanOrEqual(900);
     expect(CONTROL_DESK_LAYOUT.upgradeRows.at(-1)?.hitZone.y).toBeLessThanOrEqual(870);
   });
@@ -453,6 +532,7 @@ describe("ControlDeskScreen", () => {
     const rows = screen.instrumentOverlayLayer.children.filter((child): child is UpgradeRow => child instanceof UpgradeRow);
     expect(screen.debugReadoutFill("cash")).toBe(0x1a130d);
     expect(rows.map((row) => row.debugLabelFill())).toEqual([0x1a130d, 0x1a130d, 0x1a130d, 0x1a130d]);
+    expect(rows.map((row) => row.debugPriceFill())).toEqual([0x1a130d, 0x1a130d, 0x1a130d, 0x1a130d]);
     expect(rows.flatMap((row) => row.debugActiveLedColors()).every((color) => color === "green")).toBe(true);
     expect(screen.debugControls().wind.debugLabelFills()).toEqual([0x1a130d, 0x1a130d]);
     expect(screen.debugControls().dam.debugLabelFills()).toEqual([0x1a130d, 0x1a130d, 0x1a130d]);
@@ -481,6 +561,7 @@ describe("ControlDeskScreen", () => {
     const rows = screen.instrumentOverlayLayer.children.filter((child): child is UpgradeRow => child instanceof UpgradeRow);
 
     expect(rows[0]?.debugLabelText()).toContain("L2");
+    expect(rows[0]?.debugPriceText()).toBe("BUILD 5s");
     expect(rows[0]?.debugActiveLedCount()).toBe(2);
     expect(rows[1]?.debugArrowAlpha()).toBe(1);
   });

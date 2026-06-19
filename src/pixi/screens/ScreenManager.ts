@@ -1,10 +1,11 @@
 import { Container } from "pixi.js";
 
 import type { AssetResolver } from "../assets";
+import type { CityScene } from "../city/CityScene";
 import type { DispatchConsoleState, FinalResult, MatchState, PlayerCommand, ProductionConsoleState } from "../../gameplay/types";
 import { BreakerResetModal } from "./BreakerResetModal";
 import { ContractOfferModal } from "./ContractOfferModal";
-import { ControlDeskScreen } from "./ControlDeskScreen";
+import { ControlDeskScreen, type ControlDeskLayoutEditorTarget } from "./ControlDeskScreen";
 import { ResultScreen } from "./ResultScreen";
 import { ScreenTransition } from "./ScreenTransition";
 
@@ -67,6 +68,14 @@ export class ScreenManager extends Container {
 
   public animate(dt: number): void {
     this.controlDeskScreen.animate(dt);
+  }
+
+  public cityEditorScene(): CityScene | undefined {
+    return this.controlDeskScreen.cityEditorScene();
+  }
+
+  public createLayoutEditorTargets(): ControlDeskLayoutEditorTarget[] {
+    return this.controlDeskScreen.createLayoutEditorTargets();
   }
 
   private switchTo(screen: ScreenId): void {

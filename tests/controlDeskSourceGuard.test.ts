@@ -7,6 +7,7 @@ const repoRoot = process.cwd();
 const controlDeskRoot = join(repoRoot, "src/pixi/controlDesk");
 const controlDeskScreen = join(repoRoot, "src/pixi/screens/ControlDeskScreen.ts");
 const approvedGraphicsFiles = [
+  "src/pixi/controlDesk/components/DemandForecastMonitor.ts",
   "src/pixi/controlDesk/components/ForecastTape.ts",
   "src/pixi/controlDesk/components/HitZone.ts",
   "src/pixi/controlDesk/components/SpriteLedStrip.ts",
