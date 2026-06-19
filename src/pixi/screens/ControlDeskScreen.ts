@@ -174,16 +174,17 @@ export class ControlDeskScreen extends Container {
       text: "",
       style: {
         fontFamily: assets.fontFamily,
-        fontSize: 20,
-        fill: 0x101711,
-        fontWeight: "700",
+        fontSize: 24,
+        fill: 0xfff3b0,
+        fontWeight: "900",
         align: "center",
+        stroke: { color: 0x101711, width: 5 },
       },
     });
     this.safetyNetCooldown.eventMode = "none";
     this.safetyNetCooldown.interactiveChildren = false;
     this.safetyNetCooldownLabel.anchor.set(0.5, 0.5);
-    this.safetyNetCooldownLabel.position.set(SAFETY_NET_COOLDOWN_LAYOUT.x + SAFETY_NET_COOLDOWN_LAYOUT.w / 2, SAFETY_NET_COOLDOWN_LAYOUT.y + 18);
+    this.safetyNetCooldownLabel.position.set(SAFETY_NET_COOLDOWN_LAYOUT.x + SAFETY_NET_COOLDOWN_LAYOUT.w / 2, SAFETY_NET_COOLDOWN_LAYOUT.y + 24);
     this.safetyNetCooldown.addChild(this.safetyNetCooldownBar, this.safetyNetCooldownLabel);
     this.upgradeRows = this.layout.upgradeRows.map(
       (row) => new UpgradeRow(row, assets, sink, assets.fontFamily, options.showLayoutDebug === true),
@@ -202,7 +203,6 @@ export class ControlDeskScreen extends Container {
       this.windSwitch,
       this.damRotary,
       this.demandMonitor,
-      this.safetyNetCooldown,
       ...this.upgradeRows,
     );
 
@@ -219,6 +219,7 @@ export class ControlDeskScreen extends Container {
         this.staticTextLayer.addChild(readout);
       }
     }
+    this.topStatusLayer.addChild(this.safetyNetCooldown);
 
     this.addHitZones(options.showLayoutDebug === true);
     if (options.showReferenceOverlay) {
@@ -480,13 +481,16 @@ export class ControlDeskScreen extends Container {
     const { x, y, w, h } = SAFETY_NET_COOLDOWN_LAYOUT;
     this.safetyNetCooldownBar
       .clear()
-      .roundRect(x, y, w, h, 7)
-      .fill({ color: 0x6fcad1, alpha: 0.92 })
-      .stroke({ color: 0x101711, alpha: 0.78, width: 3 })
-      .roundRect(x + 16, y + h - 12, w - 32, 7, 3)
-      .fill({ color: 0x101711, alpha: 0.28 })
-      .roundRect(x + 16, y + h - 12, (w - 32) * ratio, 7, 3)
-      .fill({ color: 0x101711, alpha: 0.95 });
+      .roundRect(x - 5, y - 5, w + 10, h + 10, 11)
+      .fill({ color: 0x101711, alpha: 0.95 })
+      .stroke({ color: 0xff3b25, alpha: 1, width: 3 })
+      .roundRect(x, y, w, h, 8)
+      .fill({ color: 0xb73524, alpha: 0.96 })
+      .stroke({ color: 0xfff3b0, alpha: 1, width: 2 })
+      .roundRect(x + 18, y + h - 13, w - 36, 8, 4)
+      .fill({ color: 0x101711, alpha: 0.42 })
+      .roundRect(x + 18, y + h - 13, (w - 36) * ratio, 8, 4)
+      .fill({ color: 0xfff3b0, alpha: 1 });
     this.safetyNetCooldownLabel.text = `Reset safety net - ${Math.ceil(remaining)}s left to match the demand`;
   }
 
@@ -603,10 +607,10 @@ export class ControlDeskScreen extends Container {
 
 const TOP_STATUS_READOUT_KEYS = new Set<ReadoutKey>(["cash", "score", "tariff", "rivalTariff", "incidents", "city"]);
 const SAFETY_NET_COOLDOWN_LAYOUT: Rect = {
-  x: DESK_VIEWPORT.x + DESK_VIEWPORT.w / 2 - 305,
-  y: DESK_VIEWPORT.y + DESK_VIEWPORT.h - 54,
-  w: 610,
-  h: 42,
+  x: DESK_VIEWPORT.x + DESK_VIEWPORT.w / 2 - 385,
+  y: CONTROL_DESK_LAYOUT.deskTransform.y + (DESK_VIEWPORT.y + DESK_VIEWPORT.h) * CONTROL_DESK_LAYOUT.deskTransform.scaleY - 58,
+  w: 770,
+  h: 50,
 };
 
 function clamp(value: number, min: number, max: number): number {

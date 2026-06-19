@@ -299,9 +299,13 @@ describe("ControlDeskScreen", () => {
       text: "Reset safety net - 10s left to match the demand",
       barRatio: 10 / 15,
     });
+    expect(screen.topStatusLayer.children.map((child) => child.label)).toContain("SafetyNetCooldown");
+    expect(screen.debugInstrumentChildLabels()).not.toContain("SafetyNetCooldown");
     expect(screen.debugSafetyNetCooldownState().bounds).toMatchObject({
-      x: DESK_VIEWPORT.x + DESK_VIEWPORT.w / 2 - 305,
-      y: DESK_VIEWPORT.y + DESK_VIEWPORT.h - 54,
+      x: DESK_VIEWPORT.x + DESK_VIEWPORT.w / 2 - 385,
+      y: CONTROL_DESK_LAYOUT.deskTransform.y + (DESK_VIEWPORT.y + DESK_VIEWPORT.h) * CONTROL_DESK_LAYOUT.deskTransform.scaleY - 58,
+      w: 770,
+      h: 50,
     });
 
     screen.update({ ...productionState(), gridShutdownReliefSeconds: 0 });
