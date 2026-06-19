@@ -47,4 +47,12 @@ describe("how to play slides", () => {
     expect(images.every((image) => image.src.length > 0)).toBe(true);
     expect(images.every((image) => image.alt.length > 0)).toBe(true);
   });
+
+  it("uses a generated weather tape on the second tutorial screen", () => {
+    const weatherPanel = HOW_TO_PLAY_SLIDES[1]?.panels.find((panel) => panel.title === "Weather tape");
+
+    expect(weatherPanel).toBeDefined();
+    expect(weatherPanel?.visual).toBe("weatherTape");
+    expect(weatherPanel?.images).toEqual([]);
+  });
 });

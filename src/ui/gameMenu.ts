@@ -23,10 +23,13 @@ export type HowToPlayImage = {
   size: "wide" | "medium" | "tall" | "strip";
 };
 
+export type HowToPlayGeneratedVisual = "weatherTape";
+
 export type HowToPlayPanel = {
   title: string;
   copy: string[];
   images: HowToPlayImage[];
+  visual?: HowToPlayGeneratedVisual;
 };
 
 export type HowToPlaySlide = {
@@ -41,9 +44,33 @@ const HOW_TO_PLAY_IMAGE_URLS = {
   productionPanel: new URL("../../How_to_illustrations/production_panel.png", import.meta.url).href,
   reset: new URL("../../How_to_illustrations/reset.png", import.meta.url).href,
   upgrades: new URL("../../How_to_illustrations/upgrades.png", import.meta.url).href,
-  weatherTimeline: new URL("../../How_to_illustrations/weather_timeline.png", import.meta.url).href,
   worldCup: new URL("../../How_to_illustrations/worldcup.png", import.meta.url).href,
 } as const;
+
+const WEATHER_TUTORIAL_ICON_URLS = {
+  cloud: "/assets/runtime/icons/weather/cloud.webp",
+  moon: "/assets/runtime/icons/weather/moon.webp",
+  rain: "/assets/runtime/icons/weather/rain.webp",
+  snow: "/assets/runtime/icons/weather/snow.webp",
+  sun: "/assets/runtime/icons/weather/sun.webp",
+  wind: "/assets/runtime/icons/weather/wind.webp",
+} as const;
+
+type WeatherTutorialIcon = keyof typeof WEATHER_TUTORIAL_ICON_URLS;
+
+const WEATHER_TUTORIAL_SEGMENTS: Array<{
+  icon: WeatherTutorialIcon;
+  label: string;
+  note: string;
+  phase: string;
+}> = [
+  { icon: "sun", label: "Dawn", note: "solar wakes", phase: "dawn" },
+  { icon: "cloud", label: "Cloud", note: "solar capped", phase: "day" },
+  { icon: "wind", label: "Wind", note: "turbine band", phase: "day" },
+  { icon: "rain", label: "Rain", note: "dam fill", phase: "sunset" },
+  { icon: "snow", label: "Snow", note: "load rises", phase: "dusk" },
+  { icon: "moon", label: "Night", note: "solar off", phase: "night" },
+];
 
 export const HOW_TO_PLAY_SLIDES: HowToPlaySlide[] = [
   {
@@ -110,15 +137,11 @@ export const HOW_TO_PLAY_SLIDES: HowToPlaySlide[] = [
       {
         title: "Weather tape",
         copy: [
-          "Watch the weather tape. Sun boosts solar, rain fills the dam, wind powers turbines in its safe range, and cold raises demand.",
+          "Read the weather tape as time of day plus weather. The sky band moves from dawn to day, sunset, and night; moon replaces sun at night.",
+          "Sun feeds solar, rain fills the dam, wind only helps inside the turbine band, and snow or rain can raise household load.",
         ],
-        images: [
-          {
-            src: HOW_TO_PLAY_IMAGE_URLS.weatherTimeline,
-            alt: "Weather timeline showing rain, wind, snow, and sun segments",
-            size: "wide",
-          },
-        ],
+        images: [],
+        visual: "weatherTape",
       },
     ],
   },
@@ -245,16 +268,67 @@ export function createGameMenu(options: {
     return link;
   };
 
+  const renderWeatherTapeTutorial = (): HTMLElement => {
+    const tape = document.createElement("div");
+    tape.className = "game-menu__weather-tape";
+    tape.setAttribute(
+      "aria-label",
+      "Weather tape example showing dawn, day, sunset, night, sun, cloud, wind, rain, snow, and moon",
+    );
+
+    const track = document.createElement("div");
+    track.className = "game-menu__weather-tape-track";
+
+    const marker = document.createElement("div");
+    marker.className = "game-menu__weather-tape-marker";
+    track.appendChild(marker);
+
+    for (const segment of WEATHER_TUTORIAL_SEGMENTS) {
+      const tile = document.createElement("div");
+      tile.className = `game-menu__weather-tape-tile game-menu__weather-tape-tile--${segment.phase}`;
+
+      const icon = document.createElement("img");
+      icon.className = `game-menu__weather-tape-icon game-menu__weather-tape-icon--${segment.icon}`;
+      icon.src = WEATHER_TUTORIAL_ICON_URLS[segment.icon];
+      icon.alt = "";
+      icon.decoding = "async";
+      icon.setAttribute("aria-hidden", "true");
+
+      const label = document.createElement("span");
+      label.className = "game-menu__weather-tape-label";
+      label.textContent = segment.label;
+
+      const note = document.createElement("span");
+      note.className = "game-menu__weather-tape-note";
+      note.textContent = segment.note;
+
+      tile.append(icon, label, note);
+      track.appendChild(tile);
+    }
+
+    const ticks = document.createElement("div");
+    ticks.className = "game-menu__weather-tape-ticks";
+    for (const tick of ["0s", "+15s", "+30s", "+45s"]) {
+      const label = document.createElement("span");
+      label.textContent = tick;
+      ticks.appendChild(label);
+    }
+
+    tape.append(track, ticks);
+    return tape;
+  };
+
   const renderHowToPanel = (tutorialPanel: HowToPlayPanel): HTMLElement => {
     const card = document.createElement("article");
-    card.className = tutorialPanel.images.length > 0 ? "game-menu__howto-card" : "game-menu__howto-card game-menu__howto-card--tips";
+    const hasMedia = tutorialPanel.images.length > 0 || tutorialPanel.visual !== undefined;
+    card.className = hasMedia ? "game-menu__howto-card" : "game-menu__howto-card game-menu__howto-card--tips";
 
     const heading = document.createElement("h3");
     heading.textContent = tutorialPanel.title;
 
     const copy = document.createElement("div");
     copy.className = "game-menu__howto-copy";
-    if (tutorialPanel.images.length === 0) {
+    if (!hasMedia) {
       const tips = document.createElement("ul");
       tips.className = "game-menu__howto-tip-list";
       for (const paragraph of tutorialPanel.copy) {
@@ -273,7 +347,7 @@ export function createGameMenu(options: {
 
     card.append(heading, copy);
 
-    if (tutorialPanel.images.length > 0) {
+    if (hasMedia) {
       const media = document.createElement("div");
       media.className = "game-menu__howto-media";
       for (const image of tutorialPanel.images) {
@@ -285,6 +359,9 @@ export function createGameMenu(options: {
         element.decoding = "async";
         figure.appendChild(element);
         media.appendChild(figure);
+      }
+      if (tutorialPanel.visual === "weatherTape") {
+        media.appendChild(renderWeatherTapeTutorial());
       }
       card.appendChild(media);
     }

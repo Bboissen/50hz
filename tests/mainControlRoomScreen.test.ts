@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { GAME_CONFIG } from "../src/gameplay/config";
 import { createInitialMatchState, selectProductionConsoleState } from "../src/gameplay/match";
 import type { PlayerCommand, ProductionConsoleState } from "../src/gameplay/types";
-import { sampleWeather } from "../src/gameplay/weather";
+import { sampleWeather, timeOfDayRatioAt, type WeatherCondition } from "../src/gameplay/weather";
 import type { AssetResolver, PixiAssetKey } from "../src/pixi/assets";
 import { CITY_ASSET_SOURCES } from "../src/pixi/city/cityAssets";
 import { DESK_VIEWPORT } from "../src/pixi/city/citySceneConfig";
@@ -19,6 +19,7 @@ import { SpriteLedStrip } from "../src/pixi/controlDesk/components/SpriteLedStri
 import { TextReadout } from "../src/pixi/controlDesk/components/TextReadout";
 import { UpgradeRow } from "../src/pixi/controlDesk/components/UpgradeRow";
 import { WEATHER_ICON_ASSET_SOURCES, WEATHER_ICON_CONDITIONS, type WeatherIconTextures } from "../src/pixi/controlDesk/weatherIconAssets";
+import type { WeatherIconId } from "../src/pixi/controlDesk/weatherIconAssets";
 import { ControlDeskScreen } from "../src/pixi/screens/ControlDeskScreen";
 
 function recordingAssets(enabled: Partial<Record<PixiAssetKey, boolean>> = {}): { calls: PixiAssetKey[]; resolver: AssetResolver } {
@@ -45,6 +46,10 @@ function enabledWeatherIcons(): Partial<Record<PixiAssetKey, boolean>> {
 
 function emptyWeatherIconTextures(): WeatherIconTextures {
   return Object.fromEntries(WEATHER_ICON_CONDITIONS.map((condition) => [condition, Texture.EMPTY])) as WeatherIconTextures;
+}
+
+function displayWeatherIcon(condition: WeatherCondition, timeSeconds: number): WeatherIconId {
+  return condition === "sun" && timeOfDayRatioAt(timeSeconds) > 0.5 ? "moon" : condition;
 }
 
 function deskGlobalPoint(point: { x: number; y: number }): Point {
@@ -336,9 +341,9 @@ describe("ControlDeskScreen", () => {
     const baseState = { ...productionState(), matchSeed: seed, timeSeconds: 0 };
     const forecast = [
       { id: "sun", label: "SUN", phase: "impact" as const, remainingSeconds: 0 },
-      { id: "rain", label: "RAIN", phase: "warning" as const, remainingSeconds: 15 },
-      { id: "snow", label: "SNOW", phase: "warning" as const, remainingSeconds: 30 },
-      { id: "cloud", label: "CLOUD", phase: "warning" as const, remainingSeconds: 45 },
+      { id: "cloud", label: "CLOUD", phase: "warning" as const, remainingSeconds: 15 },
+      { id: "wind", label: "WIND", phase: "warning" as const, remainingSeconds: 30 },
+      { id: "snow", label: "SNOW", phase: "warning" as const, remainingSeconds: 45 },
     ];
 
     screen.update({ ...baseState, forecast });
@@ -353,7 +358,10 @@ describe("ControlDeskScreen", () => {
     expect(second?.pointerSlotIndex).toBe(0);
     expect(second?.pointerIcon).toBe("sun");
     expect(second?.visibleSlots).toEqual([0, 15, 30, 45]);
-    expect(second?.visibleIcons.slice(0, forecast.length)).toEqual(["sun", "rain", "snow", "cloud"]);
+    expect(second?.visibleIcons.slice(0, forecast.length)).toEqual(["sun", "cloud", "wind", "snow"]);
+    expect(second?.tileBackgroundSamples[0]?.left).not.toBe(second?.tileBackgroundSamples[0]?.right);
+    expect(second?.tileIconTints[1]).toBe(0xf8fbff);
+    expect(second?.tileIconTints[2]).toBe(0xf2fbff);
     expect(second?.tileIconSizes.every((size) => size.width <= 58 && size.height <= 54)).toBe(true);
   });
 
@@ -459,11 +467,31 @@ describe("ControlDeskScreen", () => {
     expect(updated.tileSlots).toEqual([0, 15, 30, 45, 60]);
     expect(updated.pointerX).toBe(initial.pointerX);
     expect(updated.pointerSlotIndex).toBe(0);
-    expect(updated.pointerIcon).toBe(sampleWeather(seed, FORECAST_BUCKET_SECONDS * 9 + 3).condition);
+    expect(updated.pointerIcon).toBe(
+      displayWeatherIcon(sampleWeather(seed, FORECAST_BUCKET_SECONDS * 9 + 3).condition, FORECAST_BUCKET_SECONDS * 9 + 3),
+    );
     expect(updated.tileIconSizes.every((size) => size.width <= 58 && size.height <= 54)).toBe(true);
     expect(updated.visibleIcons).toEqual(
-      updated.visibleSlots.map((offsetSeconds) => sampleWeather(seed, FORECAST_BUCKET_SECONDS * 9 + 3 + offsetSeconds).condition),
+      updated.visibleSlots.map((offsetSeconds) =>
+        displayWeatherIcon(
+          sampleWeather(seed, FORECAST_BUCKET_SECONDS * 9 + 3 + offsetSeconds).condition,
+          FORECAST_BUCKET_SECONDS * 9 + 3 + offsetSeconds,
+        ),
+      ),
     );
+  });
+
+  it("uses the moon icon for sunny forecast slots during the night half of the day cycle", () => {
+    const seed = "forecast-night-proof";
+    const tape = new ForecastTape(CONTROL_DESK_LAYOUT.forecast.plot, emptyWeatherIconTextures());
+    const nightSunTime = GAME_CONFIG.weather.conditionSegmentSeconds * 5;
+
+    expect(sampleWeather(seed, nightSunTime).condition).toBe("sun");
+    expect(timeOfDayRatioAt(nightSunTime)).toBeGreaterThan(0.5);
+
+    tape.update({ seed, timeSeconds: nightSunTime });
+
+    expect(tape.debugState().pointerIcon).toBe("moon");
   });
 
   it("shows compact event and city-level readouts in the desk-top HUD", () => {

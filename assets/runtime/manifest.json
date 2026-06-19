@@ -156,6 +156,10 @@
       "runtime": "/assets/runtime/icons/weather/cloud.webp"
     },
     {
+      "source": "/assets/icons/weather/moon.png",
+      "runtime": "/assets/runtime/icons/weather/moon.webp"
+    },
+    {
       "source": "/assets/icons/weather/rain.png",
       "runtime": "/assets/runtime/icons/weather/rain.webp"
     },

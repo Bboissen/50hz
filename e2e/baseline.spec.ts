@@ -6,6 +6,7 @@ import sharp from "sharp";
 const proofScreenshotDir = ".artifacts/ui-migration";
 const weatherIconPaths = [
   "/assets/runtime/icons/weather/sun.webp",
+  "/assets/runtime/icons/weather/moon.webp",
   "/assets/runtime/icons/weather/cloud.webp",
   "/assets/runtime/icons/weather/rain.webp",
   "/assets/runtime/icons/weather/wind.webp",

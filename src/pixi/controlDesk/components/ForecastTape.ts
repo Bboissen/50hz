@@ -2,9 +2,9 @@ import { Container, Graphics, Sprite } from "pixi.js";
 
 import { GAME_CONFIG } from "../../../gameplay/config";
 import type { TimelineToken } from "../../../gameplay/types";
-import { sampleWeather, type WeatherCondition } from "../../../gameplay/weather";
+import { sampleWeather, timeOfDayRatioAt, type WeatherCondition } from "../../../gameplay/weather";
 import type { Rect } from "../controlDeskLayout";
-import type { WeatherIconTextures } from "../weatherIconAssets";
+import type { WeatherIconId, WeatherIconTextures } from "../weatherIconAssets";
 
 export type ForecastTapeState = {
   seed: string;
@@ -13,7 +13,8 @@ export type ForecastTapeState = {
 };
 
 export type ForecastBucket = {
-  icon: WeatherCondition;
+  condition: WeatherCondition;
+  icon: WeatherIconId;
   absoluteTimeSeconds: number;
   slotIndex: number;
 };
@@ -22,12 +23,14 @@ export type ForecastTapeDebugState = {
   offsetPixels: number;
   pointerX: number;
   pointerSlotIndex: number | undefined;
-  pointerIcon: WeatherCondition | undefined;
+  pointerIcon: WeatherIconId | undefined;
   tileSlots: number[];
   tileXs: number[];
   tileIconSizes: Array<{ width: number; height: number }>;
+  tileIconTints: number[];
+  tileBackgroundSamples: Array<{ left: number; center: number; right: number }>;
   visibleSlots: number[];
-  visibleIcons: WeatherCondition[];
+  visibleIcons: WeatherIconId[];
 };
 
 export const FORECAST_BUCKET_SECONDS = GAME_CONFIG.weather.forecastOffsetsSeconds[1] ?? GAME_CONFIG.weather.conditionSegmentSeconds;
@@ -38,13 +41,15 @@ const FORECAST_TILE_OFFSETS_SECONDS = [
 ];
 const FORECAST_VISIBLE_BUCKET_COUNT = FORECAST_OFFSETS_SECONDS.length;
 const FORECAST_TILE_COUNT = FORECAST_TILE_OFFSETS_SECONDS.length;
+const SKY_GRADIENT_STEPS = 14;
 
-const WEATHER_COLORS: Record<WeatherCondition, number> = {
-  sun: 0x9fd7dc,
-  cloud: 0x566375,
-  rain: 0x455f6a,
-  wind: 0x657ea1,
-  snow: 0x607a8e,
+const ICON_STYLES: Record<WeatherIconId, { tint: number; glowAlpha: number }> = {
+  sun: { tint: 0xffffff, glowAlpha: 0 },
+  moon: { tint: 0xfff2b4, glowAlpha: 0.12 },
+  cloud: { tint: 0xf8fbff, glowAlpha: 0.32 },
+  rain: { tint: 0xddefff, glowAlpha: 0.08 },
+  wind: { tint: 0xf2fbff, glowAlpha: 0.38 },
+  snow: { tint: 0xffffff, glowAlpha: 0.2 },
 };
 
 const PIXEL = {
@@ -134,6 +139,8 @@ export class ForecastTape extends Container {
       tileSlots: ordered.map((tile) => tile.slotIndex),
       tileXs: ordered.map((tile) => tile.x),
       tileIconSizes: ordered.map((tile) => tile.debugIconSize()),
+      tileIconTints: ordered.map((tile) => tile.debugIconTint()),
+      tileBackgroundSamples: ordered.map((tile) => tile.debugBackgroundSamples()),
       visibleSlots: visible.map((tile) => tile.slotIndex),
       visibleIcons: visible.map((tile) => tile.bucket.icon),
     };
@@ -187,13 +194,21 @@ export class ForecastTape extends Container {
 
 class ForecastBucketView extends Container {
   private readonly background = new Graphics({ label: "forecast-bucket-background" });
+  private readonly iconGlow: Sprite;
   private readonly icon: Sprite;
   private currentBucket: ForecastBucket = {
+    condition: "sun",
     icon: "sun",
     absoluteTimeSeconds: 0,
     slotIndex: 0,
   };
-  private renderedIcon?: WeatherCondition;
+  private renderedIcon?: WeatherIconId;
+  private renderedBackgroundSignature = "";
+  private backgroundSamples = {
+    left: 0,
+    center: 0,
+    right: 0,
+  };
 
   public constructor(
     index: number,
@@ -202,14 +217,21 @@ class ForecastBucketView extends Container {
     private readonly iconTextures: WeatherIconTextures,
   ) {
     super({ label: `forecast-bucket-${index}` });
+    this.iconGlow = new Sprite({
+      texture: iconTextures.sun,
+      label: `forecast-weather-icon-glow-${index}`,
+      roundPixels: true,
+    });
     this.icon = new Sprite({
       texture: iconTextures.sun,
       label: `forecast-weather-icon-${index}`,
       roundPixels: true,
     });
+    this.iconGlow.anchor.set(0.5);
+    this.iconGlow.eventMode = "none";
     this.icon.anchor.set(0.5);
     this.icon.eventMode = "none";
-    this.addChild(this.background, this.icon);
+    this.addChild(this.background, this.iconGlow, this.icon);
   }
 
   public get bucket(): ForecastBucket {
@@ -222,24 +244,61 @@ class ForecastBucketView extends Container {
 
   public update(bucket: ForecastBucket): void {
     this.currentBucket = bucket;
-    if (this.renderedIcon === bucket.icon) {
-      return;
+    this.updateBackground(bucket);
+    if (this.renderedIcon !== bucket.icon) {
+      this.renderedIcon = bucket.icon;
+      this.icon.texture = this.iconTextures[bucket.icon];
+      this.iconGlow.texture = this.iconTextures[bucket.icon];
+      fitSprite(this.icon, Math.min(58, this.cellW * 0.54), Math.min(64, Math.max(16, this.cellH - 5)));
+      fitSprite(this.iconGlow, Math.min(66, this.cellW * 0.62), Math.min(72, Math.max(18, this.cellH + 3)));
+      this.icon.position.set(Math.round(this.cellW * 0.5), Math.round(this.cellH * 0.5));
+      this.iconGlow.position.copyFrom(this.icon.position);
     }
-    this.renderedIcon = bucket.icon;
-    this.background
-      .clear()
-      .rect(0, 0, this.cellW, this.cellH)
-      .fill({ color: WEATHER_COLORS[bucket.icon] })
-      .rect(0, 0, 2, this.cellH)
-      .fill({ color: 0xffffff, alpha: 0.18 });
-
-    this.icon.texture = this.iconTextures[bucket.icon];
-    fitSprite(this.icon, Math.min(58, this.cellW * 0.54), Math.min(64, Math.max(16, this.cellH - 5)));
-    this.icon.position.set(Math.round(this.cellW * 0.5), Math.round(this.cellH * 0.5));
+    const iconStyle = ICON_STYLES[bucket.icon];
+    this.icon.tint = iconStyle.tint;
+    this.iconGlow.tint = 0xffffff;
+    this.iconGlow.alpha = iconStyle.glowAlpha;
+    this.iconGlow.visible = iconStyle.glowAlpha > 0;
   }
 
   public debugIconSize(): { width: number; height: number } {
     return { width: this.icon.width, height: this.icon.height };
+  }
+
+  public debugIconTint(): number {
+    return this.icon.tint as number;
+  }
+
+  public debugBackgroundSamples(): { left: number; center: number; right: number } {
+    return { ...this.backgroundSamples };
+  }
+
+  private updateBackground(bucket: ForecastBucket): void {
+    const left = skyColorAtTime(bucket.absoluteTimeSeconds);
+    const center = skyColorAtTime(bucket.absoluteTimeSeconds + FORECAST_BUCKET_SECONDS / 2);
+    const right = skyColorAtTime(bucket.absoluteTimeSeconds + FORECAST_BUCKET_SECONDS);
+    const signature = `${left}:${center}:${right}`;
+    this.backgroundSamples = { left, center, right };
+    if (this.renderedBackgroundSignature === signature) {
+      return;
+    }
+    this.renderedBackgroundSignature = signature;
+    this.background.clear();
+    for (let step = 0; step < SKY_GRADIENT_STEPS; step += 1) {
+      const x = (this.cellW / SKY_GRADIENT_STEPS) * step;
+      const w = Math.ceil(this.cellW / SKY_GRADIENT_STEPS) + 1;
+      const ratio = step / Math.max(SKY_GRADIENT_STEPS - 1, 1);
+      this.background
+        .rect(x, 0, w, this.cellH)
+        .fill({ color: skyColorAtTime(bucket.absoluteTimeSeconds + FORECAST_BUCKET_SECONDS * ratio) });
+    }
+    this.background
+      .rect(0, 0, 2, this.cellH)
+      .fill({ color: 0xffffff, alpha: 0.16 })
+      .rect(0, 0, this.cellW, Math.max(2, this.cellH * 0.12))
+      .fill({ color: 0xffffff, alpha: 0.12 })
+      .rect(0, this.cellH - Math.max(2, this.cellH * 0.16), this.cellW, Math.max(2, this.cellH * 0.16))
+      .fill({ color: 0x0b0e17, alpha: 0.18 });
   }
 }
 
@@ -252,12 +311,21 @@ function bucketForOffset(
 ): ForecastBucket {
   const token = forecast?.find((item) => Math.abs(item.remainingSeconds - offsetSeconds) < 0.001);
   const absoluteTimeSeconds = timeSeconds + offsetSeconds;
-  const icon = weatherConditionFromToken(token) ?? sampleWeather(seed, absoluteTimeSeconds).condition;
+  const condition = weatherConditionFromToken(token) ?? sampleWeather(seed, absoluteTimeSeconds).condition;
+  const icon = iconForConditionAtTime(condition, absoluteTimeSeconds);
   return {
+    condition,
     icon,
     absoluteTimeSeconds,
     slotIndex: index === 0 ? 0 : offsetSeconds,
   };
+}
+
+function iconForConditionAtTime(condition: WeatherCondition, absoluteTimeSeconds: number): WeatherIconId {
+  if (condition === "sun" && timeOfDayRatioAt(absoluteTimeSeconds) > 0.5) {
+    return "moon";
+  }
+  return condition;
 }
 
 function weatherConditionFromToken(token: TimelineToken | undefined): WeatherCondition | undefined {
@@ -278,6 +346,47 @@ function fitSprite(sprite: Sprite, maxWidth: number, maxHeight: number): void {
   const textureHeight = sprite.texture.height || 1;
   const scale = Math.min(maxWidth / textureWidth, maxHeight / textureHeight);
   sprite.scale.set(scale);
+}
+
+function skyColorAtTime(timeSeconds: number): number {
+  return gradientColorAt(timeOfDayRatioAt(timeSeconds));
+}
+
+function gradientColorAt(ratio: number): number {
+  const stops = [
+    { at: 0, color: 0x26304c },
+    { at: 0.08, color: 0xc07a52 },
+    { at: 0.18, color: 0xf0c06b },
+    { at: 0.32, color: 0x9cc6d8 },
+    { at: 0.5, color: 0xe28b5b },
+    { at: 0.62, color: 0x4f607e },
+    { at: 0.78, color: 0x182139 },
+    { at: 1, color: 0x26304c },
+  ] as const;
+  const normalizedRatio = positiveModulo(ratio, 1);
+  for (let index = 1; index < stops.length; index += 1) {
+    const previous = stops[index - 1]!;
+    const next = stops[index]!;
+    if (normalizedRatio <= next.at) {
+      const localRatio = (normalizedRatio - previous.at) / Math.max(next.at - previous.at, Number.EPSILON);
+      return mixColor(previous.color, next.color, localRatio);
+    }
+  }
+  return stops[0].color;
+}
+
+function mixColor(from: number, to: number, ratio: number): number {
+  const clampedRatio = Math.max(0, Math.min(1, ratio));
+  const fromRed = (from >> 16) & 0xff;
+  const fromGreen = (from >> 8) & 0xff;
+  const fromBlue = from & 0xff;
+  const toRed = (to >> 16) & 0xff;
+  const toGreen = (to >> 8) & 0xff;
+  const toBlue = to & 0xff;
+  const red = Math.round(fromRed + (toRed - fromRed) * clampedRatio);
+  const green = Math.round(fromGreen + (toGreen - fromGreen) * clampedRatio);
+  const blue = Math.round(fromBlue + (toBlue - fromBlue) * clampedRatio);
+  return (red << 16) | (green << 8) | blue;
 }
 
 function positiveModulo(value: number, divisor: number): number {

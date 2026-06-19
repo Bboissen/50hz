@@ -554,6 +554,172 @@ canvas {
   max-height: 72px;
 }
 
+.game-menu__weather-tape {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  gap: 8px;
+  padding: 10px;
+  background:
+    linear-gradient(rgba(6, 12, 10, 0.34), rgba(4, 8, 6, 0.48)),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 5px);
+  border: 2px solid rgba(0, 0, 0, 0.58);
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.38),
+    0 0 0 1px rgba(164, 173, 104, 0.18),
+    inset 0 0 0 2px rgba(255, 225, 144, 0.06);
+}
+
+.game-menu__weather-tape-track {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 128px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  overflow: hidden;
+  background:
+    linear-gradient(
+      90deg,
+      #202746 0%,
+      #9d594d 9%,
+      #e4b66e 18%,
+      #a9d4dc 36%,
+      #8fb8d2 48%,
+      #d98658 60%,
+      #465170 72%,
+      #161c33 86%,
+      #0a1020 100%
+    );
+  border: 1px solid rgba(255, 236, 174, 0.38);
+}
+
+.game-menu__weather-tape-track::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.22) 0 2px, transparent 2px 8px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent 38%, rgba(0, 0, 0, 0.22));
+  content: "";
+}
+
+.game-menu__weather-tape-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 8.3%;
+  z-index: 2;
+  display: grid;
+  width: 34px;
+  justify-items: center;
+  color: #151005;
+  font: 800 10px / 1 Roboto, "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  transform: translateX(-50%);
+}
+
+.game-menu__weather-tape-marker::before {
+  width: 2px;
+  height: 100%;
+  background: #ffe190;
+  box-shadow: 0 0 10px rgba(255, 225, 144, 0.9);
+  content: "";
+}
+
+.game-menu__weather-tape-marker::after {
+  position: absolute;
+  top: 6px;
+  padding: 3px 5px;
+  background: #ffe190;
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  content: "NOW";
+}
+
+.game-menu__weather-tape-tile {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  min-width: 0;
+  padding: 18px 6px 10px;
+  justify-items: center;
+  align-content: center;
+  gap: 6px;
+  border-right: 1px solid rgba(2, 6, 8, 0.38);
+  text-align: center;
+}
+
+.game-menu__weather-tape-tile:last-child {
+  border-right: 0;
+}
+
+.game-menu__weather-tape-tile--night {
+  background: rgba(4, 8, 22, 0.24);
+}
+
+.game-menu__weather-tape-icon {
+  display: block;
+  width: clamp(34px, 4.8vw, 58px);
+  height: clamp(34px, 4.8vw, 58px);
+  object-fit: contain;
+  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.38));
+  image-rendering: pixelated;
+}
+
+.game-menu__weather-tape-icon--cloud,
+.game-menu__weather-tape-icon--wind {
+  filter: brightness(1.24) saturate(0.72) drop-shadow(0 0 8px rgba(255, 255, 255, 0.32))
+    drop-shadow(0 3px 0 rgba(0, 0, 0, 0.34));
+}
+
+.game-menu__weather-tape-icon--moon {
+  filter: drop-shadow(0 0 8px rgba(255, 225, 144, 0.42)) drop-shadow(0 3px 0 rgba(0, 0, 0, 0.34));
+}
+
+.game-menu__weather-tape-label,
+.game-menu__weather-tape-note {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  letter-spacing: 0;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.36);
+}
+
+.game-menu__weather-tape-label {
+  color: #fff4c3;
+  font: 800 clamp(11px, 1vw, 14px) / 1 Roboto, "Helvetica Neue", Arial, sans-serif;
+  text-transform: uppercase;
+}
+
+.game-menu__weather-tape-note {
+  color: rgba(255, 255, 255, 0.86);
+  font: 700 clamp(10px, 0.88vw, 12px) / 1.08 Roboto, "Helvetica Neue", Arial, sans-serif;
+  text-transform: uppercase;
+}
+
+.game-menu__weather-tape-ticks {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  color: rgba(255, 255, 255, 0.72);
+  font: 800 10px / 1 Roboto, "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.game-menu__weather-tape-ticks span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.game-menu__weather-tape-ticks span:not(:first-child) {
+  text-align: center;
+}
+
+.game-menu__weather-tape-ticks span:last-child {
+  text-align: right;
+}
+
 .game-menu__actions--tutorial {
   position: relative;
   z-index: 1;
@@ -648,6 +814,24 @@ canvas {
   .game-menu__howto-figure--medium img {
     width: 100%;
     max-height: none;
+  }
+
+  .game-menu__weather-tape {
+    padding: 8px;
+  }
+
+  .game-menu__weather-tape-track {
+    min-height: 112px;
+  }
+
+  .game-menu__weather-tape-tile {
+    padding: 20px 4px 8px;
+    gap: 5px;
+  }
+
+  .game-menu__weather-tape-icon {
+    width: clamp(30px, 10vw, 42px);
+    height: clamp(30px, 10vw, 42px);
   }
 
   .game-menu__actions--split,
