@@ -1,4 +1,4 @@
-import { updateAssetOutputs } from "./assets";
+import { updateAssetOutputs, windFactor } from "./assets";
 import { updateBreakerRisk, computeSupplyDemandMismatch } from "./breaker";
 import { GAME_CONFIG } from "./config";
 import { acceptContract, tickContracts } from "./contracts";
@@ -749,8 +749,20 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
 export function selectProductionConsoleState(state: MatchState): ProductionConsoleState {
   const dispatch = selectDispatchConsoleState(state);
   const player = state.players.player;
+  const environment = sampleEventEnvironment({
+    seed: state.seed,
+    demandSchedule: state.demandSchedule,
+    timeSeconds: state.timeSeconds,
+  });
   return {
     ...dispatch,
+    matchSeed: state.seed,
+    currentWeather: environment.weather,
+    currentWindKmh: environment.windKmh,
+    windPotentialMW: player.capacities.windPeakMW * windFactor(environment.windKmh),
+    rainActive: environment.weather.rainActive,
+    solarFactor: environment.solarFactor,
+    timeOfDayRatio: environment.weather.timeOfDayRatio,
     nuclearTargetMW: player.controls.nuclearTargetMW,
     nuclearOutputMW: player.lastOutputs.nuclearOutputMW,
     thermalThrottle: player.controls.thermalThrottle,

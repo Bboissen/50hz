@@ -1,4 +1,5 @@
 import type { GAME_CONFIG, PLAYER_IDS } from "./config";
+import type { WeatherSample } from "./weather";
 
 export type PlayerId = (typeof PLAYER_IDS)[number];
 export type MatchSeed = string;
@@ -275,6 +276,13 @@ export type DispatchConsoleState = {
 };
 
 export type ProductionConsoleState = DispatchConsoleState & {
+  matchSeed: MatchSeed;
+  currentWeather: WeatherSample;
+  currentWindKmh: number;
+  windPotentialMW: number;
+  rainActive: boolean;
+  solarFactor: number;
+  timeOfDayRatio: number;
   nuclearTargetMW: number;
   nuclearOutputMW: number;
   thermalThrottle: number;

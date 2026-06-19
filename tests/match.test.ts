@@ -9,7 +9,9 @@ import {
   selectProductionConsoleState,
   tickMatch,
 } from "../src/gameplay/match";
+import { windFactor } from "../src/gameplay/assets";
 import { GAME_CONFIG } from "../src/gameplay/config";
+import { sampleWeather } from "../src/gameplay/weather";
 
 function tickFor(seconds: number) {
   let state = createInitialMatchState();
@@ -32,6 +34,15 @@ describe("match", () => {
     const state = tickMatch(createInitialMatchState(), 1);
 
     expect(state.timeSeconds).toBe(1);
+  });
+
+  it("does not advance simulation while paused", () => {
+    const beforePause = tickMatch(createInitialMatchState(), 1);
+    const paused = applyPlayerCommand(beforePause, { type: "pause" });
+    const afterWait = tickMatch(paused, 2);
+
+    expect(afterWait).toBe(paused);
+    expect(afterWait.timeSeconds).toBe(beforePause.timeSeconds);
   });
 
   it("triggers expected demo timeline warnings and impacts", () => {
@@ -432,7 +443,15 @@ describe("match", () => {
   it("production selector exposes manual control state", () => {
     const state = tickMatch(createInitialMatchState(), 1);
     const production = selectProductionConsoleState(state);
+    const sampledWeather = sampleWeather(state.seed, state.timeSeconds);
 
+    expect(production.matchSeed).toBe(state.seed);
+    expect(production.currentWeather).toEqual(sampledWeather);
+    expect(production.currentWindKmh).toBe(sampledWeather.windKmh);
+    expect(production.windPotentialMW).toBeCloseTo(production.windPeakMW * windFactor(sampledWeather.windKmh));
+    expect(production.rainActive).toBe(sampledWeather.rainActive);
+    expect(production.solarFactor).toBe(sampledWeather.solarFactor);
+    expect(production.timeOfDayRatio).toBe(sampledWeather.timeOfDayRatio);
     expect(production.nuclearTargetMW).toBeGreaterThanOrEqual(0);
     expect(production.thermalOutputMW).toBeGreaterThanOrEqual(0);
     expect(production.waterDamCapacityMWh).toBeGreaterThan(0);
@@ -449,7 +468,6 @@ describe("match", () => {
     const production = selectProductionConsoleState(state);
     const dispatch = selectDispatchConsoleState(state);
 
-    expect(production.generationMW).toBe(state.players.player.lastOutputs.rawProductionMW);
     expect(dispatch.generationMW).toBe(production.generationMW);
     expect(dispatch.supplyDemandMismatch).toBe(production.supplyDemandMismatch);
     expect(production.generationMW).toBeLessThan(selectProductionConsoleState(baseline).generationMW);

@@ -7,7 +7,7 @@ const repoRoot = process.cwd();
 const controlDeskRoot = join(repoRoot, "src/pixi/controlDesk");
 const controlDeskScreen = join(repoRoot, "src/pixi/screens/ControlDeskScreen.ts");
 const approvedGraphicsFiles = [
-  "src/pixi/controlDesk/components/ForecastOscilloscope.ts",
+  "src/pixi/controlDesk/components/ForecastTape.ts",
   "src/pixi/controlDesk/components/HitZone.ts",
   "src/pixi/controlDesk/components/SpriteLedStrip.ts",
   "src/pixi/screens/ControlDeskScreen.ts",
@@ -44,7 +44,7 @@ describe("control desk migration source guardrails", () => {
     }
   });
 
-  it("keeps Graphics drawing limited to approved live overlays and debug layers", () => {
+  it("keeps Graphics use limited to approved live overlays and debug layers", () => {
     expect(approvedGraphicsFiles.every((file) => existsSync(join(repoRoot, file)))).toBe(true);
 
     const filesUsingGraphics = deskSourceFiles()
