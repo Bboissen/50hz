@@ -1,75 +1,84 @@
-# 50Hz Gameplay Wiki
+# 50Hz
 
-The game is a **real-time 1v1 educational electricity-grid duel**. The first playable version is single-player against an AI opponent. Two electricity companies supply a shared regional demand. The better operator runs a more efficient grid, obtains a lower customer price, attracts more consumers, earns more money, and is then pushed toward overload by that same success.
+50Hz is a finished 48h hackathon project: a short single-player electricity-grid control game built with TypeScript, Vite, PixiJS, and deterministic gameplay modules.
 
-## Canonical reference order
+The project is considered complete as of the end of the 48h hackathon on 2026-06-19. It is not planned for further updates.
 
-Future coding agents should route through the relevant skill before loading wiki pages:
+## Current Status
 
-1. [`AGENTS.md`](./AGENTS.md)
-2. The relevant skill file in [`.agents/skills/`](./.agents/skills/)
-3. The wiki pages named by that skill
+- `Status`: finished hackathon prototype
+- `Playable mode`: single-player against an AI opponent
+- `Core loop`: operate the grid manually, keep generation close to load, win customers through efficiency, earn revenue, and survive breaker pressure
+- `Frontend`: PixiJS control-desk game screen with menu, match flow, visual city/generation state, weather forecast, upgrades, contracts, and result screen
+- `Gameplay`: deterministic TypeScript systems for demand, generation assets, efficiency, pricing, market share, revenue, breaker risk, events, upgrades, weather, bot commands, and match scoring
+- `Tests`: Vitest unit coverage plus Playwright baseline coverage
+- `Documentation`: gameplay canon, visual direction, asset manifest, and agent routing notes under `wiki/` and `.agents/skills/`
 
-Use [`wiki/index.md`](./wiki/index.md) or `python3 scripts/wiki.py search "<query>"` when the correct mechanic page is unclear or the user asks for a wiki-backed answer.
+## Play It Locally
 
-## Non-negotiable gameplay rules
+```sh
+pnpm install
+pnpm dev
+```
 
-- **Manual operation is core gameplay.** The player must actively navigate screens and adjust systems in real time.
-- **Better efficiency means lower price.**
-- **Better efficiency must also mean more revenue.** The economic formula must preserve this invariant.
-- **More customers create more grid pressure.** Winning too hard can overload the network.
-- **The grid is most efficient when heavily used but not overloaded.** Overbuilding too early hurts utilization and price.
-- **Events create synchronized shocks.** Weather, data centers, heating, football games, and opponent cards can trigger chain reactions.
-- **Real open data/geolocation is informational only for the MVP.** Core gameplay uses synthetic, controllable numbers.
+Then open the Vite URL printed by the command.
 
-## Directory structure
+Useful query modes:
+
+- `?play=1` starts directly in the match.
+- `?dev=1` enables the debug panel.
+- `?seed=<value>` runs a deterministic seeded match.
+- `?cityEditor=1` opens the city editor mode.
+- `?dev=1&layoutEdit=1` opens layout editing helpers.
+
+## Checks
+
+```sh
+pnpm test
+pnpm build
+python3 scripts/wiki.py check
+```
+
+`make check` runs the main test and build path.
+
+## Project Shape
 
 ```txt
-.
-├── AGENTS.md
-├── README.md
-├── scripts/
-│   └── wiki.py
-├── .agents/skills/
-│   ├── README.md
-│   ├── economy-balance/SKILL.md
-│   ├── event-card-system/SKILL.md
-│   ├── gameplay-canon/SKILL.md
-│   ├── manual-control-room/SKILL.md
-│   ├── query/SKILL.md
-│   └── tuning-and-playtest/SKILL.md
-├── wiki/
-│   ├── index.md
-│   └── gameplay/
-│       ├── README.md
-│       ├── 00-canonical-summary.md
-│       ├── 01-design-axioms.md
-│       ├── 02-core-loop.md
-│       ├── 03-efficiency-model.md
-│       ├── 04-price-market-revenue.md
-│       ├── 05-demand-and-customers.md
-│       ├── 06-manual-control-room.md
-│       ├── 07-generation-assets.md
-│       ├── 08-grid-overload-and-reliability.md
-│       ├── 09-events-and-cards.md
-│       ├── 10-upgrades-and-progression.md
-│       ├── 11-match-endgame-and-scoring.md
-│       ├── 12-mvp-balance-config.md
-│       ├── 13-implementation-guardrails.md
-│       └── 99-glossary.md
-│   └── visual/
-│       ├── README.md
-│       ├── 20-visual-design-index.md
-│       ├── 21-dispatch-console-layout.md
-│       ├── 22-art-direction-bible.md
-│       ├── 23-ui-naming-and-taxonomy.md
-│       ├── 24-city-sectors-visual-design.md
-│       ├── 25-grid-pressure-meter.md
-│       ├── 26-events-cards-timelines.md
-│       ├── 27-upgrades-generation-tariffs.md
-│       ├── 28-animation-and-feedback-priorities.md
-│       ├── 29-asset-inventory-and-ownership.md
-│       ├── 30-pixijs-agent-integration-brief.md
-│       ├── 31-production-console-visual-direction.md
-│       └── asset-manifest.prototype.json
+src/
+  gameplay/        deterministic game systems
+  pixi/            PixiJS application, screens, city view, and controls
+  ui/              DOM overlays, menu, debug panel, and editor helpers
+tests/             Vitest coverage for gameplay, UI helpers, and assets
+e2e/               Playwright baseline check
+public/            app icons and manifest
+wiki/              gameplay canon and visual documentation
+.agents/skills/   task routing notes used during development
 ```
+
+## Hackathon Token Usage
+
+This project was built with Codex/OpenAI assistance during the hackathon.
+
+Codex session stats are the following:
+
+- `Sessions counted`: 92
+- `Date range counted`: 2026-06-17 to 2026-06-19
+- `Total tokens`: 501,802,000
+- `Input tokens`: 499,695,162
+- `Cached input tokens`: 465,119,488
+- `Output tokens`: 2,106,838
+- `Reasoning output tokens`: 708,010
+
+The `Total tokens` figure includes cached input tokens because that is how Codex records `total_tokens` in the local session logs.
+
+## Canonical Gameplay Summary
+
+50Hz is a real-time electricity-grid control game where the player faces an AI opponent. The provider with better contract-to-capacity efficiency offers the cheaper tariff, attracts more customers, earns more money, and then has to handle the extra grid pressure created by that success.
+
+The main tension is not simply building more power plants. Overbuilding hurts utilization and price, while underreacting to demand causes breaker trips. The player is trying to keep contracted load close to the efficient capacity basis while keeping real-time supply within a safe band around demand.
+
+## Repository Notes
+
+- The MVP uses synthetic gameplay numbers. External data and geolocation are flavor only.
+- Multiplayer, real market clearing, live-data balance, detailed carbon accounting, and long tech trees are intentionally out of scope.
+- The wiki is retained as design canon and historical development context, not as a roadmap for future work.
