@@ -1,4 +1,4 @@
-import { rm, mkdir, readFile, writeFile } from "node:fs/promises";
+import { rm, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 
 import sharp from "sharp";
@@ -15,6 +15,8 @@ const extraAssetSources = ["/assets/ui/background/menu.png"];
 const assetOptions = {
   "/assets/ui/background/menu.png": { quality: 80, alphaQuality: 90 },
 };
+const howToSourceRoot = join(repoRoot, "How_to_illustrations");
+const howToRuntimeRoot = join(runtimeRoot, "how-to");
 
 function runtimePathForSource(sourcePath) {
   return sourcePath.replace(/^\/assets\//, "/assets/runtime/").replace(/\.png$/, ".webp");
@@ -51,6 +53,27 @@ for (const sourcePath of [...sources].sort()) {
   });
 }
 
+const howToManifest = [];
+const howToFiles = await readdir(howToSourceRoot, { withFileTypes: true });
+for (const entry of howToFiles) {
+  if (!entry.isFile() || !entry.name.endsWith(".png")) {
+    continue;
+  }
+  const inputPath = join(howToSourceRoot, entry.name);
+  const outputName = entry.name.replace(/\.png$/, ".webp");
+  const outputPath = join(howToRuntimeRoot, outputName);
+
+  await mkdir(dirname(outputPath), { recursive: true });
+  await sharp(inputPath)
+    .webp({ quality: 82, alphaQuality: 90, effort: 6 })
+    .toFile(outputPath);
+
+  howToManifest.push({
+    source: `/How_to_illustrations/${entry.name}`,
+    runtime: `/assets/runtime/how-to/${outputName}`,
+  });
+}
+
 await writeFile(
   join(runtimeRoot, "manifest.json"),
   `${JSON.stringify(
@@ -59,10 +82,16 @@ await writeFile(
       quality: 85,
       alphaQuality: 90,
       assets: manifest,
+      howToAssets: howToManifest.sort((a, b) => a.source.localeCompare(b.source)),
     },
     null,
     2,
   )}\n`,
 );
 
-console.log(`Optimized ${manifest.length} Pixi runtime assets into ${relative(repoRoot, runtimeRoot)}`);
+console.log(
+  `Optimized ${manifest.length} Pixi runtime assets and ${howToManifest.length} how-to assets into ${relative(
+    repoRoot,
+    runtimeRoot,
+  )}`,
+);

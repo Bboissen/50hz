@@ -38,13 +38,13 @@ export type HowToPlaySlide = {
 };
 
 const HOW_TO_PLAY_IMAGE_URLS = {
-  contracts: new URL("../../How_to_illustrations/contracts.png", import.meta.url).href,
-  demandForecast: new URL("../../How_to_illustrations/demand_forecast.png", import.meta.url).href,
-  gauges: new URL("../../How_to_illustrations/gauges.png", import.meta.url).href,
-  productionPanel: new URL("../../How_to_illustrations/production_panel.png", import.meta.url).href,
-  reset: new URL("../../How_to_illustrations/reset.png", import.meta.url).href,
-  upgrades: new URL("../../How_to_illustrations/upgrades.png", import.meta.url).href,
-  worldCup: new URL("../../How_to_illustrations/worldcup.png", import.meta.url).href,
+  contracts: new URL("../../assets/runtime/how-to/contracts.webp", import.meta.url).href,
+  demandForecast: new URL("../../assets/runtime/how-to/demand_forecast.webp", import.meta.url).href,
+  gauges: new URL("../../assets/runtime/how-to/gauges.webp", import.meta.url).href,
+  productionPanel: new URL("../../assets/runtime/how-to/production_panel.webp", import.meta.url).href,
+  reset: new URL("../../assets/runtime/how-to/reset.webp", import.meta.url).href,
+  upgrades: new URL("../../assets/runtime/how-to/upgrades.webp", import.meta.url).href,
+  worldCup: new URL("../../assets/runtime/how-to/worldcup.webp", import.meta.url).href,
 } as const;
 
 const WEATHER_TUTORIAL_ICON_URLS = {

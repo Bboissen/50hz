@@ -48,6 +48,14 @@ describe("how to play slides", () => {
     expect(images.every((image) => image.alt.length > 0)).toBe(true);
   });
 
+  it("uses optimized WebP tutorial images", () => {
+    const images = HOW_TO_PLAY_SLIDES.flatMap((slide) => slide.panels.flatMap((panel) => panel.images));
+
+    expect(images.length).toBeGreaterThan(0);
+    expect(images.every((image) => image.src.includes("/assets/runtime/how-to/"))).toBe(true);
+    expect(images.every((image) => image.src.endsWith(".webp"))).toBe(true);
+  });
+
   it("uses a generated weather tape on the second tutorial screen", () => {
     const weatherPanel = HOW_TO_PLAY_SLIDES[1]?.panels.find((panel) => panel.title === "Weather tape");
 

@@ -231,5 +231,39 @@
       "source": "/assets/ui/components/upgrade.png",
       "runtime": "/assets/runtime/ui/components/upgrade.webp"
     }
+  ],
+  "howToAssets": [
+    {
+      "source": "/How_to_illustrations/contracts.png",
+      "runtime": "/assets/runtime/how-to/contracts.webp"
+    },
+    {
+      "source": "/How_to_illustrations/demand_forecast.png",
+      "runtime": "/assets/runtime/how-to/demand_forecast.webp"
+    },
+    {
+      "source": "/How_to_illustrations/gauges.png",
+      "runtime": "/assets/runtime/how-to/gauges.webp"
+    },
+    {
+      "source": "/How_to_illustrations/production_panel.png",
+      "runtime": "/assets/runtime/how-to/production_panel.webp"
+    },
+    {
+      "source": "/How_to_illustrations/reset.png",
+      "runtime": "/assets/runtime/how-to/reset.webp"
+    },
+    {
+      "source": "/How_to_illustrations/upgrades.png",
+      "runtime": "/assets/runtime/how-to/upgrades.webp"
+    },
+    {
+      "source": "/How_to_illustrations/weather_timeline.png",
+      "runtime": "/assets/runtime/how-to/weather_timeline.webp"
+    },
+    {
+      "source": "/How_to_illustrations/worldcup.png",
+      "runtime": "/assets/runtime/how-to/worldcup.webp"
+    }
   ]
 }
