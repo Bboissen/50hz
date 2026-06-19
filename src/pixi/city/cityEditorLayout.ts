@@ -83,11 +83,11 @@ export function applyCityEditorCommand(state: CityEditorState, command: CityEdit
   }
 
   if (command.type === "move") {
-    return replaceSelected(state, {
+    return replaceSelected(state, withDepthIndex({
       ...selected,
       x: round3(selected.x + command.dx),
       y: round3(selected.y + command.dy),
-    });
+    }));
   }
 
   return replaceSelected(state, {
@@ -97,23 +97,24 @@ export function applyCityEditorCommand(state: CityEditorState, command: CityEdit
 }
 
 export function serializeCityEditorConfig(layout: CityEditorLayout): string {
+  const normalizedLayout = normalizeCityEditorLayoutDepth(layout);
   const slotById = new Map(CITY_SLOT_CONFIGS.map((config) => [config.id, config]));
 
   return [
     `export const WORLD_CAMERA = ${inlineObject(WORLD_CAMERA)};`,
     "",
     "export const TERRAIN_TILE_CONFIGS = [",
-    `  ${inlineObject(layout.terrain)},`,
+    `  ${inlineObject(withoutId(normalizedLayout.terrain))},`,
     "] as const;",
     "",
     "export const CITY_DECORATION_CONFIGS = [",
-    `  ${inlineObject(layout.openAiSign)},`,
+    `  ${inlineObject(normalizedLayout.openAiSign)},`,
     "] as const;",
     "",
     "export const CITY_SLOT_CONFIGS: readonly CitySlotConfig[] = [",
     ...CITY_EDITOR_ELEMENT_IDS.filter(isSlotId).map((slotId) => {
       const base = slotById.get(slotId);
-      const edited = layout[slotId];
+      const edited = normalizedLayout[slotId];
       return `  ${inlineObject({
         id: slotId,
         upgradeable: base?.upgradeable ?? true,
@@ -128,14 +129,20 @@ export function serializeCityEditorConfig(layout: CityEditorLayout): string {
   ].join("\n");
 }
 
+export function normalizeCityEditorLayoutDepth(layout: CityEditorLayout): CityEditorLayout {
+  return Object.fromEntries(
+    CITY_EDITOR_ELEMENT_IDS.map((elementId) => [elementId, withDepthIndex(layout[elementId])]),
+  ) as CityEditorLayout;
+}
+
 function editable(id: CityEditorElementId, config: { x: number; y: number; scale: number; zIndex: number }): CityEditorElementConfig {
-  return {
+  return withDepthIndex({
     id,
     x: config.x,
     y: config.y,
     scale: config.scale,
     zIndex: config.zIndex,
-  };
+  });
 }
 
 function replaceSelected(state: CityEditorState, config: CityEditorElementConfig): CityEditorState {
@@ -156,6 +163,18 @@ function inlineObject(value: Record<string, unknown>): string {
   return `{ ${Object.entries(value)
     .map(([key, entry]) => `${key}: ${typeof entry === "string" ? JSON.stringify(entry) : String(entry)}`)
     .join(", ")} }`;
+}
+
+function withoutId(config: CityEditorElementConfig): Omit<CityEditorElementConfig, "id"> {
+  const { id: _id, ...rest } = config;
+  return rest;
+}
+
+function withDepthIndex(config: CityEditorElementConfig): CityEditorElementConfig {
+  if (config.id === "terrain") {
+    return { ...config, zIndex: -40 };
+  }
+  return { ...config, zIndex: round3(config.x - config.y) };
 }
 
 function positiveModulo(value: number, divisor: number): number {

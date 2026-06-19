@@ -4,6 +4,7 @@ import {
   applyCityEditorCommand,
   CITY_EDITOR_ELEMENT_IDS,
   createDefaultCityEditorState,
+  normalizeCityEditorLayoutDepth,
   serializeCityEditorConfig,
 } from "../src/pixi/city/cityEditorLayout";
 
@@ -43,5 +44,19 @@ describe("city editor layout", () => {
     expect(snippet).toContain("export const CITY_DECORATION_CONFIGS");
     expect(snippet).toContain("export const CITY_SLOT_CONFIGS");
     expect(snippet).toContain(`x: ${state.layout.terrain.x}`);
+  });
+
+  it("derives render depth from the bottom-left to top-right diagonal", () => {
+    const state = createDefaultCityEditorState();
+    const layout = normalizeCityEditorLayoutDepth({
+      ...state.layout,
+      solar: { ...state.layout.solar, x: 300, y: 900, zIndex: 9999 },
+      business: { ...state.layout.business, x: 1600, y: 400, zIndex: -9999 },
+    });
+
+    expect(layout.terrain.zIndex).toBe(-40);
+    expect(layout.solar.zIndex).toBe(-600);
+    expect(layout.business.zIndex).toBe(1200);
+    expect(layout.business.zIndex).toBeGreaterThan(layout.solar.zIndex);
   });
 });

@@ -3,6 +3,7 @@ import {
   applyCityEditorCommand,
   CITY_EDITOR_ELEMENT_IDS,
   createDefaultCityEditorState,
+  normalizeCityEditorLayoutDepth,
   serializeCityEditorConfig,
   type CityEditorCommand,
   type CityEditorState,
@@ -119,7 +120,10 @@ function loadState(): CityEditorState {
     if (!parsed.layout || typeof parsed.selectedIndex !== "number") {
       return createDefaultCityEditorState();
     }
-    return parsed;
+    return {
+      ...parsed,
+      layout: normalizeCityEditorLayoutDepth(parsed.layout),
+    };
   } catch {
     return createDefaultCityEditorState();
   }
