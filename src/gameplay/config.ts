@@ -67,6 +67,7 @@ export const GAME_CONFIG = {
       solarShare: 0.4,
       windPeakMW: 15,
       windShare: 0.6,
+      rampMWPerSecond: 4,
       windCutInKmh: 12,
       windFullPowerKmh: 45,
       windCutOutKmh: 90,

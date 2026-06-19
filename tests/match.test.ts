@@ -161,12 +161,13 @@ describe("match", () => {
   it("dam drain lowers stored water and wind toggle removes wind contribution", () => {
     let state = createInitialMatchState();
     const initialWater = state.players.player.runtime.storedWaterMWh;
+    const initialWindOutputMW = state.players.player.lastOutputs.windOutputMW;
     state = applyPlayerCommand(state, { type: "setWaterDamMode", playerId: "player", mode: "drain" });
     state = applyPlayerCommand(state, { type: "setWindEnabled", playerId: "player", enabled: false });
     state = tickMatch(state, 1);
 
     expect(state.players.player.runtime.storedWaterMWh).toBeLessThan(initialWater);
-    expect(state.players.player.lastOutputs.windOutputMW).toBe(0);
+    expect(state.players.player.lastOutputs.windOutputMW).toBeLessThan(initialWindOutputMW);
   });
 
   it("hold breaker reset only clears after two seconds", () => {

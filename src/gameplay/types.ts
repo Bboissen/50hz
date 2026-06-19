@@ -45,6 +45,8 @@ export type AssetCapacities = {
 
 export type AssetRuntime = {
   nuclearOutputMW: number;
+  solarOutputMW: number;
+  windOutputMW: number;
   thermalHeat: number;
   storedWaterMWh: number;
   capacityOverloadTimer: number;

@@ -58,4 +58,18 @@ describe("plant upgrades", () => {
     expect(plant.completedLevel(player.capacities)).toBe(3);
     expect(player.capacities.thermalCapacityMW).toBe(GAME_CONFIG.assets.plantLevels.thermalMW[2]);
   });
+
+  it("preserves boiler MW output when a thermal upgrade completes", () => {
+    const player: PlayerState = {
+      ...wealthyPlayer(),
+      controls: {
+        ...wealthyPlayer().controls,
+        thermalThrottle: 1,
+      },
+    };
+    const upgraded = tickUpgrades(buyUpgrade(player, "thermal"), GAME_CONFIG.upgrades.thermal.buildSeconds + 0.1);
+
+    expect(upgraded.capacities.thermalCapacityMW).toBe(GAME_CONFIG.assets.plantLevels.thermalMW[1]);
+    expect(upgraded.controls.thermalThrottle).toBeCloseTo(45 / 70);
+  });
 });
