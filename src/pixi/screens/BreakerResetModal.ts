@@ -111,7 +111,6 @@ export class BreakerResetModal extends Container {
   private renderPanel(state: DispatchConsoleState): void {
     this.labels.removeChildren();
     const progress = state.breakerResetProgress;
-    const reason = state.breakerTripReason?.replace("-", " ").toUpperCase() ?? "UNKNOWN";
     this.g
       .clear()
       .rect(0, 0, 1920, 1080)
@@ -126,7 +125,6 @@ export class BreakerResetModal extends Container {
       .stroke({ color: PIXEL.red, width: 4 });
 
     addLabel(this.labels, "BREAKER RESET REQUIRED", 574, 222, 34, PIXEL.red);
-    addLabel(this.labels, `${reason} / COST ${state.breakerResetCost}`, 958, 238, 18, PIXEL.cream);
     addLabel(this.labels, this.resetArmed ? "BREAKER ARMED" : "FLIP SWITCH TO ON", 646, 690, 24, this.resetArmed ? PIXEL.green : PIXEL.amber);
     addLabel(this.labels, state.canAffordBreakerReset ? "HOLD FUSE BUTTON" : "CASH SHORT", 1014, 690, 24, state.canAffordBreakerReset ? PIXEL.green : PIXEL.red);
     addLabel(this.labels, state.breakerStatusText, 650, 832, 20, PIXEL.cream);
