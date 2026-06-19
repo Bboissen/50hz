@@ -35,13 +35,21 @@ export function createCityEditor(options: { scene: CityScene }): CityEditorContr
     exportBox.select();
     await navigator.clipboard?.writeText(exportBox.value);
   });
+  const layerDownButton = button("Layer -", () => {
+    state = applyCityEditorCommand(state, { type: "layer", dz: -10 });
+    sync();
+  });
+  const layerUpButton = button("Layer +", () => {
+    state = applyCityEditorCommand(state, { type: "layer", dz: 10 });
+    sync();
+  });
   const resetButton = button("Reset layout", () => {
     localStorage.removeItem(STORAGE_KEY);
     state = createDefaultCityEditorState();
     sync();
   });
 
-  element.append(title, selected, values, exportBox, copyButton, resetButton);
+  element.append(title, selected, values, exportBox, layerDownButton, layerUpButton, copyButton, resetButton);
   document.body.appendChild(element);
 
   const onKeyDown = (event: KeyboardEvent): void => {
@@ -103,6 +111,12 @@ function commandFromKey(event: KeyboardEvent): CityEditorCommand | undefined {
   }
   if (event.key.toLowerCase() === "e") {
     return { type: "scale", delta: 0.005 };
+  }
+  if (event.key === "[" || event.key === "PageDown") {
+    return { type: "layer", dz: event.shiftKey ? -100 : -10 };
+  }
+  if (event.key === "]" || event.key === "PageUp") {
+    return { type: "layer", dz: event.shiftKey ? 100 : 10 };
   }
   if (event.key.toLowerCase() === "d") {
     return { type: "toggleDebug" };

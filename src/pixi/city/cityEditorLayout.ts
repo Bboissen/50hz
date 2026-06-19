@@ -42,7 +42,10 @@ export type CityEditorCommand =
   | { type: "previous" }
   | { type: "move"; dx: number; dy: number }
   | { type: "scale"; delta: number }
+  | { type: "layer"; dz: number }
   | { type: "toggleDebug" };
+
+const TERRAIN_Z_INDEX = -10_000;
 
 export function createDefaultCityEditorState(): CityEditorState {
   return {
@@ -83,11 +86,22 @@ export function applyCityEditorCommand(state: CityEditorState, command: CityEdit
   }
 
   if (command.type === "move") {
-    return replaceSelected(state, withDepthIndex({
+    const layerOffset = selected.id === "terrain" ? 0 : selected.zIndex - automaticDepthIndex(selected);
+    return replaceSelected(state, withAutomaticDepth({
       ...selected,
       x: round3(selected.x + command.dx),
       y: round3(selected.y + command.dy),
-    }));
+    }, layerOffset));
+  }
+
+  if (command.type === "layer") {
+    if (selected.id === "terrain") {
+      return state;
+    }
+    return replaceSelected(state, {
+      ...selected,
+      zIndex: round3(selected.zIndex + command.dz),
+    });
   }
 
   return replaceSelected(state, {
@@ -131,12 +145,12 @@ export function serializeCityEditorConfig(layout: CityEditorLayout): string {
 
 export function normalizeCityEditorLayoutDepth(layout: CityEditorLayout): CityEditorLayout {
   return Object.fromEntries(
-    CITY_EDITOR_ELEMENT_IDS.map((elementId) => [elementId, withDepthIndex(layout[elementId])]),
+    CITY_EDITOR_ELEMENT_IDS.map((elementId) => [elementId, clampDepth(layout[elementId])]),
   ) as CityEditorLayout;
 }
 
 function editable(id: CityEditorElementId, config: { x: number; y: number; scale: number; zIndex: number }): CityEditorElementConfig {
-  return withDepthIndex({
+  return withAutomaticDepth({
     id,
     x: config.x,
     y: config.y,
@@ -170,11 +184,22 @@ function withoutId(config: CityEditorElementConfig): Omit<CityEditorElementConfi
   return rest;
 }
 
-function withDepthIndex(config: CityEditorElementConfig): CityEditorElementConfig {
+function clampDepth(config: CityEditorElementConfig): CityEditorElementConfig {
   if (config.id === "terrain") {
-    return { ...config, zIndex: -40 };
+    return { ...config, zIndex: TERRAIN_Z_INDEX };
   }
-  return { ...config, zIndex: round3(config.x - config.y) };
+  return { ...config, zIndex: Math.max(TERRAIN_Z_INDEX + 1, round3(config.zIndex)) };
+}
+
+function withAutomaticDepth(config: CityEditorElementConfig, layerOffset = 0): CityEditorElementConfig {
+  if (config.id === "terrain") {
+    return { ...config, zIndex: TERRAIN_Z_INDEX };
+  }
+  return { ...config, zIndex: round3(automaticDepthIndex(config) + layerOffset) };
+}
+
+function automaticDepthIndex(config: Pick<CityEditorElementConfig, "x" | "y">): number {
+  return round3(config.x - config.y);
 }
 
 function positiveModulo(value: number, divisor: number): number {

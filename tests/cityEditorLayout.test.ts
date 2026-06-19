@@ -46,17 +46,39 @@ describe("city editor layout", () => {
     expect(snippet).toContain(`x: ${state.layout.terrain.x}`);
   });
 
-  it("derives render depth from the bottom-left to top-right diagonal", () => {
-    const state = createDefaultCityEditorState();
-    const layout = normalizeCityEditorLayoutDepth({
-      ...state.layout,
-      solar: { ...state.layout.solar, x: 300, y: 900, zIndex: 9999 },
-      business: { ...state.layout.business, x: 1600, y: 400, zIndex: -9999 },
-    });
+  it("keeps terrain behind every editable city element", () => {
+    const layout = normalizeCityEditorLayoutDepth(createDefaultCityEditorState().layout);
 
-    expect(layout.terrain.zIndex).toBe(-40);
-    expect(layout.solar.zIndex).toBe(-600);
-    expect(layout.business.zIndex).toBe(1200);
-    expect(layout.business.zIndex).toBeGreaterThan(layout.solar.zIndex);
+    expect(layout.terrain.zIndex).toBe(-10_000);
+    for (const elementId of CITY_EDITOR_ELEMENT_IDS.filter((id) => id !== "terrain")) {
+      expect(layout[elementId].zIndex).toBeGreaterThan(layout.terrain.zIndex);
+    }
+  });
+
+  it("allows city element layer edits while keeping terrain fixed", () => {
+    let state = createDefaultCityEditorState();
+    state = applyCityEditorCommand(state, { type: "layer", dz: 50 });
+    expect(state.layout.terrain.zIndex).toBe(-10_000);
+
+    while (CITY_EDITOR_ELEMENT_IDS[state.selectedIndex] !== "solar") {
+      state = applyCityEditorCommand(state, { type: "next" });
+    }
+    const beforeLayer = state.layout.solar.zIndex;
+    state = applyCityEditorCommand(state, { type: "layer", dz: 50 });
+
+    expect(state.layout.solar.zIndex).toBe(beforeLayer + 50);
+  });
+
+  it("preserves manual layer offsets when moving an element", () => {
+    let state = createDefaultCityEditorState();
+    while (CITY_EDITOR_ELEMENT_IDS[state.selectedIndex] !== "solar") {
+      state = applyCityEditorCommand(state, { type: "next" });
+    }
+
+    state = applyCityEditorCommand(state, { type: "layer", dz: 50 });
+    const before = state.layout.solar;
+    state = applyCityEditorCommand(state, { type: "move", dx: 10, dy: -5 });
+
+    expect(state.layout.solar.zIndex).toBe(before.zIndex + 15);
   });
 });
