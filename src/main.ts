@@ -82,9 +82,16 @@ async function bootstrap(): Promise<void> {
     phase = editorMode ? "editing" : "playing";
     gameMenu.hide();
   };
+  const returnToMainMenu = (): void => {
+    state = createInitialMatchState({ seed: matchSeed });
+    accumulator = 0;
+    phase = "menu";
+    gameMenu.showStart();
+  };
   const gameMenu = createGameMenu({
     onPlay: resetMatch,
     onReplay: resetMatch,
+    onMainMenu: returnToMainMenu,
   });
   if (!autoStart) {
     gameMenu.showStart();

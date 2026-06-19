@@ -43,7 +43,7 @@ This visual area must expose the canonical controls from gameplay:
 | Nuclear target | Large slow incremental potentiometer / target trim dial | Current output chases target slowly |
 | Thermal throttle | Incremental rotary throttle | Heat gauge and amber/red overheat lamp |
 | Water dam control | Three-position rotary switch with visible `FILL / HOLD / DRAIN` labels | Stored-water gauge and available MW lamp |
-| Wind turbine routing | Two-position rotary switch with visible `OFF / ON` labels | Wind resource lamp stays stable; switch connects/disconnects wind from grid |
+| Wind turbine routing | Two-position rotary switch with visible `OFF / ON` labels | Wind output lamp shows connected output against installed peak, matching solar for now |
 | Breaker status | Status-only emergency panel or modal | Grid-down, reset-required, and recovery-relief readouts |
 
 ## Screen composition

@@ -35,7 +35,7 @@ export class HitZone extends Container {
         handlers.move?.(event);
       });
     }
-    if (handlers.up) {
+    if (handlers.up || handlers.move) {
       const endPress = (event: FederatedPointerEvent): void => {
         if (!isPressed) {
           return;

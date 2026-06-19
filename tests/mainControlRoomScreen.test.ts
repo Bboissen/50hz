@@ -1,6 +1,7 @@
 import { Circle, Point, Rectangle, Texture } from "pixi.js";
 import { describe, expect, it } from "vitest";
 
+import { GAME_CONFIG } from "../src/gameplay/config";
 import { createInitialMatchState, selectProductionConsoleState } from "../src/gameplay/match";
 import type { PlayerCommand, ProductionConsoleState } from "../src/gameplay/types";
 import { sampleWeather } from "../src/gameplay/weather";
@@ -370,6 +371,8 @@ describe("ControlDeskScreen", () => {
     expect(first?.offsetPixels).toBe(0);
     expect(second?.offsetPixels).toBeGreaterThan(0);
     expect(second?.tileXs).not.toEqual(first?.tileXs);
+    expect(second?.pointerSlotIndex).toBe(0);
+    expect(second?.pointerIcon).toBe(sampleWeather(seed, FORECAST_BUCKET_SECONDS / 2).condition);
     expect(second?.visibleIcons).toEqual(
       second?.visibleSlots.map((slotIndex) => sampleWeather(seed, slotIndex * FORECAST_BUCKET_SECONDS).condition),
     );
@@ -476,6 +479,8 @@ describe("ControlDeskScreen", () => {
     expect(initial.tileSlots).toEqual([0, 1, 2, 3, 4, 5, 6]);
     expect(recycled.tileSlots).toEqual([9, 10, 11, 12, 13, 14, 15]);
     expect(recycled.pointerX).toBe(initial.pointerX);
+    expect(recycled.pointerSlotIndex).toBe(9);
+    expect(recycled.pointerIcon).toBe(sampleWeather(seed, FORECAST_BUCKET_SECONDS * 9 + 3).condition);
     expect(recycled.visibleIcons).toEqual(
       recycled.visibleSlots.map((slotIndex) => sampleWeather(seed, slotIndex * FORECAST_BUCKET_SECONDS).condition),
     );
@@ -531,7 +536,7 @@ describe("ControlDeskScreen", () => {
     expect(screen.debugReadoutText("city")).toBe("House LVL1 Business LVL1 Data Center LVL1");
     expect(screen.debugReadoutText("reactor")).toBe("REACT 35/20 MW");
     expect(screen.debugReadoutText("boiler")).toBe("BOILER 17 MW");
-    expect(screen.debugReadoutText("wind")).toBe("WIND 36K 0/11MW");
+    expect(screen.debugReadoutText("wind")).toBe("WIND 36K 0/15MW");
     expect(screen.debugReadoutText("solar")).toBe("SOLAR 3/10 MW");
     expect(screen.debugReadoutText("dam")).toBe("DAM OUT 7 MW");
     expect(screen.debugReactorLedCount()).toBe(6);
@@ -540,11 +545,36 @@ describe("ControlDeskScreen", () => {
     expect(screen.debugReadoutText("dam")).toBe("DAM FILL 5 MW");
   });
 
-  it("keeps wind resource LEDs selector-driven when the switch disconnects wind from the grid", () => {
+  it("explains when selected dam fill is blocked by full storage", () => {
+    const { resolver } = recordingAssets({ led_empty_10: true, led_blue: true });
+    const screen = new ControlDeskScreen(resolver, () => undefined);
+    const state = {
+      ...productionState(),
+      waterDamMode: "fill" as const,
+      damOutputMW: 0,
+      damAbsorbMW: 0,
+      generationMW: 60,
+      currentDemandMW: 70,
+      storedWaterMWh: 10,
+      waterDamCapacityMWh: 20,
+    };
+
+    screen.update(state);
+    expect(screen.debugReadoutText("dam")).toBe("DAM FILL 0 MW");
+
+    screen.update({ ...state, generationMW: 90, storedWaterMWh: 20 });
+    expect(screen.debugReadoutText("dam")).toBe("DAM FULL");
+  });
+
+  it("drives renewable LEDs from connected ramped output", () => {
     const { resolver } = recordingAssets({ led_empty_10: true, led_green: true });
     const screen = new ControlDeskScreen(resolver, () => undefined);
     const state = {
       ...productionState(),
+      solarFactor: 1,
+      solarOutputMW: 4,
+      solarPotentialMW: 10,
+      solarPeakMW: 10,
       windOutputMW: 9,
       windPotentialMW: 9,
       windPeakMW: 15,
@@ -553,10 +583,12 @@ describe("ControlDeskScreen", () => {
 
     screen.update(state);
     const connectedCount = screen.debugWindLedCount();
+    expect(connectedCount).toBe(6);
+    expect(screen.debugSolarLedCount()).toBe(4);
     screen.update({ ...state, windEnabled: false, windOutputMW: 0, generationMW: state.generationMW - state.windOutputMW });
 
-    expect(screen.debugWindLedCount()).toBe(connectedCount);
-    expect(screen.debugReadoutText("wind")).toBe("WIND 32K 0/9MW");
+    expect(screen.debugWindLedCount()).toBe(0);
+    expect(screen.debugReadoutText("wind")).toBe("WIND 32K 0/15MW");
   });
 
   it("keeps top-level LED strips on the declared manifest coordinates only", () => {
@@ -794,6 +826,21 @@ describe("control desk sprite components", () => {
     expect(gauge.debugNeedleRotation()).not.toBe(firstRotation);
   });
 
+  it("calibrates the supply delta gauge to breaker mismatch thresholds", () => {
+    const layout = CONTROL_DESK_LAYOUT.gauges.supplyDelta;
+    const gauge = new GaugeNeedle(Texture.EMPTY, layout);
+
+    gauge.update(0);
+    const centerRotation = gauge.debugNeedleRotation();
+    gauge.update(GAME_CONFIG.breaker.safeBalanceBand);
+    const safeBandRotation = gauge.debugNeedleRotation();
+
+    expect(layout.minValue).toBe(-GAME_CONFIG.breaker.severeBalanceMismatch);
+    expect(layout.maxValue).toBe(GAME_CONFIG.breaker.severeBalanceMismatch);
+    expect(centerRotation).toBeCloseTo((layout.minAngle + layout.maxAngle) / 2);
+    expect(safeBandRotation - centerRotation).toBeCloseTo((layout.maxAngle - centerRotation) / 3);
+  });
+
   it("maps knob drags to predictable up-right increase and down-left decrease gestures", () => {
     const deltas: number[] = [];
     const knob = new RotaryKnob(Texture.EMPTY, CONTROL_DESK_LAYOUT.knobs.boiler, (deltaRatio) => deltas.push(deltaRatio));
@@ -939,6 +986,25 @@ describe("control desk sprite components", () => {
     zone.emit("globalpointermove", { global: new Point(30, 10) } as never);
 
     expect(events).toEqual(["down", "move", "up"]);
+  });
+
+  it("clears hit-zone press state after release even without an up callback", () => {
+    const events: string[] = [];
+    const zone = new HitZone(
+      CONTROL_DESK_LAYOUT.hitZones.wind,
+      {
+        down: () => events.push("down"),
+        move: () => events.push("move"),
+      },
+      false,
+    );
+
+    zone.emit("pointerdown", { global: new Point(10, 10) } as never);
+    zone.emit("globalpointermove", { global: new Point(20, 10) } as never);
+    zone.emit("pointerup", { global: new Point(20, 10) } as never);
+    zone.emit("globalpointermove", { global: new Point(30, 10) } as never);
+
+    expect(events).toEqual(["down", "move"]);
   });
 
   it("renders hit zone outlines only for layout debug", () => {

@@ -483,7 +483,7 @@ Add:
 Done when:
 
 - authored LED sprites are visible;
-- wind LEDs show available wind/resource level and do not change merely because the wind switch connects or disconnects wind from the grid;
+- wind LEDs show connected wind output against installed wind peak, matching the solar output strip behavior for now;
 - upgrade level LEDs show purchased level immediately;
 - no procedural LED blocks exist;
 - no stray LED appears outside declared layout.
@@ -564,7 +564,7 @@ Done when:
 - each hit zone emits the existing command;
 - reactor and boiler hit zones emit relative adjustments, not direct absolute targets;
 - wind and dam hit zones support click cycling plus left/right drag;
-- wind switching connects/disconnects wind from the grid instead of changing the wind LED resource level;
+- wind switching connects/disconnects wind from the grid and therefore changes the wind output LED strip;
 - upgrade row clicks immediately increase the visible purchased-level counter;
 - no automatic dispatch is introduced;
 - e2e can change one control on the UI-focus route without triggering modals.
@@ -587,12 +587,12 @@ Completed in the current worktree:
 - Phase 2: `/?ui=desk` constructs a deterministic frozen preview state, suppresses debug scenario controls and gameplay modals, and remains frozen even if `?play=1` is also present.
 - Phase 3: `ControlDeskScreen`, `Backplate`, and `controlDeskLayout.ts` exist; the Backplate contract is directly tested as one non-interactive sprite with no procedural fallback.
 - Phase 4: `?layoutDebug=1` exposes alignment boxes/crosshairs from the layout manifest without moving tuning into component code.
-- Phase 5: LED strips use authored sprite assets for top-level controls and green upgrade rows; wind LEDs remain resource/availability display when the grid switch changes; unit tests cover thresholds, sprite-backed rendering, upgrade color, purchased-level display, and manifest coordinates.
+- Phase 5: LED strips use authored sprite assets for top-level controls and green upgrade rows; wind LEDs show connected output against installed wind peak, matching the solar output strip behavior for now; unit tests cover thresholds, sprite-backed rendering, upgrade color, purchased-level display, and manifest coordinates.
 - Phase 6: capacity and supply-delta needles use authored needle sprites; tests prove needle position stays fixed while rotation changes.
 - Phase 7: reactor and boiler use sprite-backed incremental knobs; wind and dam use sprite-backed mode switches with fixed black labels; tests prove modes change without jumping center or rotating labels and hit zones update preview commands.
 - Phase 8: the forecast oscilloscope draws the current marker, range band, forecast curve, and scan animation inside the monitor area; Playwright checks the forecast region is nonblank and animating while gameplay remains frozen.
 - Phase 9: compact black text readouts cover cash, score, tariff, rival tariff, weather, subscribed-load share, load, generation, breaker status, and plant values; plant power values include `MW`; tests prove readouts skip duplicate text writes.
-- Phase 10: transparent hit zones emit existing player commands for reactor, boiler, wind, water-dam modes, and upgrades; knobs are relative adjustments, wind/dam support click cycling and left/right drag, wind toggles grid connection without changing the wind LED resource level, and Playwright proves a UI-focus control drag changes the control region without adding modals.
+- Phase 10: transparent hit zones emit existing player commands for reactor, boiler, wind, water-dam modes, and upgrades; knobs are relative adjustments, wind/dam support click cycling and left/right drag, wind toggles grid connection and updates the wind output LED strip, and Playwright proves a UI-focus control drag changes the control region without adding modals.
 
 Proof artifacts:
 

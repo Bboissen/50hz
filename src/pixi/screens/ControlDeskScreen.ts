@@ -239,8 +239,8 @@ export class ControlDeskScreen extends Container {
     this.supplyDeltaNeedle.update(state.supplyDemandMismatch);
     this.reactorStrip.update(state.nuclearCapacityMW === 0 ? 0 : state.nuclearTargetMW / state.nuclearCapacityMW);
     this.boilerStrip.update(state.thermalThrottle);
-    this.windStrip.update(state.windPeakMW === 0 ? 0 : state.windPotentialMW / state.windPeakMW, "green");
-    this.solarStrip.update(state.solarFactor, "green");
+    this.windStrip.update(state.windPeakMW === 0 ? 0 : state.windOutputMW / state.windPeakMW, "green");
+    this.solarStrip.update(state.solarPeakMW === 0 ? 0 : state.solarOutputMW / state.solarPeakMW, "green");
     this.damStrip.update(state.storedWaterMWh / Math.max(1, state.waterDamCapacityMWh), "blue");
     this.reactorKnob.update(state.nuclearCapacityMW === 0 ? 0 : state.nuclearTargetMW / state.nuclearCapacityMW);
     this.boilerKnob.update(state.thermalThrottle);
@@ -268,7 +268,7 @@ export class ControlDeskScreen extends Container {
     this.readouts.get("boiler")?.update(`BOILER ${state.thermalOutputMW.toFixed(0)} MW`);
     this.readouts
       .get("wind")
-      ?.update(`WIND ${state.currentWindKmh.toFixed(0)}K ${state.windOutputMW.toFixed(0)}/${state.windPotentialMW.toFixed(0)}MW`);
+      ?.update(`WIND ${state.currentWindKmh.toFixed(0)}K ${state.windOutputMW.toFixed(0)}/${state.windPeakMW.toFixed(0)}MW`);
     this.readouts.get("solar")?.update(`SOLAR ${state.solarOutputMW.toFixed(0)}/${state.solarPeakMW.toFixed(0)} MW`);
     this.readouts.get("dam")?.update(formatDamReadout(state));
   }
@@ -318,6 +318,10 @@ export class ControlDeskScreen extends Container {
 
   public debugWindLedCount(): number {
     return this.windStrip.debugActiveCount();
+  }
+
+  public debugSolarLedCount(): number {
+    return this.solarStrip.debugActiveCount();
   }
 
   public debugReactorLedCount(): number {
@@ -654,6 +658,11 @@ function formatDamReadout(state: ProductionConsoleState): string {
   }
   if (state.damAbsorbMW > 0) {
     return `DAM FILL ${state.damAbsorbMW.toFixed(0)} MW`;
+  }
+  if (state.waterDamMode === "fill") {
+    if (state.storedWaterMWh >= state.waterDamCapacityMWh) {
+      return "DAM FULL";
+    }
   }
   return `DAM ${state.waterDamMode.toUpperCase()} 0 MW`;
 }

@@ -1,6 +1,6 @@
 import { Container, Graphics, Sprite } from "pixi.js";
 
-import { sampleWeather, type WeatherCondition } from "../../../gameplay/weather";
+import { sampleWeather, weatherSegmentSeconds, type WeatherCondition } from "../../../gameplay/weather";
 import type { Rect } from "../controlDeskLayout";
 import type { WeatherIconTextures } from "../weatherIconAssets";
 
@@ -18,13 +18,15 @@ export type ForecastBucket = {
 export type ForecastTapeDebugState = {
   offsetPixels: number;
   pointerX: number;
+  pointerSlotIndex: number | undefined;
+  pointerIcon: WeatherCondition | undefined;
   tileSlots: number[];
   tileXs: number[];
   visibleSlots: number[];
   visibleIcons: WeatherCondition[];
 };
 
-export const FORECAST_BUCKET_SECONDS = 15;
+export const FORECAST_BUCKET_SECONDS = weatherSegmentSeconds();
 const FORECAST_TILE_COUNT = 7;
 
 const WEATHER_COLORS: Record<WeatherCondition, number> = {
@@ -96,7 +98,7 @@ export class ForecastTape extends Container {
     const visibleBuckets: ForecastBucket[] = [];
     for (const tile of this.tileViews) {
       const slotOffset = tile.slotIndex - currentSlotIndex;
-      const x = this.bounds.x + this.leftPad + slotOffset * this.cellW - this.offsetPixels;
+      const x = this.pointerX + slotOffset * this.cellW - this.offsetPixels;
       tile.position.set(Math.round(x), this.cellY);
       tile.visible = x + this.cellW > this.bounds.x + this.leftPad && x < this.bounds.x + this.bounds.w - this.leftPad;
       if (tile.visible) {
@@ -110,9 +112,12 @@ export class ForecastTape extends Container {
   public debugState(): ForecastTapeDebugState {
     const ordered = [...this.tileViews].sort((a, b) => a.slotIndex - b.slotIndex);
     const visible = ordered.filter((tile) => tile.visible);
+    const pointerTile = ordered.find((tile) => this.pointerX >= tile.x && this.pointerX < tile.x + this.cellW);
     return {
       offsetPixels: this.offsetPixels,
       pointerX: this.pointerX,
+      pointerSlotIndex: pointerTile?.slotIndex,
+      pointerIcon: pointerTile?.bucket.icon,
       tileSlots: ordered.map((tile) => tile.slotIndex),
       tileXs: ordered.map((tile) => tile.x),
       visibleSlots: visible.map((tile) => tile.slotIndex),

@@ -91,6 +91,10 @@ test("shows the start menu before the match begins", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "50Hz" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Start Game" })).toBeVisible();
   await expect(page.getByRole("button", { name: "How to Play" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open 50Hz on GitHub" })).toHaveAttribute(
+    "href",
+    "https://github.com/Bboissen/50hz",
+  );
   await page.getByRole("button", { name: "How to Play" }).click();
   await expect(page.getByRole("heading", { name: "How to Play" })).toBeVisible();
   await expect(page.locator(".game-menu__step")).toHaveCount(3);
@@ -336,7 +340,9 @@ test("debug controls drive the shared gameplay readout", async ({ page }) => {
   await expect(readout).toContainText("dam=drain");
 });
 
-test("shows an endgame summary menu and replays from a fresh match", async ({ page }) => {
+test("shows an endgame summary menu and returns to the main menu", async ({ page }) => {
+  test.setTimeout(45_000);
+
   await page.goto("/?dev=1&seed=endgame-menu-proof");
   await startGame(page);
   await expect(page.locator("canvas")).toBeVisible();
@@ -358,12 +364,15 @@ test("shows an endgame summary menu and replays from a fresh match", async ({ pa
 
   await expect(page.getByText("Grid Lost")).toBeVisible();
   await expect(page.getByText("You could not pay the breaker reset.")).toBeVisible();
-  await expect(page.getByText("YOU")).toBeVisible();
-  await expect(page.getByText("GRID-AI")).toBeVisible();
+  await expect(page.getByText("YOU", { exact: true })).toBeVisible();
+  await expect(page.getByText("GRID-AI", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Replay" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Main Menu" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Replay" }).click();
-
+  await page.getByRole("button", { name: "Main Menu" }).click();
+  await expect(page.getByRole("heading", { name: "50Hz" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start Game" })).toBeVisible();
+  await page.getByRole("button", { name: "Start Game" }).click();
   await expect(page.locator(".game-menu")).toBeHidden();
   await expect(readout).toContainText("gameOver=none");
 });

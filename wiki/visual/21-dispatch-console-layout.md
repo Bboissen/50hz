@@ -110,7 +110,7 @@ Design for this eye path:
 |---|---|---|
 | Reactor knob | Yes | Incremental rotary target-trim knob with output/target readout |
 | Boiler knob | Yes | Incremental rotary throttle-trim knob with heat/output readout |
-| Wind switch | Yes | Physical two-position rotary switch with fixed `OFF / ON` labels; left/right drag connects or disconnects wind from the grid without changing the resource LED level |
+| Wind switch | Yes | Physical two-position rotary switch with fixed `OFF / ON` labels; left/right drag connects or disconnects wind from the grid and updates the wind output LED strip |
 | Dam mode switch | Yes | Physical three-position rotary switch with fixed `FILL / HOLD / DRAIN` labels, left/right drag, and storage gauge |
 | Upgrade Rack | Yes | Raised buttons, green lamps, cost/status labels; click shows purchased level immediately without dimming unrelated rows |
 | Contract Offer Modal | Yes when offer-active | Blocking center overlay; accept/decline buttons and countdown |
