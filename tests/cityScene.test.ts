@@ -9,7 +9,7 @@ import { createInitialMatchState, selectProductionConsoleState } from "../src/ga
 import { AnimatedTurbineField } from "../src/pixi/city/AnimatedTurbineField";
 import { CITY_ASSET_SOURCES, CITY_LEVELS, CITY_SLOT_IDS } from "../src/pixi/city/cityAssets";
 import { CityScene, type CitySceneTextures } from "../src/pixi/city/CityScene";
-import { CITY_DECORATION_CONFIGS, CITY_SLOT_CONFIGS } from "../src/pixi/city/citySceneConfig";
+import { CITY_DECORATION_CONFIGS, CITY_SLOT_CONFIGS, TERRAIN_TILE_CONFIGS } from "../src/pixi/city/citySceneConfig";
 import type { CityLevel, CitySlotId } from "../src/pixi/city/cityTypes";
 import { cityViewStateFromProductionState, selectDamWaterVisualState, selectWindFarmVisualState } from "../src/pixi/city/cityState";
 
@@ -334,18 +334,37 @@ describe("city view production integration", () => {
     }
   });
 
-  it("uses larger readable city tiles while shrinking the OpenAI sign", () => {
+  it("uses the edited city composition with terrain behind all objects", () => {
     const slotScale = Object.fromEntries(CITY_SLOT_CONFIGS.map((slot) => [slot.id, slot.scale]));
-    const openAiScale = CITY_DECORATION_CONFIGS.find((decoration) => decoration.id === "openAiSign")?.scale;
+    const terrain = TERRAIN_TILE_CONFIGS[0];
+    const openAiSign = CITY_DECORATION_CONFIGS.find((decoration) => decoration.id === "openAiSign");
+    const cityZIndexes = [
+      ...CITY_SLOT_CONFIGS.map((slot) => slot.zIndex),
+      ...(openAiSign ? [openAiSign.zIndex] : []),
+    ];
 
-    expect(slotScale.dam).toBeCloseTo(0.205 * 1.5, 3);
-    expect(slotScale.nuclear).toBeCloseTo(0.29 * 1.5, 3);
-    expect(slotScale.wind).toBeCloseTo(0.25 * 1.5, 3);
-    expect(slotScale.solar).toBeCloseTo(0.25 * 1.5, 3);
-    expect(slotScale.thermal).toBeCloseTo(0.193 * 2, 3);
-    expect(slotScale.business).toBeCloseTo(0.27 * 1.5, 3);
-    expect(slotScale.household).toBeCloseTo(0.255 * 1.5, 3);
-    expect(slotScale.datacenter).toBeCloseTo(0.233 * 1.5, 3);
-    expect(openAiScale).toBeCloseTo(0.315 * 0.7, 3);
+    expect(terrain.zIndex).toBe(-10_000);
+    expect(Math.min(...cityZIndexes)).toBeGreaterThan(terrain.zIndex);
+    expect(CITY_SLOT_CONFIGS.map((slot) => slot.id)).toEqual([
+      "dam",
+      "nuclear",
+      "wind",
+      "solar",
+      "thermal",
+      "business",
+      "household",
+      "datacenter",
+    ]);
+    expect(slotScale).toMatchObject({
+      dam: 0.2975,
+      nuclear: 0.505,
+      wind: 0.38,
+      solar: 0.38,
+      thermal: 0.396,
+      business: 0.32,
+      household: 0.3125,
+      datacenter: 0.3545,
+    });
+    expect(openAiSign?.scale).toBe(0.2255);
   });
 });
