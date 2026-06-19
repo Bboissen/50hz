@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true
+  },
+  "include": [
+    "assetManifest.ts",
+    "CityScene.ts",
+    "CitySlot.ts",
+    "citySceneConfig.ts",
+    "cityTypes.ts",
+    "main.ts",
+    "nodeTypes.d.ts",
+    "playwright.config.ts",
+    "smoke.spec.ts",
+    "vite.config.ts"
+  ]
+}
