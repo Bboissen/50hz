@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.weather-timeline.tsbuildinfo",
+    "types": ["vite/client", "@playwright/test"]
+  },
+  "include": ["*.ts"]
+}

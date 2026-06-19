@@ -69,7 +69,7 @@ export class BreakerResetModal extends Container {
     if (this.resetArmed && this.holdingFuse && state.canAffordBreakerReset && dt > 0) {
       this.sink({ type: "holdBreakerReset", playerId: "player", seconds: dt });
     }
-    this.draw(state);
+    this.renderPanel(state);
   }
 
   public deactivate(): void {
@@ -108,7 +108,7 @@ export class BreakerResetModal extends Container {
     this.addChild(switchZone, fuseZone);
   }
 
-  private draw(state: DispatchConsoleState): void {
+  private renderPanel(state: DispatchConsoleState): void {
     this.labels.removeChildren();
     const progress = state.breakerResetProgress;
     const reason = state.breakerTripReason?.replace("-", " ").toUpperCase() ?? "UNKNOWN";
@@ -131,12 +131,12 @@ export class BreakerResetModal extends Container {
     addLabel(this.labels, state.canAffordBreakerReset ? "HOLD FUSE BUTTON" : "CASH SHORT", 1014, 690, 24, state.canAffordBreakerReset ? PIXEL.green : PIXEL.red);
     addLabel(this.labels, state.breakerStatusText, 650, 832, 20, PIXEL.cream);
 
-    this.drawHazardSwitch(632, 304, 340, 340);
-    this.drawFuseButton(1130, 452, 112, progress, state.canAffordBreakerReset);
-    this.drawProgressBar(646, 770, 628, 34, progress, state.canAffordBreakerReset);
+    this.renderHazardSwitch(632, 304, 340, 340);
+    this.renderFuseButton(1130, 452, 112, progress, state.canAffordBreakerReset);
+    this.renderProgressBar(646, 770, 628, 34, progress, state.canAffordBreakerReset);
   }
 
-  private drawHazardSwitch(x: number, y: number, w: number, h: number): void {
+  private renderHazardSwitch(x: number, y: number, w: number, h: number): void {
     this.g.rect(x, y, w, h).fill({ color: PIXEL.hazard }).stroke({ color: PIXEL.black, width: 6 });
     for (let stripe = -60; stripe < w + h; stripe += 58) {
       this.g
@@ -184,7 +184,7 @@ export class BreakerResetModal extends Container {
     addLabel(this.labels, "FUSE", x + 144, y + h - 26, 10, PIXEL.black);
   }
 
-  private drawFuseButton(cx: number, cy: number, radius: number, progress: number, canReset: boolean): void {
+  private renderFuseButton(cx: number, cy: number, radius: number, progress: number, canReset: boolean): void {
     const pressOffset = this.holdingFuse ? 8 : 0;
     const fill = canReset ? PIXEL.green : PIXEL.smoke;
     this.g.circle(cx + 22, cy + 22, radius).fill({ color: 0x000000, alpha: 0.32 });
@@ -210,7 +210,7 @@ export class BreakerResetModal extends Container {
     addLabel(this.labels, "HOLD", cx - 44, cy + pressOffset - 12, 24, PIXEL.black);
   }
 
-  private drawProgressBar(x: number, y: number, w: number, h: number, progress: number, canReset: boolean): void {
+  private renderProgressBar(x: number, y: number, w: number, h: number, progress: number, canReset: boolean): void {
     this.g
       .rect(x, y, w, h)
       .fill({ color: PIXEL.black })

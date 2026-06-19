@@ -1,18 +1,18 @@
 ---
-title: "Production Console Visual Direction"
+title: "Embedded Production Controls Visual Direction"
 type: "screen"
 status: "draft"
 updated: "2026-06-18"
-tags: ["50hz", "visual-design", "production-console", "manual-control", "controls"]
-summary: "Early visual direction for the manual production control center: gauges, potentiometers, switches, and breaker/reset controls."
+tags: ["50hz", "visual-design", "main-control-room", "manual-control", "controls"]
+summary: "Visual direction for the embedded manual production controls: gauges, potentiometers, switches, and breaker/reset status."
 related: ["../gameplay/06-manual-control-room.md", "../gameplay/07-generation-assets.md", "../gameplay/08-grid-overload-and-reliability.md", "21-dispatch-console-layout.md", "25-grid-pressure-meter.md"]
 ---
 
-# Production Console Visual Direction
+# Embedded Production Controls Visual Direction
 
 ## Purpose
 
-The Production Console is the manual control-center screen.
+The old separate Production Console is deprecated as a user-facing route. Its controls now live inside the single Main Control Room screen.
 
 It answers:
 
@@ -20,7 +20,7 @@ It answers:
 How do I physically change generation and load response right now?
 ```
 
-This screen is not fully visually established yet. Until final art direction is chosen, use a physical control-room language:
+Use a physical control-room language:
 
 ```txt
 gauges
@@ -36,31 +36,32 @@ mechanical detents
 
 Gameplay owns the mechanics.
 
-This visual screen must expose the canonical controls from gameplay:
+This visual area must expose the canonical controls from gameplay:
 
 | Gameplay control | Visual object | Required feedback |
 |---|---|---|
-| Nuclear target | Large slow potentiometer / target dial | Current output chases target slowly |
-| Thermal throttle | Lever or rotary throttle | Heat gauge and amber/red overheat lamp |
-| Water dam control | Three-position switch: `FILL / HOLD / DRAIN` | Stored-water gauge and available MW lamp |
-| Wind turbine routing | Protected toggle: `ON / OFF` | Wind-valid lamp and current wind output |
-| Breaker status | Status-only emergency panel | Grid-down, reset-required, and recovery-relief readouts |
+| Nuclear target | Large slow incremental potentiometer / target trim dial | Current output chases target slowly |
+| Thermal throttle | Incremental rotary throttle | Heat gauge and amber/red overheat lamp |
+| Water dam control | Three-position rotary switch with visible `FILL / HOLD / DRAIN` labels | Stored-water gauge and available MW lamp |
+| Wind turbine routing | Two-position rotary switch with visible `OFF / ON` labels | Wind resource lamp stays stable; switch connects/disconnects wind from grid |
+| Breaker status | Status-only emergency panel or modal | Grid-down, reset-required, and recovery-relief readouts |
 
 ## Screen composition
 
-Recommended MVP layout:
+Recommended MVP placement:
 
 ```txt
-┌────────────────────────────────────────────────────────────────────────────┐
-│ PRODUCTION CONSOLE                         GRID PRESSURE MINI STATUS       │
-├──────────────────────┬──────────────────────┬─────────────────────────────┤
-│ REACTOR TARGET       │ BOILER THROTTLE      │ WATER DAM                   │
-│ big rotary dial      │ lever + heat gauge   │ FILL / HOLD / DRAIN switch  │
-│ current vs target    │ output MW            │ reservoir gauge             │
-├──────────────────────┴──────────────────────┼─────────────────────────────┤
-│ RENEWABLE ROUTING                            │ EMERGENCY PANEL             │
-│ wind ON/OFF, solar available, weather lamp   │ BREAKER STATUS              │
-└──────────────────────────────────────────────┴─────────────────────────────┘
+RIGHT CONTROL TOWER
+├─ REACTOR target-trim knob + output lamp row
+├─ BOILER throttle-trim knob + heat lamp row
+├─ WIND two-position rotary switch + solar readout
+└─ DAM storage gauge + FILL/HOLD/DRAIN rotary switch
+
+BOTTOM DESK
+├─ Capacity meter
+├─ Supply-delta meter
+├─ Load forecast monitor
+└─ Upgrade rack
 ```
 
 ## Visual rules
@@ -68,8 +69,15 @@ Recommended MVP layout:
 - Controls must look physically actionable, not like flat dashboard cards.
 - Every interactive control needs a visible current state.
 - Slow controls need target and current readouts so inertia is readable.
+- Reactor and boiler knobs are relative trim controls: click-drag changes the target/throttle incrementally instead of jumping to an absolute dial position.
+- Wind and dam switches must support left/right drag, while center taps cycle through modes and reverse at the ends.
+- Wind and dam switch labels stay fixed; only the switch knob sprite rotates.
+- Power numbers beside plant names must carry `MW` for context.
+- Upgrade rows show the purchased level immediately and must not dim unrelated rows after one purchase.
+- The forecast monitor can animate as a validation example, but that animation must not advance gameplay state.
+- Added live text on the desk must be black, compact, and placed on the desk-top band above the main control desk.
 - Emergency status needs guarded styling and clear downside labels.
-- Breaker reset itself is a main-overview modal: large switch to arm, then green fuse button hold.
+- Breaker reset itself is a blocking main-control-room modal: large switch to arm, then green fuse button hold.
 - Do not add automatic dispatch controls.
 - Do not hide overload/underload behind generic warning text.
 
@@ -118,14 +126,18 @@ type ProductionConsoleState = {
 
 ## Minimum implementation
 
-The first version can use procedural PixiJS controls:
+The current sprite-backed desk migration uses authored assets for the physical controls:
 
-- `Graphics` dials and levers,
-- lamp circles/squares,
-- text labels,
-- simple switch hit areas,
-- reset status/progress readout,
-- no authored sprites required.
+- `assets/ui/background/empty_background_1920.runtime.png` for the shipped desk backplate,
+- authored LED, knob, needle, and upgrade sprites for visible controls,
+- text labels and approved live-state overlays for readouts,
+- transparent hit areas for interaction,
+- green upgrade-level LEDs,
+- fixed black switch labels,
+- forecast scan animation inside the monitor only,
+- no procedural dials, levers, lamp blocks, panel chrome, or gauge faces over the clean desk.
+
+The `assets/ui/full_clean.png` image is a dev reference only. Use it for `?deskRef=1` alignment overlays, not as the shipped interface.
 
 ## Acceptance criteria
 

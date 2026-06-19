@@ -137,6 +137,43 @@ export function getPublicEventState(timeSeconds: number): PublicEventState {
   };
 }
 
+export function forecastEventQueue(timeSeconds: number, horizonSeconds = 45): TimelineToken[] {
+  return DEMO_EVENTS.flatMap((event) => {
+    const activeToken = tokenForEvent(event, timeSeconds);
+    if (activeToken) {
+      return [activeToken];
+    }
+
+    const secondsUntilWarning = event.warningAt - timeSeconds;
+    if (secondsUntilWarning >= 0 && secondsUntilWarning <= horizonSeconds) {
+      return [
+        {
+          id: event.id,
+          label: `${event.label} SOON`,
+          phase: "warning" as const,
+          remainingSeconds: secondsUntilWarning,
+          intensity: 0,
+        },
+      ];
+    }
+
+    const secondsUntilImpact = event.impactAt - timeSeconds;
+    if (secondsUntilImpact >= 0 && secondsUntilImpact <= horizonSeconds) {
+      return [
+        {
+          id: event.id,
+          label: `${event.label} WARNING`,
+          phase: "warning" as const,
+          remainingSeconds: secondsUntilImpact,
+          intensity: 0,
+        },
+      ];
+    }
+
+    return [];
+  }).sort((a, b) => a.remainingSeconds - b.remainingSeconds);
+}
+
 export function sampleEventEnvironment(args: {
   seed: string;
   demandSchedule: DemandScheduleStep[];

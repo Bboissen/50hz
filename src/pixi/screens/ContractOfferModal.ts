@@ -70,7 +70,7 @@ export class ContractOfferModal extends Container {
 
     this.latestOffer = state.contractOffer;
     this.visible = true;
-    this.draw(state.contractOffer);
+    this.renderPanel(state.contractOffer);
   }
 
   public deactivate(): void {
@@ -101,7 +101,7 @@ export class ContractOfferModal extends Container {
     this.addChild(hit);
   }
 
-  private draw(offer: ContractOfferState): void {
+  private renderPanel(offer: ContractOfferState): void {
     this.labels.removeChildren();
     const seconds = Math.max(0, Math.ceil(offer.remainingSeconds));
     const loadLabel = `+${offer.loadMW} MW COMMITTED LOAD`;
@@ -139,11 +139,11 @@ export class ContractOfferModal extends Container {
     addLabel(this.labels, rewardLabel, 658, 552, 22, PIXEL.black);
     addLabel(this.labels, strikeLabel, 658, 598, 21, PIXEL.red);
 
-    this.drawButton(630, 714, 286, 74, "ACCEPT", PIXEL.green);
-    this.drawButton(1004, 714, 286, 74, "DECLINE", PIXEL.smoke);
+    this.renderButton(630, 714, 286, 74, "ACCEPT", PIXEL.green);
+    this.renderButton(1004, 714, 286, 74, "DECLINE", PIXEL.smoke);
   }
 
-  private drawButton(x: number, y: number, w: number, h: number, text: string, fill: number): void {
+  private renderButton(x: number, y: number, w: number, h: number, text: string, fill: number): void {
     this.g
       .rect(x, y, w, h)
       .fill({ color: PIXEL.black })

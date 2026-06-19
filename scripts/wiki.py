@@ -112,12 +112,14 @@ def cmd_check(_args: argparse.Namespace) -> int:
             errors.append(f"{rel}: invalid status {meta.get('status')!r}")
         if not isinstance(meta.get("tags"), list):
             errors.append(f"{rel}: tags must be a list")
-        if not isinstance(meta.get("related"), list):
+        related_links = meta.get("related")
+        if not isinstance(related_links, list):
             errors.append(f"{rel}: related must be a list")
-        for related in meta.get("related", []):
-            target = resolve_related(path, str(related))
-            if not target.exists():
-                errors.append(f"{rel}: broken related link {related}")
+        else:
+            for related in related_links:
+                target = resolve_related(path, str(related))
+                if not target.exists():
+                    errors.append(f"{rel}: broken related link {related}")
 
     if errors:
         print("Wiki check failed:")

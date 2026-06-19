@@ -20,21 +20,20 @@ The game should not be mostly automatic.
 
 ## Screen model
 
-Use 2 main screens for MVP.
+Use 1 main operational screen for MVP.
 
 | Screen | Purpose |
 |---|---|
-| Main overview | Understand current danger quickly |
-| Production console | Manually match supply to load |
+| Main control room | Understand current danger and manually match supply to load |
 
-Informative detailed panel can be embedded in the main overview screen as modal.
+The main control room combines the diagnostic overview and physical production controls. It is still manual: the player must read the instruments and operate reactor, thermal, wind, and water-dam controls directly. Blocking modals can appear above this screen for fixed-contract offers and breaker reset.
 
-## Screen 1 — Main overview
+## Main control room
 
 Purpose:
 
 ```txt
-What is going wrong right now?
+What is going wrong right now, and what can I manually do about it?
 ```
 
 ┌────────────────────────────────────────────────────────────────────────────┐
@@ -55,22 +54,22 @@ What is going wrong right now?
 │ Renew.   [■■□] €60       50Hz LOCK / OVERLOAD LAMP                       │
 └────────────────────────────────────────────────────────────────────────────┘
 
+Core areas:
+
+- top-left world/load viewport for the phase-2 game view,
+- bottom desk for upgrades, capacity, supply delta, and load forecast,
+- right control tower for reactor target, thermal throttle, wind routing, solar readout, and water-dam mode,
+- blocking contract and breaker-reset modals above the desk.
+
 Controls:
 
-- upgrade
-- play DISPATCH CARDS
-- accept fixed contracts
-- reset the breaker through the emergency modal when grid-down
-
-This screen is mainly diagnostic.
-
-## Screen 2 — Production console
-
-Purpose:
-
-```txt
-Manually match supply to customer load.
-```
+- upgrade,
+- accept fixed contracts,
+- set nuclear target,
+- set thermal throttle,
+- set wind turbine routing,
+- set water dam fill/hold/drain,
+- reset the breaker through the emergency modal when grid-down.
 
 The player must keep controllable generation output within 5% of current demand.
 
@@ -89,9 +88,9 @@ Controls:
 | Thermal throttle | Fast expensive emergency power |
 | Water dam control | Fill / neutral / drain |
 | Wind turbine routing | ON / OFF |
-| Breaker status | Grid-down and reset status; the reset action is handled by the main overview emergency modal |
+| Breaker status | Grid-down and reset status; the reset action is handled by the blocking emergency modal |
 
-When the breaker trips, the game returns the player to the main overview and opens a blocking reset modal. The player must flip the large breaker switch to `ON`, then hold the fuse button for 2 seconds. Completing the hold pays the reset cost; if the player cannot pay, the match ends immediately. Every plant reports `gridDown` and contributes 0 MW while reset is required. Supply, demand, and served contract load read as 0 until reset completes. For 15 seconds after reset, served load follows actual supply so the operator has recovery headroom while ramping generation back up.
+When the breaker trips, the game stays on the main control room and opens a blocking reset modal. The player must flip the large breaker switch to `ON`, then hold the fuse button for 2 seconds. Completing the hold pays the reset cost; if the player cannot pay, the match ends immediately. Every plant reports `gridDown` and contributes 0 MW while reset is required. Supply, demand, and served contract load read as 0 until reset completes. For 15 seconds after reset, served load follows actual supply so the operator has recovery headroom while ramping generation back up.
 
 ## Manual control principle
 
@@ -103,13 +102,13 @@ Each control should have a different response profile.
 | Thermal | Fast but costly | Crisis response |
 | Water dam | Immediate if filled, unavailable if empty | Timing |
 | Wind turbine | Produces only inside valid wind-speed range | Weather reading |
-| Breaker reset | Main-overview switch arm plus fuse hold, paid from cash reserve | Recovery discipline |
+| Breaker reset | Main-control-room modal switch arm plus fuse hold, paid from cash reserve | Recovery discipline |
 
 ## Anti-patterns
 
 Avoid:
 
-- one master screen with every control available,
+- passive dashboards where controls are hidden or automatic,
 - automatic optimal dispatch,
 - hidden events with no warning,
 - controls that all behave the same.
