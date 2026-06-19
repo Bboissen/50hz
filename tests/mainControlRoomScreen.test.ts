@@ -271,12 +271,14 @@ describe("ControlDeskScreen", () => {
     const screen = new ControlDeskScreen(resolver, (command) => commands.push(command));
 
     screen.update(productionState());
-    screen.hitZoneLayer.children[2]?.emit("pointerdown", { global: deskGlobalPoint({ x: 1560, y: 390 }) } as never);
-    screen.hitZoneLayer.children[2]?.emit("globalpointermove", { global: deskGlobalPoint({ x: 1508, y: 390 }) } as never);
-    screen.hitZoneLayer.children[2]?.emit("pointerup", { global: deskGlobalPoint({ x: 1508, y: 390 }) } as never);
-    screen.hitZoneLayer.children[4]?.emit("pointerdown", { global: deskGlobalPoint({ x: 1735, y: 562 }) } as never);
-    screen.hitZoneLayer.children[4]?.emit("globalpointermove", { global: deskGlobalPoint({ x: 1800, y: 562 }) } as never);
-    screen.hitZoneLayer.children[4]?.emit("pointerup", { global: deskGlobalPoint({ x: 1800, y: 562 }) } as never);
+    const windCenter = CONTROL_DESK_LAYOUT.knobs.windSwitch.center;
+    const damCenter = CONTROL_DESK_LAYOUT.knobs.dam.center;
+    screen.hitZoneLayer.children[2]?.emit("pointerdown", { global: deskGlobalPoint(windCenter) } as never);
+    screen.hitZoneLayer.children[2]?.emit("globalpointermove", { global: deskGlobalPoint({ x: windCenter.x - 52, y: windCenter.y }) } as never);
+    screen.hitZoneLayer.children[2]?.emit("pointerup", { global: deskGlobalPoint({ x: windCenter.x - 52, y: windCenter.y }) } as never);
+    screen.hitZoneLayer.children[4]?.emit("pointerdown", { global: deskGlobalPoint(damCenter) } as never);
+    screen.hitZoneLayer.children[4]?.emit("globalpointermove", { global: deskGlobalPoint({ x: damCenter.x + 65, y: damCenter.y }) } as never);
+    screen.hitZoneLayer.children[4]?.emit("pointerup", { global: deskGlobalPoint({ x: damCenter.x + 65, y: damCenter.y }) } as never);
 
     expect(commands).toContainEqual({ type: "setWindEnabled", playerId: "player", enabled: false });
     expect(commands).toContainEqual({ type: "setWaterDamMode", playerId: "player", mode: "drain" });
@@ -367,10 +369,10 @@ describe("ControlDeskScreen", () => {
     const second = screen.debugDemandForecastMonitorState();
 
     expect(first?.plot).toEqual({
-      x: CONTROL_DESK_LAYOUT.demandMonitor.x + 40,
-      y: CONTROL_DESK_LAYOUT.demandMonitor.y + 70,
-      w: CONTROL_DESK_LAYOUT.demandMonitor.w - 74,
-      h: CONTROL_DESK_LAYOUT.demandMonitor.h - 122,
+      x: CONTROL_DESK_LAYOUT.demandMonitor.x + 30,
+      y: CONTROL_DESK_LAYOUT.demandMonitor.y + 60,
+      w: CONTROL_DESK_LAYOUT.demandMonitor.w - 60,
+      h: CONTROL_DESK_LAYOUT.demandMonitor.h - 108,
     });
     expect(first?.demandPoints).toHaveLength(3);
     expect(first?.supplyPoint.x).toBe(second?.supplyPoint.x);
@@ -394,16 +396,14 @@ describe("ControlDeskScreen", () => {
     );
   });
 
-  it("shows the player versus rival subscribed-load share in the desk-top HUD", () => {
+  it("shows compact event and city-level readouts in the desk-top HUD", () => {
     const { resolver } = recordingAssets();
     const screen = new ControlDeskScreen(resolver, () => undefined);
 
     screen.update(productionState());
 
-    expect(screen.debugReadoutText("share")).toBe("SHARE YOU 50% RIVAL 50%");
-    expect(screen.debugReadoutText("weather")).toContain("WX");
     expect(screen.debugReadoutText("incidents")).toContain("INCIDENT");
-    expect(screen.debugReadoutText("city")).toMatch(/^CITY H\d B\d D\d$/);
+    expect(screen.debugReadoutText("city")).toMatch(/^House LVL\d Business LVL\d Data Center LVL\d$/);
     expect(screen.debugReadoutText("load")).toMatch(/^DEMAND \d+ > \d+ > \d+ MW$/);
     expect(screen.debugReadoutText("reactor")).toMatch(/MW$/);
     expect(screen.debugReadoutText("boiler")).toMatch(/MW$/);
@@ -443,7 +443,7 @@ describe("ControlDeskScreen", () => {
     screen.update(state);
 
     expect(screen.debugReadoutText("generation")).toBe("GEN 120.0 MW");
-    expect(screen.debugReadoutText("weather")).toBe("WX WIND 36K / DAWN");
+    expect(screen.debugReadoutText("city")).toBe("House LVL1 Business LVL1 Data Center LVL1");
     expect(screen.debugReadoutText("reactor")).toBe("REACT 35/20 MW");
     expect(screen.debugReadoutText("boiler")).toBe("BOILER 17 MW");
     expect(screen.debugReadoutText("wind")).toBe("WIND 36K 0/11MW");
@@ -518,8 +518,10 @@ describe("ControlDeskScreen", () => {
     expect(CONTROL_DESK_LAYOUT.upgradeRows.at(-1)?.hitZone.y).toBeLessThanOrEqual(870);
   });
 
-  it("keeps reactor and boiler readout boxes wide enough for MW labels", () => {
-    expect(CONTROL_DESK_LAYOUT.text.reactor.maxWidth).toBeGreaterThanOrEqual(186);
+  it("keeps single-line right-tower readouts from wrapping", () => {
+    expect(CONTROL_DESK_LAYOUT.text.reactor.maxWidth).toBeUndefined();
+    expect(CONTROL_DESK_LAYOUT.text.wind.maxWidth).toBeUndefined();
+    expect(CONTROL_DESK_LAYOUT.text.solar.maxWidth).toBeUndefined();
     expect(CONTROL_DESK_LAYOUT.text.boiler.maxWidth).toBeGreaterThanOrEqual(210);
   });
 
@@ -535,6 +537,7 @@ describe("ControlDeskScreen", () => {
     expect(rows.map((row) => row.debugPriceFill())).toEqual([0x1a130d, 0x1a130d, 0x1a130d, 0x1a130d]);
     expect(rows.flatMap((row) => row.debugActiveLedColors()).every((color) => color === "green")).toBe(true);
     expect(screen.debugControls().wind.debugLabelFills()).toEqual([0x1a130d, 0x1a130d]);
+    expect(screen.debugControls().wind.debugLabelPositions().every((position) => position.y < 0)).toBe(true);
     expect(screen.debugControls().dam.debugLabelFills()).toEqual([0x1a130d, 0x1a130d, 0x1a130d]);
   });
 
@@ -607,6 +610,27 @@ describe("ControlDeskScreen", () => {
     expect(screen.debugReadoutPosition("cash")).toEqual({ x: customLayout.text.cash.x, y: customLayout.text.cash.y });
     expect(reactorHitZone?.position.x).toBe(customLayout.hitZones.reactor.x);
     expect(reactorHitZone?.position.y).toBe(customLayout.hitZones.reactor.y);
+  });
+
+  it("exposes right-tower hardware as direct layout-editor targets", () => {
+    const { resolver } = recordingAssets({ led_empty_10: true, knob: true, rotary_left: true, rotary_right: true, rotary_center: true });
+    const screen = new ControlDeskScreen(resolver, () => undefined);
+
+    const targetIds = screen.createLayoutEditorTargets().map((target) => target.id);
+
+    expect(targetIds).toEqual(
+      expect.arrayContaining([
+        "led.reactor",
+        "led.boiler",
+        "led.wind",
+        "led.solar",
+        "led.dam",
+        "knob.reactor",
+        "knob.boiler",
+        "switch.wind",
+        "switch.dam",
+      ]),
+    );
   });
 
   it("keeps alignment and hit-zone debug visuals opt-in", () => {
@@ -724,6 +748,7 @@ describe("control desk sprite components", () => {
     expect(dam.debugSelectedMode()).toBe("drain");
     expect(dam.debugLabelTexts()).toEqual(["FILL", "HOLD", "DRAIN"]);
     expect(dam.debugLabelRotations()).toEqual([0, 0, 0]);
+    expect(dam.debugLabelPositions().every((position) => position.y < 0)).toBe(true);
     expect(drainTransform.x).toBe(fillTransform.x);
     expect(drainTransform.y).toBe(fillTransform.y);
     expect(drainTransform.rotation).not.toBe(fillTransform.rotation);

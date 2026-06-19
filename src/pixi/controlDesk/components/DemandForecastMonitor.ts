@@ -32,10 +32,10 @@ export class DemandForecastMonitor extends Container {
     this.eventMode = "none";
     this.interactiveChildren = false;
     this.plot = {
-      x: bounds.x + 40,
-      y: bounds.y + 70,
-      w: bounds.w - 74,
-      h: bounds.h - 122,
+      x: bounds.x + 30,
+      y: bounds.y + 60,
+      w: bounds.w - 60,
+      h: bounds.h - 108,
     };
     this.title = new Text({
       text: "LOAD Forecast",
@@ -50,9 +50,9 @@ export class DemandForecastMonitor extends Container {
     this.title.position.set(bounds.x + bounds.w / 2, bounds.y + 24);
 
     this.labels = [
-      this.createLabel("NOW", bounds.x + 40, bounds.y + bounds.h - 38, fontFamily, "left"),
-      this.createLabel("TIME", bounds.x + bounds.w / 2, bounds.y + bounds.h - 38, fontFamily, "center"),
-      this.createLabel("+30s", bounds.x + bounds.w - 40, bounds.y + bounds.h - 38, fontFamily, "right"),
+      this.createLabel("NOW", bounds.x + 30, bounds.y + bounds.h - 34, fontFamily, "left"),
+      this.createLabel("TIME", bounds.x + bounds.w / 2, bounds.y + bounds.h - 34, fontFamily, "center"),
+      this.createLabel("+30s", bounds.x + bounds.w - 30, bounds.y + bounds.h - 34, fontFamily, "right"),
     ];
     this.addChild(this.frame, this.plotLayer, this.title, ...this.labels);
     this.drawFrame();
@@ -89,12 +89,12 @@ export class DemandForecastMonitor extends Container {
   private drawFrame(): void {
     this.frame
       .clear()
-      .rect(this.bounds.x, this.bounds.y, this.bounds.w, this.bounds.h)
-      .fill({ color: 0xd4c09a })
-      .stroke({ color: 0x1f1a13, width: 4 })
-      .rect(this.bounds.x + 20, this.bounds.y + 22, this.bounds.w - 40, this.bounds.h - 44)
+      .rect(this.bounds.x + 12, this.bounds.y + 12, this.bounds.w - 24, this.bounds.h - 24)
+      .fill({ color: 0x071007 })
+      .stroke({ color: 0x0a0e08, width: 10 })
+      .rect(this.bounds.x + 22, this.bounds.y + 24, this.bounds.w - 44, this.bounds.h - 48)
       .fill({ color: 0x18270f })
-      .stroke({ color: 0x0a0e08, width: 8 })
+      .stroke({ color: 0x365c24, alpha: 0.75, width: 2 })
       .rect(this.plot.x, this.plot.y, this.plot.w, this.plot.h)
       .stroke({ color: 0xa8ff63, alpha: 0.82, width: 3 });
   }

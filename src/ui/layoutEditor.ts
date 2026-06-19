@@ -106,7 +106,11 @@ export function createLayoutEditor(options: {
     exportArea.value = text;
     const writer = options.writeText ?? navigator.clipboard?.writeText?.bind(navigator.clipboard);
     if (writer) {
-      await writer(text);
+      try {
+        await writer(text);
+      } catch (error) {
+        console.warn("50Hz layout editor clipboard export failed", error);
+      }
     }
     console.info("50Hz layout editor export", JSON.parse(text) as unknown);
   };

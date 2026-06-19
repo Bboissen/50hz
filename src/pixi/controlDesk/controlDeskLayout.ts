@@ -32,6 +32,7 @@ export type ThreePositionRotaryLayout = {
   radius: number;
   scale: number;
   labelY?: number;
+  labelPlacement?: "above" | "below";
 };
 
 export type TextLayout = Point & {
@@ -78,9 +79,6 @@ export type ControlDeskLayout = {
     | "rivalTariff"
     | "load"
     | "generation"
-    | "breaker"
-    | "share"
-    | "weather"
     | "incidents"
     | "city"
     | "reactor"
@@ -127,13 +125,13 @@ export const CONTROL_DESK_LAYOUT: ControlDeskLayout = {
     },
   },
   ledStrips: {
-    reactor: horizontalLed(1502, 178, 10),
-    boiler: horizontalLed(1695, 178, 10),
-    wind: horizontalLed(1502, 323, 10),
-    solar: horizontalLed(1695, 323, 10),
+    reactor: horizontalLed(1502, 179, 10),
+    boiler: horizontalLed(1693, 178, 10),
+    wind: horizontalLed(1502, 288, 10),
+    solar: horizontalLed(1695, 289, 10),
     dam: {
-      x: 1556,
-      y: 478,
+      x: 1552,
+      y: 481,
       w: 34,
       h: 118,
       cells: 10,
@@ -142,20 +140,20 @@ export const CONTROL_DESK_LAYOUT: ControlDeskLayout = {
     },
   },
   knobs: {
-    reactor: { center: { x: 1570, y: 136 }, radius: 54, minAngle: -2.4, maxAngle: 2.4, scale: 0.29 },
-    boiler: { center: { x: 1749, y: 136 }, radius: 54, minAngle: -2.4, maxAngle: 2.4, scale: 0.29 },
-    windSwitch: { center: { x: 1560, y: 390 }, radius: 60, scale: 0.33, labelY: 443 },
-    dam: { center: { x: 1735, y: 562 }, radius: 68, scale: 0.34, labelY: 626 },
+    reactor: { center: { x: 1572, y: 137 }, radius: 54, minAngle: -2.4, maxAngle: 2.4, scale: 0.29 },
+    boiler: { center: { x: 1760, y: 136 }, radius: 54, minAngle: -2.4, maxAngle: 2.4, scale: 0.29 },
+    windSwitch: { center: { x: 1574, y: 376 }, radius: 60, scale: 0.33, labelY: 336, labelPlacement: "above" },
+    dam: { center: { x: 1735, y: 564 }, radius: 68, scale: 0.34, labelY: 501, labelPlacement: "above" },
   },
   forecast: {
-    plot: { x: 342, y: 10, w: 420, h: 50 },
+    plot: { x: 374, y: 7, w: 496, h: 59 },
     labels: {
-      now: { x: 356, y: 62 },
-      soon: { x: 500, y: 62 },
-      later: { x: 644, y: 62 },
+      now: { x: 390, y: 68 },
+      soon: { x: 560, y: 68 },
+      later: { x: 730, y: 68 },
     },
   },
-  demandMonitor: { x: 1488, y: 660, w: 386, h: 338 },
+  demandMonitor: { x: 1532, y: 681, w: 270, h: 237 },
   upgradeRows: [
     {
       key: "reactor",
@@ -191,29 +189,26 @@ export const CONTROL_DESK_LAYOUT: ControlDeskLayout = {
     },
   ],
   text: {
-    cash: { x: 42, y: 14, fontSize: 24, maxWidth: 126 },
-    score: { x: 42, y: 42, fontSize: 16, maxWidth: 126 },
-    tariff: { x: 172, y: 14, fontSize: 16, maxWidth: 132 },
-    rivalTariff: { x: 172, y: 42, fontSize: 16, maxWidth: 132 },
-    weather: { x: 778, y: 23, fontSize: 16, maxWidth: 126 },
-    incidents: { x: 940, y: 13, fontSize: 17, maxWidth: 240 },
-    city: { x: 1218, y: 23, fontSize: 17, maxWidth: 260 },
-    load: { x: 540, y: 974, fontSize: 18, maxWidth: 410 },
-    generation: { x: 990, y: 974, fontSize: 18, maxWidth: 260 },
-    breaker: { x: 990, y: 998, fontSize: 17, maxWidth: 260 },
-    share: { x: 1266, y: 998, fontSize: 17, maxWidth: 238 },
-    reactor: { x: 1518, y: 72, fontSize: 24, maxWidth: 186 },
-    boiler: { x: 1690, y: 72, fontSize: 24, maxWidth: 210 },
-    wind: { x: 1530, y: 270, fontSize: 24, maxWidth: 160 },
-    solar: { x: 1724, y: 270, fontSize: 24, maxWidth: 160 },
-    dam: { x: 1640, y: 470, fontSize: 24, maxWidth: 230 },
+    cash: { x: 38, y: 14, fontSize: 24, maxWidth: 126 },
+    score: { x: 40, y: 41, fontSize: 19, maxWidth: 146 },
+    tariff: { x: 172, y: 14, fontSize: 19, maxWidth: 153 },
+    rivalTariff: { x: 171, y: 37, fontSize: 19, maxWidth: 153 },
+    incidents: { x: 922, y: 14, fontSize: 21, maxWidth: 293 },
+    city: { x: 1306, y: 23, fontSize: 22, maxWidth: 614 },
+    load: { x: 1008, y: 866, fontSize: 23, maxWidth: 525 },
+    generation: { x: 645, y: 870, fontSize: 23, maxWidth: 333 },
+    reactor: { x: 1496, y: 72, fontSize: 21 },
+    boiler: { x: 1688, y: 70, fontSize: 23, maxWidth: 210 },
+    wind: { x: 1497, y: 263, fontSize: 19 },
+    solar: { x: 1694, y: 262, fontSize: 19 },
+    dam: { x: 1580, y: 448, fontSize: 24, maxWidth: 230 },
   },
   hitZones: {
-    reactor: { x: 1570, y: 136, r: 58 },
-    boiler: { x: 1749, y: 136, r: 58 },
-    wind: { x: 1512, y: 352, w: 118, h: 82 },
-    damFill: { x: 1644, y: 520, w: 54, h: 90 },
-    damHold: { x: 1698, y: 520, w: 54, h: 90 },
-    damDrain: { x: 1752, y: 520, w: 54, h: 90 },
+    reactor: { x: 1572, y: 137, r: 58 },
+    boiler: { x: 1760, y: 136, r: 58 },
+    wind: { x: 1526, y: 338, w: 118, h: 82 },
+    damFill: { x: 1644, y: 522, w: 54, h: 90 },
+    damHold: { x: 1698, y: 522, w: 54, h: 90 },
+    damDrain: { x: 1752, y: 522, w: 54, h: 90 },
   },
 };

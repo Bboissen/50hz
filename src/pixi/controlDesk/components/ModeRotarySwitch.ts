@@ -38,7 +38,8 @@ export class ModeRotarySwitch<Mode extends string> extends Container {
       this.addChild(sprite);
     }
 
-    const labelY = layout.labelY ?? layout.center.y + layout.radius + 18;
+    const labelPlacement = layout.labelPlacement ?? "below";
+    const labelY = layout.labelY ?? (labelPlacement === "above" ? layout.center.y - layout.radius - 18 : layout.center.y + layout.radius + 18);
     for (const option of options) {
       const label = new Text({
         text: option.label,
@@ -50,7 +51,7 @@ export class ModeRotarySwitch<Mode extends string> extends Container {
           align: "center",
         },
       });
-      label.anchor.set(0.5);
+      label.anchor.set(0.5, labelPlacement === "above" ? 1 : 0.5);
       label.position.set(option.labelX - layout.center.x, labelY - layout.center.y);
       this.addChild(label);
     }
@@ -112,6 +113,10 @@ export class ModeRotarySwitch<Mode extends string> extends Container {
 
   public debugLabelRotations(): number[] {
     return this.children.filter((child): child is Text => child instanceof Text).map((child) => child.rotation);
+  }
+
+  public debugLabelPositions(): { x: number; y: number }[] {
+    return this.children.filter((child): child is Text => child instanceof Text).map((child) => ({ x: child.x, y: child.y }));
   }
 
   public debugSelect(mode: Mode): void {

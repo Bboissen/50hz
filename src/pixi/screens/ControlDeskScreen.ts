@@ -239,15 +239,10 @@ export class ControlDeskScreen extends Container {
     this.readouts.get("score")?.update(`SCORE ${Math.floor(state.score)}`);
     this.readouts.get("tariff")?.update(`TARIFF ${state.playerTariffCents.toFixed(1)}c`);
     this.readouts.get("rivalTariff")?.update(`RIVAL ${state.rivalTariffCents.toFixed(1)}c`);
-    this.readouts.get("weather")?.update(formatWeatherTimelineReadout(state));
     this.readouts.get("incidents")?.update(formatIncidentReadout(state));
     this.readouts.get("city")?.update(formatCityReadout(state));
     this.readouts.get("load")?.update(formatDemandForecastReadout(state));
     this.readouts.get("generation")?.update(`GEN ${state.generationMW.toFixed(1)} MW`);
-    this.readouts.get("breaker")?.update(state.breakerStatusText);
-    this.readouts
-      .get("share")
-      ?.update(`SHARE YOU ${(state.playerSubscribedLoadShare * 100).toFixed(0)}% RIVAL ${((1 - state.playerSubscribedLoadShare) * 100).toFixed(0)}%`);
     this.readouts.get("reactor")?.update(`REACT ${state.nuclearOutputMW.toFixed(0)}/${state.nuclearTargetMW.toFixed(0)} MW`);
     this.readouts.get("boiler")?.update(`BOILER ${state.thermalOutputMW.toFixed(0)} MW`);
     this.readouts
@@ -341,6 +336,17 @@ export class ControlDeskScreen extends Container {
     for (const [key, readout] of this.readouts.entries()) {
       targets.push(this.createLayoutEditorTarget(`text.${key}`, `Text ${key}`, readout));
     }
+    targets.push(
+      this.createLayoutEditorTarget("led.reactor", "LED reactor", this.reactorStrip),
+      this.createLayoutEditorTarget("led.boiler", "LED boiler", this.boilerStrip),
+      this.createLayoutEditorTarget("led.wind", "LED wind", this.windStrip),
+      this.createLayoutEditorTarget("led.solar", "LED solar", this.solarStrip),
+      this.createLayoutEditorTarget("led.dam", "LED dam", this.damStrip),
+      this.createLayoutEditorTarget("knob.reactor", "Knob reactor", this.reactorKnob),
+      this.createLayoutEditorTarget("knob.boiler", "Knob boiler", this.boilerKnob),
+      this.createLayoutEditorTarget("switch.wind", "Switch wind", this.windSwitch),
+      this.createLayoutEditorTarget("switch.dam", "Switch dam", this.damRotary),
+    );
     if (this.forecastTape) {
       targets.push(this.createLayoutEditorTarget("forecast.weatherTape", "Weather tape", this.forecastTape));
     }
@@ -531,7 +537,7 @@ export class ControlDeskScreen extends Container {
   }
 
   private drawLayoutSelection(displayObject: Container): void {
-    const bounds = displayObject.getBounds();
+    const bounds = safeGlobalBounds(displayObject);
     this.layoutSelectionLayer
       .clear()
       .rect(bounds.x, bounds.y, bounds.width, bounds.height)
@@ -539,7 +545,7 @@ export class ControlDeskScreen extends Container {
   }
 }
 
-const TOP_STATUS_READOUT_KEYS = new Set<ReadoutKey>(["cash", "score", "tariff", "rivalTariff", "weather", "incidents", "city"]);
+const TOP_STATUS_READOUT_KEYS = new Set<ReadoutKey>(["cash", "score", "tariff", "rivalTariff", "incidents", "city"]);
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
@@ -547,6 +553,19 @@ function clamp(value: number, min: number, max: number): number {
 
 function round(value: number): number {
   return Math.round(value * 1000) / 1000;
+}
+
+function safeGlobalBounds(displayObject: Container): { x: number; y: number; width: number; height: number } {
+  try {
+    const bounds = displayObject.getBounds();
+    if (Number.isFinite(bounds.x) && Number.isFinite(bounds.y) && bounds.width > 0 && bounds.height > 0) {
+      return bounds;
+    }
+  } catch {
+    // Some Pixi graphics-backed containers can throw while computing global bounds during live editing.
+  }
+  const position = displayObject.getGlobalPosition();
+  return { x: position.x - 36, y: position.y - 36, width: 72, height: 72 };
 }
 
 class DeskCoordinateMapper {
@@ -575,10 +594,6 @@ function formatDamReadout(state: ProductionConsoleState): string {
   return `DAM ${state.waterDamMode.toUpperCase()} 0 MW`;
 }
 
-function formatWeatherTimelineReadout(state: ProductionConsoleState): string {
-  return `WX ${state.currentWeather.condition.toUpperCase()} ${state.currentWindKmh.toFixed(0)}K / ${timeOfDayLabel(state.timeOfDayRatio)}`;
-}
-
 function formatDemandForecastReadout(state: ProductionConsoleState): string {
   const now = state.eventTrace.find((point) => point.timeOffsetSeconds === 0)?.demandMW ?? state.cityDemandMW;
   const soon = state.eventTrace.find((point) => point.timeOffsetSeconds === 15)?.demandMW ?? now;
@@ -595,18 +610,5 @@ function formatIncidentReadout(state: ProductionConsoleState): string {
 }
 
 function formatCityReadout(state: ProductionConsoleState): string {
-  return `CITY H${state.sectors.homes.demandLevel} B${state.sectors.services.demandLevel} D${state.sectors.dataCenters.demandLevel}`;
-}
-
-function timeOfDayLabel(ratio: number): string {
-  if (ratio < 0.125 || ratio >= 0.875) {
-    return "DAWN";
-  }
-  if (ratio < 0.375) {
-    return "DAY";
-  }
-  if (ratio < 0.625) {
-    return "DUSK";
-  }
-  return "NIGHT";
+  return `House LVL${state.sectors.homes.demandLevel} Business LVL${state.sectors.services.demandLevel} Data Center LVL${state.sectors.dataCenters.demandLevel}`;
 }

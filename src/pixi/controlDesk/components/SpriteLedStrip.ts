@@ -35,15 +35,25 @@ export class SpriteLedStrip extends Container {
       this.addChild(base);
     }
 
+    const totalLitWidth = layout.cells * layout.litCell.w + (layout.cells - 1) * layout.litCell.gap;
+    const totalLitHeight = layout.cells * layout.litCell.h + (layout.cells - 1) * layout.litCell.gap;
+    const horizontalInset = Math.max(0, (layout.w - totalLitWidth) / 2);
+    const verticalInset = Math.max(0, (layout.h - totalLitHeight) / 2);
     for (let index = 0; index < layout.cells; index += 1) {
       const sprite = new Sprite({ texture: Texture.EMPTY, label: "lit-led-sprite" });
       sprite.visible = false;
       sprite.width = layout.litCell.w;
       sprite.height = layout.litCell.h;
       if (layout.orientation === "horizontal") {
-        sprite.position.set(index * (layout.litCell.w + layout.litCell.gap), Math.max(0, (layout.h - layout.litCell.h) / 2));
+        sprite.position.set(
+          horizontalInset + index * (layout.litCell.w + layout.litCell.gap),
+          Math.max(0, (layout.h - layout.litCell.h) / 2),
+        );
       } else {
-        sprite.position.set(Math.max(0, (layout.w - layout.litCell.w) / 2), layout.h - (index + 1) * (layout.litCell.h + layout.litCell.gap));
+        sprite.position.set(
+          Math.max(0, (layout.w - layout.litCell.w) / 2),
+          verticalInset + (layout.cells - 1 - index) * (layout.litCell.h + layout.litCell.gap),
+        );
       }
       this.litSprites.push(sprite);
       this.addChild(sprite);
