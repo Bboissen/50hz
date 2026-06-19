@@ -496,13 +496,21 @@ export function tickMatch(state: MatchState, dt = 1 / GAME_CONFIG.match.tickRate
     lastMargin: revenue.marginB,
   };
 
+  const gameOverReason =
+    state.gameOverReason ??
+    (player.runtime.breakerTrippedSeconds > 0 && player.cash < GAME_CONFIG.breaker.resetCost
+      ? "player-reset-bankrupt"
+      : rival.runtime.breakerTrippedSeconds > 0 && rival.cash < GAME_CONFIG.breaker.resetCost
+        ? "rival-reset-bankrupt"
+        : undefined);
+
   return {
     seed: state.seed,
     demandSchedule: state.demandSchedule,
     contractOffers: tickContractOffers(state.contractOffers, nextTime, dt, player.runtime.breakerTrippedSeconds > 0),
     timeSeconds: nextTime,
     isPaused: false,
-    gameOverReason: state.gameOverReason,
+    gameOverReason,
     activeEvents: publicEvents.tokens,
     players: {
       player,
@@ -682,6 +690,7 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
     },
   };
   const activeOffer = state.contractOffers.find((offer) => offer.status === "active");
+  const fixedLoadMW = player.activeContracts.reduce((sum, contract) => sum + contract.loadMW, 0);
   const contractOffer: ContractOfferState | undefined = activeOffer
     ? {
         id: activeOffer.id,
@@ -752,6 +761,8 @@ export function selectDispatchConsoleState(state: MatchState): DispatchConsoleSt
       timeSeconds: state.timeSeconds,
       capacities: player.capacities,
       controls: player.controls,
+      subscribedLoadShare: isGridDown ? 0 : player.subscribedLoadShare,
+      fixedLoadMW: isGridDown ? 0 : fixedLoadMW,
     }),
     contractOffer,
     activeContracts,

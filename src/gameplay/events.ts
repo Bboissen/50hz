@@ -208,6 +208,8 @@ export function buildEventTrace(args: {
   timeSeconds: number;
   capacities: AssetCapacities;
   controls: GenerationControls;
+  subscribedLoadShare?: number;
+  fixedLoadMW?: number;
 }): EventTracePoint[] {
   return [0, 5, 10, 15, 20, 25, 30].map((timeOffsetSeconds) => {
     const environment = sampleEventEnvironment({
@@ -221,7 +223,7 @@ export function buildEventTrace(args: {
 
     return {
       timeOffsetSeconds,
-      demandMW: environment.demand.totalMW,
+      demandMW: environment.demand.totalMW * (args.subscribedLoadShare ?? 1) + (args.fixedLoadMW ?? 0),
       renewableSupplyMW,
       eventIntensity: Math.max(0, ...environment.publicEvents.tokens.map((token) => token.intensity ?? 0)),
     };

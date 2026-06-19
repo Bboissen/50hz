@@ -38,7 +38,7 @@ export class DemandForecastMonitor extends Container {
       h: bounds.h - 108,
     };
     this.title = new Text({
-      text: "LOAD Forecast",
+      text: "POWER BALANCE",
       style: {
         fontFamily,
         fontSize: 28,
@@ -50,9 +50,9 @@ export class DemandForecastMonitor extends Container {
     this.title.position.set(bounds.x + bounds.w / 2, bounds.y + 24);
 
     this.labels = [
-      this.createLabel("NOW", bounds.x + 30, bounds.y + bounds.h - 34, fontFamily, "left"),
+      this.createLabel("LOAD", bounds.x + 30, bounds.y + bounds.h - 34, fontFamily, "left"),
       this.createLabel("TIME", bounds.x + bounds.w / 2, bounds.y + bounds.h - 34, fontFamily, "center"),
-      this.createLabel("+30s", bounds.x + bounds.w - 30, bounds.y + bounds.h - 34, fontFamily, "right"),
+      this.createLabel("+30s LOAD", bounds.x + bounds.w - 30, bounds.y + bounds.h - 34, fontFamily, "right"),
     ];
     this.addChild(this.frame, this.plotLayer, this.title, ...this.labels);
     this.drawFrame();

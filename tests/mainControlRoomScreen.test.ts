@@ -404,7 +404,7 @@ describe("ControlDeskScreen", () => {
 
     expect(screen.debugReadoutText("incidents")).toContain("INCIDENT");
     expect(screen.debugReadoutText("city")).toMatch(/^House LVL\d Business LVL\d Data Center LVL\d$/);
-    expect(screen.debugReadoutText("load")).toMatch(/^DEMAND \d+ > \d+ > \d+ MW$/);
+    expect(screen.debugReadoutText("load")).toMatch(/^GEN \d+ \/ LOAD \d+ \/ DELTA [+-]?\d+ MW$/);
     expect(screen.debugReadoutText("reactor")).toMatch(/MW$/);
     expect(screen.debugReadoutText("boiler")).toMatch(/MW$/);
     expect(screen.debugReadoutText("wind")).toMatch(/MW$/);

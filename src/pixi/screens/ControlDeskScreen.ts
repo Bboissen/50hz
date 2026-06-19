@@ -595,10 +595,9 @@ function formatDamReadout(state: ProductionConsoleState): string {
 }
 
 function formatDemandForecastReadout(state: ProductionConsoleState): string {
-  const now = state.eventTrace.find((point) => point.timeOffsetSeconds === 0)?.demandMW ?? state.cityDemandMW;
-  const soon = state.eventTrace.find((point) => point.timeOffsetSeconds === 15)?.demandMW ?? now;
-  const later = state.eventTrace.find((point) => point.timeOffsetSeconds === 30)?.demandMW ?? soon;
-  return `DEMAND ${now.toFixed(0)} > ${soon.toFixed(0)} > ${later.toFixed(0)} MW`;
+  const deltaMW = state.generationMW - state.currentDemandMW;
+  const deltaPrefix = deltaMW >= 0 ? "+" : "";
+  return `GEN ${state.generationMW.toFixed(0)} / LOAD ${state.currentDemandMW.toFixed(0)} / DELTA ${deltaPrefix}${deltaMW.toFixed(0)} MW`;
 }
 
 function formatIncidentReadout(state: ProductionConsoleState): string {
