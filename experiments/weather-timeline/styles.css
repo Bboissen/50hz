@@ -1,0 +1,34 @@
+:root {
+  color: #f3e7c1;
+  background: #161813;
+  font-family: "Courier New", monospace;
+  font-synthesis: none;
+  text-rendering: geometricPrecision;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+.experiment-shell,
+#pixi-stage {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+}
+
+.experiment-shell {
+  position: relative;
+  background: #161813;
+}
+
+canvas {
+  display: block;
+  image-rendering: pixelated;
+}
