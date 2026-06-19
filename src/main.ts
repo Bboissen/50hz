@@ -11,7 +11,6 @@ import {
 import { GAME_CONFIG } from "./gameplay/config";
 import type { MatchState, PlayerCommand } from "./gameplay/types";
 import { createAssetResolver } from "./pixi/assets";
-import { createControlDeskPreviewState } from "./pixi/controlDesk/controlDeskPreviewState";
 import { createPixiApp } from "./pixi/createPixiApp";
 import { ScreenManager } from "./pixi/screens/ScreenManager";
 import { createDebugPanel } from "./ui/debugPanel";
@@ -28,8 +27,7 @@ const root = appRoot;
 async function bootstrap(): Promise<void> {
   const searchParams = new URLSearchParams(window.location.search);
   const matchSeed = searchParams.get("seed") ?? undefined;
-  const uiMode = searchParams.get("ui");
-  const isDeskPreview = uiMode === "desk";
+  const devMode = searchParams.get("dev") === "1";
   let state: MatchState = createInitialMatchState({ seed: matchSeed });
   const app = await createPixiApp(root);
   const assets = await createAssetResolver();
@@ -38,47 +36,21 @@ async function bootstrap(): Promise<void> {
     state = applyPlayerCommand(state, command);
   };
 
-  if (isDeskPreview) {
-    let previewMatch = createControlDeskPreviewState(matchSeed).match;
-    const previewDispatch = (command: PlayerCommand): void => {
-      previewMatch = applyPlayerCommand(previewMatch, command);
-      renderPreview();
-    };
-    const screenManager = new ScreenManager(assets, previewDispatch, {
-      designMode: true,
-      showReferenceOverlay: searchParams.get("deskRef") === "1",
-      showLayoutDebug: searchParams.get("layoutDebug") === "1",
-    });
-    app.stage.addChild(screenManager);
-    window.addEventListener("keydown", (event) => screenManager.handleKey(event));
-
-    function renderPreview(): void {
-      const dispatchState = selectDispatchConsoleState(previewMatch);
-      screenManager.update({
-        dispatch: dispatchState,
-        production: selectProductionConsoleState(previewMatch),
-        result: computeFinalResult(previewMatch),
-        match: previewMatch,
-        isMatchOver: false,
-        dt: 0,
-      });
-    }
-
-    renderPreview();
-    app.ticker.add((ticker) => {
-      screenManager.animate(Math.min(ticker.deltaMS / 1000, 0.1));
-    });
-    return;
+  const debugPanel = devMode
+    ? createDebugPanel({
+        onCommand: dispatch,
+        onReset: () => {
+          state = createInitialMatchState({ seed: matchSeed });
+        },
+      })
+    : undefined;
+  if (debugPanel) {
+    root.appendChild(debugPanel.element);
   }
-
-  const debugPanel = createDebugPanel({
-    onCommand: dispatch,
-    onReset: () => {
-      state = createInitialMatchState({ seed: matchSeed });
-    },
+  const screenManager = new ScreenManager(assets, dispatch, {
+    showReferenceOverlay: searchParams.get("deskRef") === "1",
+    showLayoutDebug: searchParams.get("layoutDebug") === "1",
   });
-  root.appendChild(debugPanel.element);
-  const screenManager = new ScreenManager(assets, dispatch);
   app.stage.addChild(screenManager);
   window.addEventListener("keydown", (event) => screenManager.handleKey(event));
 
@@ -105,7 +77,7 @@ async function bootstrap(): Promise<void> {
       isMatchOver: isMatchOver(state),
       dt: Math.min(ticker.deltaMS / 1000, 0.1),
     });
-    debugPanel.update(dispatchState, productionState, state.isPaused);
+    debugPanel?.update(dispatchState, productionState, state.isPaused);
   });
 }
 
