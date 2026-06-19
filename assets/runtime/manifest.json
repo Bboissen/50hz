@@ -5,231 +5,687 @@
   "assets": [
     {
       "source": "/assets/city/background.png",
-      "runtime": "/assets/runtime/city/background.webp"
+      "runtime": "/assets/runtime/city/background.webp",
+      "sourceWidth": 1254,
+      "sourceHeight": 1254,
+      "runtimeWidth": 1254,
+      "runtimeHeight": 1254,
+      "resolution": 1,
+      "resizeScale": 1,
+      "quality": 78,
+      "alphaQuality": 86
     },
     {
       "source": "/assets/city/buildings/business/business_level_1.png",
-      "runtime": "/assets/runtime/city/buildings/business/business_level_1.webp"
+      "runtime": "/assets/runtime/city/buildings/business/business_level_1.webp",
+      "sourceWidth": 1672,
+      "sourceHeight": 941,
+      "runtimeWidth": 690,
+      "runtimeHeight": 388,
+      "resolution": 0.4126794258373206,
+      "resizeScale": 0.4128,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/buildings/business/business_level_2.png",
-      "runtime": "/assets/runtime/city/buildings/business/business_level_2.webp"
+      "runtime": "/assets/runtime/city/buildings/business/business_level_2.webp",
+      "sourceWidth": 1672,
+      "sourceHeight": 941,
+      "runtimeWidth": 690,
+      "runtimeHeight": 388,
+      "resolution": 0.4126794258373206,
+      "resizeScale": 0.4128,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/buildings/business/business_level_3.png",
-      "runtime": "/assets/runtime/city/buildings/business/business_level_3.webp"
+      "runtime": "/assets/runtime/city/buildings/business/business_level_3.webp",
+      "sourceWidth": 1672,
+      "sourceHeight": 941,
+      "runtimeWidth": 690,
+      "runtimeHeight": 388,
+      "resolution": 0.4126794258373206,
+      "resizeScale": 0.4128,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/buildings/datacenter/datacenter_level_1.png",
-      "runtime": "/assets/runtime/city/buildings/datacenter/datacenter_level_1.webp"
+      "runtime": "/assets/runtime/city/buildings/datacenter/datacenter_level_1.webp",
+      "sourceWidth": 1672,
+      "sourceHeight": 941,
+      "runtimeWidth": 765,
+      "runtimeHeight": 430,
+      "resolution": 0.45753588516746413,
+      "resizeScale": 0.45730499999999996,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/buildings/datacenter/datacenter_level_2.png",
-      "runtime": "/assets/runtime/city/buildings/datacenter/datacenter_level_2.webp"
+      "runtime": "/assets/runtime/city/buildings/datacenter/datacenter_level_2.webp",
+      "sourceWidth": 1672,
+      "sourceHeight": 941,
+      "runtimeWidth": 765,
+      "runtimeHeight": 430,
+      "resolution": 0.45753588516746413,
+      "resizeScale": 0.45730499999999996,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/buildings/datacenter/datacenter_level_3.png",
-      "runtime": "/assets/runtime/city/buildings/datacenter/datacenter_level_3.webp"
+      "runtime": "/assets/runtime/city/buildings/datacenter/datacenter_level_3.webp",
+      "sourceWidth": 1672,
+      "sourceHeight": 941,
+      "runtimeWidth": 765,
+      "runtimeHeight": 430,
+      "resolution": 0.45753588516746413,
+      "resizeScale": 0.45730499999999996,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/buildings/household/house_level_1.png",
-      "runtime": "/assets/runtime/city/buildings/household/house_level_1.webp"
+      "runtime": "/assets/runtime/city/buildings/household/house_level_1.webp",
+      "sourceWidth": 1672,
+      "sourceHeight": 941,
+      "runtimeWidth": 674,
+      "runtimeHeight": 379,
+      "resolution": 0.40311004784689,
+      "resizeScale": 0.40312499999999996,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/buildings/household/house_level_2.png",
-      "runtime": "/assets/runtime/city/buildings/household/house_level_2.webp"
+      "runtime": "/assets/runtime/city/buildings/household/house_level_2.webp",
+      "sourceWidth": 1672,
+      "sourceHeight": 941,
+      "runtimeWidth": 674,
+      "runtimeHeight": 379,
+      "resolution": 0.40311004784689,
+      "resizeScale": 0.40312499999999996,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/buildings/household/house_level_3.png",
-      "runtime": "/assets/runtime/city/buildings/household/house_level_3.webp"
+      "runtime": "/assets/runtime/city/buildings/household/house_level_3.webp",
+      "sourceWidth": 1672,
+      "sourceHeight": 941,
+      "runtimeWidth": 674,
+      "runtimeHeight": 379,
+      "resolution": 0.40311004784689,
+      "resizeScale": 0.40312499999999996,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/openAI.png",
-      "runtime": "/assets/runtime/city/openAI.webp"
+      "runtime": "/assets/runtime/city/openAI.webp",
+      "sourceWidth": 1448,
+      "sourceHeight": 1086,
+      "runtimeWidth": 507,
+      "runtimeHeight": 380,
+      "resolution": 0.35013812154696133,
+      "resizeScale": 0.35,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/power/dam/dam_level_1.png",
-      "runtime": "/assets/runtime/city/power/dam/dam_level_1.webp"
+      "runtime": "/assets/runtime/city/power/dam/dam_level_1.webp",
+      "sourceWidth": 2730,
+      "sourceHeight": 1536,
+      "runtimeWidth": 1048,
+      "runtimeHeight": 589,
+      "resolution": 0.3838827838827839,
+      "resizeScale": 0.383775,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/power/dam/dam_level_2.png",
-      "runtime": "/assets/runtime/city/power/dam/dam_level_2.webp"
+      "runtime": "/assets/runtime/city/power/dam/dam_level_2.webp",
+      "sourceWidth": 2730,
+      "sourceHeight": 1536,
+      "runtimeWidth": 1048,
+      "runtimeHeight": 589,
+      "resolution": 0.3838827838827839,
+      "resizeScale": 0.383775,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/power/dam/dam_level_3.png",
-      "runtime": "/assets/runtime/city/power/dam/dam_level_3.webp"
+      "runtime": "/assets/runtime/city/power/dam/dam_level_3.webp",
+      "sourceWidth": 2730,
+      "sourceHeight": 1536,
+      "runtimeWidth": 1048,
+      "runtimeHeight": 589,
+      "resolution": 0.3838827838827839,
+      "resizeScale": 0.383775,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/power/dam/mask_2.png",
-      "runtime": "/assets/runtime/city/power/dam/mask_2.webp"
+      "runtime": "/assets/runtime/city/power/dam/mask_2.webp",
+      "sourceWidth": 1672,
+      "sourceHeight": 941,
+      "runtimeWidth": 1048,
+      "runtimeHeight": 590,
+      "resolution": 0.6267942583732058,
+      "resizeScale": 0.6266182715311004,
+      "quality": 70,
+      "alphaQuality": 80
     },
     {
       "source": "/assets/city/power/dam/mask_3.png",
-      "runtime": "/assets/runtime/city/power/dam/mask_3.webp"
+      "runtime": "/assets/runtime/city/power/dam/mask_3.webp",
+      "sourceWidth": 1672,
+      "sourceHeight": 941,
+      "runtimeWidth": 1048,
+      "runtimeHeight": 590,
+      "resolution": 0.6267942583732058,
+      "resizeScale": 0.6266182715311004,
+      "quality": 70,
+      "alphaQuality": 80
     },
     {
       "source": "/assets/city/power/dam/upstream_top_mask.png",
-      "runtime": "/assets/runtime/city/power/dam/upstream_top_mask.webp"
+      "runtime": "/assets/runtime/city/power/dam/upstream_top_mask.webp",
+      "sourceWidth": 1672,
+      "sourceHeight": 941,
+      "runtimeWidth": 1048,
+      "runtimeHeight": 590,
+      "resolution": 0.6267942583732058,
+      "resizeScale": 0.6266182715311004,
+      "quality": 70,
+      "alphaQuality": 80
     },
     {
       "source": "/assets/city/power/nuclear/nuclear_level_1.png",
-      "runtime": "/assets/runtime/city/power/nuclear/nuclear_level_1.webp"
+      "runtime": "/assets/runtime/city/power/nuclear/nuclear_level_1.webp",
+      "sourceWidth": 918,
+      "sourceHeight": 514,
+      "runtimeWidth": 598,
+      "runtimeHeight": 335,
+      "resolution": 0.6514161220043573,
+      "resizeScale": 0.6514500000000001,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/power/nuclear/nuclear_level_2.png",
-      "runtime": "/assets/runtime/city/power/nuclear/nuclear_level_2.webp"
+      "runtime": "/assets/runtime/city/power/nuclear/nuclear_level_2.webp",
+      "sourceWidth": 1211,
+      "sourceHeight": 674,
+      "runtimeWidth": 789,
+      "runtimeHeight": 439,
+      "resolution": 0.6515276630883567,
+      "resizeScale": 0.6514500000000001,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/power/nuclear/nuclear_level_3.png",
-      "runtime": "/assets/runtime/city/power/nuclear/nuclear_level_3.webp"
+      "runtime": "/assets/runtime/city/power/nuclear/nuclear_level_3.webp",
+      "sourceWidth": 1213,
+      "sourceHeight": 770,
+      "runtimeWidth": 790,
+      "runtimeHeight": 502,
+      "resolution": 0.651277823577906,
+      "resizeScale": 0.6514500000000001,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/power/solar/solar_level_1.png",
-      "runtime": "/assets/runtime/city/power/solar/solar_level_1.webp"
+      "runtime": "/assets/runtime/city/power/solar/solar_level_1.webp",
+      "sourceWidth": 1672,
+      "sourceHeight": 941,
+      "runtimeWidth": 820,
+      "runtimeHeight": 461,
+      "resolution": 0.4904306220095694,
+      "resizeScale": 0.49019999999999997,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/power/solar/solar_level_2.png",
-      "runtime": "/assets/runtime/city/power/solar/solar_level_2.webp"
+      "runtime": "/assets/runtime/city/power/solar/solar_level_2.webp",
+      "sourceWidth": 1672,
+      "sourceHeight": 941,
+      "runtimeWidth": 820,
+      "runtimeHeight": 461,
+      "resolution": 0.4904306220095694,
+      "resizeScale": 0.49019999999999997,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/power/solar/solar_level_3.png",
-      "runtime": "/assets/runtime/city/power/solar/solar_level_3.webp"
+      "runtime": "/assets/runtime/city/power/solar/solar_level_3.webp",
+      "sourceWidth": 1672,
+      "sourceHeight": 941,
+      "runtimeWidth": 820,
+      "runtimeHeight": 461,
+      "resolution": 0.4904306220095694,
+      "resizeScale": 0.49019999999999997,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/power/thermal/thermal_level_1.png",
-      "runtime": "/assets/runtime/city/power/thermal/thermal_level_1.webp"
+      "runtime": "/assets/runtime/city/power/thermal/thermal_level_1.webp",
+      "sourceWidth": 1348,
+      "sourceHeight": 735,
+      "runtimeWidth": 689,
+      "runtimeHeight": 375,
+      "resolution": 0.5111275964391692,
+      "resizeScale": 0.5108400000000001,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/power/thermal/thermal_level_2.png",
-      "runtime": "/assets/runtime/city/power/thermal/thermal_level_2.webp"
+      "runtime": "/assets/runtime/city/power/thermal/thermal_level_2.webp",
+      "sourceWidth": 1350,
+      "sourceHeight": 787,
+      "runtimeWidth": 690,
+      "runtimeHeight": 402,
+      "resolution": 0.5111111111111111,
+      "resizeScale": 0.5108400000000001,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/power/thermal/thermal_level_3.png",
-      "runtime": "/assets/runtime/city/power/thermal/thermal_level_3.webp"
+      "runtime": "/assets/runtime/city/power/thermal/thermal_level_3.webp",
+      "sourceWidth": 1352,
+      "sourceHeight": 785,
+      "runtimeWidth": 691,
+      "runtimeHeight": 401,
+      "resolution": 0.511094674556213,
+      "resizeScale": 0.5108400000000001,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/power/wind/turbine_1.png",
-      "runtime": "/assets/runtime/city/power/wind/turbine_1.webp"
+      "runtime": "/assets/runtime/city/power/wind/turbine_1.webp",
+      "sourceWidth": 250,
+      "sourceHeight": 250,
+      "runtimeWidth": 105,
+      "runtimeHeight": 105,
+      "resolution": 0.42,
+      "resizeScale": 0.42157199999999995,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/power/wind/turbine_2.png",
-      "runtime": "/assets/runtime/city/power/wind/turbine_2.webp"
+      "runtime": "/assets/runtime/city/power/wind/turbine_2.webp",
+      "sourceWidth": 250,
+      "sourceHeight": 250,
+      "runtimeWidth": 105,
+      "runtimeHeight": 105,
+      "resolution": 0.42,
+      "resizeScale": 0.42157199999999995,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/power/wind/turbine_3.png",
-      "runtime": "/assets/runtime/city/power/wind/turbine_3.webp"
+      "runtime": "/assets/runtime/city/power/wind/turbine_3.webp",
+      "sourceWidth": 250,
+      "sourceHeight": 250,
+      "runtimeWidth": 105,
+      "runtimeHeight": 105,
+      "resolution": 0.42,
+      "resizeScale": 0.42157199999999995,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/power/wind/turbine_4.png",
-      "runtime": "/assets/runtime/city/power/wind/turbine_4.webp"
+      "runtime": "/assets/runtime/city/power/wind/turbine_4.webp",
+      "sourceWidth": 250,
+      "sourceHeight": 250,
+      "runtimeWidth": 105,
+      "runtimeHeight": 105,
+      "resolution": 0.42,
+      "resizeScale": 0.42157199999999995,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/power/wind/turbine_5.png",
-      "runtime": "/assets/runtime/city/power/wind/turbine_5.webp"
+      "runtime": "/assets/runtime/city/power/wind/turbine_5.webp",
+      "sourceWidth": 250,
+      "sourceHeight": 250,
+      "runtimeWidth": 105,
+      "runtimeHeight": 105,
+      "resolution": 0.42,
+      "resizeScale": 0.42157199999999995,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/power/wind/turbine_6.png",
-      "runtime": "/assets/runtime/city/power/wind/turbine_6.webp"
+      "runtime": "/assets/runtime/city/power/wind/turbine_6.webp",
+      "sourceWidth": 250,
+      "sourceHeight": 250,
+      "runtimeWidth": 105,
+      "runtimeHeight": 105,
+      "resolution": 0.42,
+      "resizeScale": 0.42157199999999995,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/power/wind/turbine_7.png",
-      "runtime": "/assets/runtime/city/power/wind/turbine_7.webp"
+      "runtime": "/assets/runtime/city/power/wind/turbine_7.webp",
+      "sourceWidth": 250,
+      "sourceHeight": 250,
+      "runtimeWidth": 105,
+      "runtimeHeight": 105,
+      "resolution": 0.42,
+      "resizeScale": 0.42157199999999995,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/power/wind/turbine_8.png",
-      "runtime": "/assets/runtime/city/power/wind/turbine_8.webp"
+      "runtime": "/assets/runtime/city/power/wind/turbine_8.webp",
+      "sourceWidth": 250,
+      "sourceHeight": 250,
+      "runtimeWidth": 105,
+      "runtimeHeight": 105,
+      "resolution": 0.42,
+      "resizeScale": 0.42157199999999995,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/power/wind/wind_level_1.png",
-      "runtime": "/assets/runtime/city/power/wind/wind_level_1.webp"
+      "runtime": "/assets/runtime/city/power/wind/wind_level_1.webp",
+      "sourceWidth": 1432,
+      "sourceHeight": 830,
+      "runtimeWidth": 702,
+      "runtimeHeight": 407,
+      "resolution": 0.49022346368715086,
+      "resizeScale": 0.49019999999999997,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/power/wind/wind_level_2.png",
-      "runtime": "/assets/runtime/city/power/wind/wind_level_2.webp"
+      "runtime": "/assets/runtime/city/power/wind/wind_level_2.webp",
+      "sourceWidth": 1432,
+      "sourceHeight": 822,
+      "runtimeWidth": 702,
+      "runtimeHeight": 403,
+      "resolution": 0.49022346368715086,
+      "resizeScale": 0.49019999999999997,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/city/power/wind/wind_level_3.png",
-      "runtime": "/assets/runtime/city/power/wind/wind_level_3.webp"
+      "runtime": "/assets/runtime/city/power/wind/wind_level_3.webp",
+      "sourceWidth": 1430,
+      "sourceHeight": 826,
+      "runtimeWidth": 701,
+      "runtimeHeight": 405,
+      "resolution": 0.4902097902097902,
+      "resizeScale": 0.49019999999999997,
+      "quality": 74,
+      "alphaQuality": 82
     },
     {
       "source": "/assets/icons/weather/cloud.png",
-      "runtime": "/assets/runtime/icons/weather/cloud.webp"
+      "runtime": "/assets/runtime/icons/weather/cloud.webp",
+      "sourceWidth": 230,
+      "sourceHeight": 250,
+      "runtimeWidth": 230,
+      "runtimeHeight": 250,
+      "resolution": 1,
+      "resizeScale": 1,
+      "quality": 85,
+      "alphaQuality": 90
     },
     {
       "source": "/assets/icons/weather/moon.png",
-      "runtime": "/assets/runtime/icons/weather/moon.webp"
+      "runtime": "/assets/runtime/icons/weather/moon.webp",
+      "sourceWidth": 230,
+      "sourceHeight": 250,
+      "runtimeWidth": 230,
+      "runtimeHeight": 250,
+      "resolution": 1,
+      "resizeScale": 1,
+      "quality": 85,
+      "alphaQuality": 90
     },
     {
       "source": "/assets/icons/weather/rain.png",
-      "runtime": "/assets/runtime/icons/weather/rain.webp"
+      "runtime": "/assets/runtime/icons/weather/rain.webp",
+      "sourceWidth": 230,
+      "sourceHeight": 250,
+      "runtimeWidth": 230,
+      "runtimeHeight": 250,
+      "resolution": 1,
+      "resizeScale": 1,
+      "quality": 85,
+      "alphaQuality": 90
     },
     {
       "source": "/assets/icons/weather/snow.png",
-      "runtime": "/assets/runtime/icons/weather/snow.webp"
+      "runtime": "/assets/runtime/icons/weather/snow.webp",
+      "sourceWidth": 230,
+      "sourceHeight": 250,
+      "runtimeWidth": 230,
+      "runtimeHeight": 250,
+      "resolution": 1,
+      "resizeScale": 1,
+      "quality": 85,
+      "alphaQuality": 90
     },
     {
       "source": "/assets/icons/weather/sun.png",
-      "runtime": "/assets/runtime/icons/weather/sun.webp"
+      "runtime": "/assets/runtime/icons/weather/sun.webp",
+      "sourceWidth": 230,
+      "sourceHeight": 250,
+      "runtimeWidth": 230,
+      "runtimeHeight": 250,
+      "resolution": 1,
+      "resizeScale": 1,
+      "quality": 85,
+      "alphaQuality": 90
     },
     {
       "source": "/assets/icons/weather/wind.png",
-      "runtime": "/assets/runtime/icons/weather/wind.webp"
+      "runtime": "/assets/runtime/icons/weather/wind.webp",
+      "sourceWidth": 230,
+      "sourceHeight": 250,
+      "runtimeWidth": 230,
+      "runtimeHeight": 250,
+      "resolution": 1,
+      "resizeScale": 1,
+      "quality": 85,
+      "alphaQuality": 90
     },
     {
       "source": "/assets/ui/background/empty_background_1920.runtime.png",
-      "runtime": "/assets/runtime/ui/background/empty_background_1920.runtime.webp"
+      "runtime": "/assets/runtime/ui/background/empty_background_1920.runtime.webp",
+      "sourceWidth": 1920,
+      "sourceHeight": 1080,
+      "runtimeWidth": 1920,
+      "runtimeHeight": 1080,
+      "resolution": 1,
+      "resizeScale": 1,
+      "quality": 85,
+      "alphaQuality": 90
     },
     {
       "source": "/assets/ui/background/menu.png",
-      "runtime": "/assets/runtime/ui/background/menu.webp"
+      "runtime": "/assets/runtime/ui/background/menu.webp",
+      "sourceWidth": 1672,
+      "sourceHeight": 941,
+      "runtimeWidth": 1672,
+      "runtimeHeight": 941,
+      "resolution": 1,
+      "resizeScale": 1,
+      "quality": 80,
+      "alphaQuality": 90
     },
     {
       "source": "/assets/ui/components/Knob/knob.png",
-      "runtime": "/assets/runtime/ui/components/Knob/knob.webp"
+      "runtime": "/assets/runtime/ui/components/Knob/knob.webp",
+      "sourceWidth": 250,
+      "sourceHeight": 250,
+      "runtimeWidth": 250,
+      "runtimeHeight": 250,
+      "resolution": 1,
+      "resizeScale": 1,
+      "quality": 85,
+      "alphaQuality": 90
     },
     {
       "source": "/assets/ui/components/Knob/rotary_knob_center.png",
-      "runtime": "/assets/runtime/ui/components/Knob/rotary_knob_center.webp"
+      "runtime": "/assets/runtime/ui/components/Knob/rotary_knob_center.webp",
+      "sourceWidth": 250,
+      "sourceHeight": 320,
+      "runtimeWidth": 250,
+      "runtimeHeight": 320,
+      "resolution": 1,
+      "resizeScale": 1,
+      "quality": 85,
+      "alphaQuality": 90
     },
     {
       "source": "/assets/ui/components/Knob/rotary_knob_left.png",
-      "runtime": "/assets/runtime/ui/components/Knob/rotary_knob_left.webp"
+      "runtime": "/assets/runtime/ui/components/Knob/rotary_knob_left.webp",
+      "sourceWidth": 250,
+      "sourceHeight": 320,
+      "runtimeWidth": 250,
+      "runtimeHeight": 320,
+      "resolution": 1,
+      "resizeScale": 1,
+      "quality": 85,
+      "alphaQuality": 90
     },
     {
       "source": "/assets/ui/components/Knob/rotary_knob_right.png",
-      "runtime": "/assets/runtime/ui/components/Knob/rotary_knob_right.webp"
+      "runtime": "/assets/runtime/ui/components/Knob/rotary_knob_right.webp",
+      "sourceWidth": 250,
+      "sourceHeight": 320,
+      "runtimeWidth": 250,
+      "runtimeHeight": 320,
+      "resolution": 1,
+      "resizeScale": 1,
+      "quality": 85,
+      "alphaQuality": 90
     },
     {
       "source": "/assets/ui/components/Led/blue_led.png",
-      "runtime": "/assets/runtime/ui/components/Led/blue_led.webp"
+      "runtime": "/assets/runtime/ui/components/Led/blue_led.webp",
+      "sourceWidth": 60,
+      "sourceHeight": 200,
+      "runtimeWidth": 60,
+      "runtimeHeight": 200,
+      "resolution": 1,
+      "resizeScale": 1,
+      "quality": 85,
+      "alphaQuality": 90
     },
     {
       "source": "/assets/ui/components/Led/empty_10-level.png",
-      "runtime": "/assets/runtime/ui/components/Led/empty_10-level.webp"
+      "runtime": "/assets/runtime/ui/components/Led/empty_10-level.webp",
+      "sourceWidth": 1642,
+      "sourceHeight": 442,
+      "runtimeWidth": 1642,
+      "runtimeHeight": 442,
+      "resolution": 1,
+      "resizeScale": 1,
+      "quality": 85,
+      "alphaQuality": 90
     },
     {
       "source": "/assets/ui/components/Led/empty_3-level.png",
-      "runtime": "/assets/runtime/ui/components/Led/empty_3-level.webp"
+      "runtime": "/assets/runtime/ui/components/Led/empty_3-level.webp",
+      "sourceWidth": 900,
+      "sourceHeight": 489,
+      "runtimeWidth": 900,
+      "runtimeHeight": 489,
+      "resolution": 1,
+      "resizeScale": 1,
+      "quality": 85,
+      "alphaQuality": 90
     },
     {
       "source": "/assets/ui/components/Led/green_led.png",
-      "runtime": "/assets/runtime/ui/components/Led/green_led.webp"
+      "runtime": "/assets/runtime/ui/components/Led/green_led.webp",
+      "sourceWidth": 60,
+      "sourceHeight": 200,
+      "runtimeWidth": 60,
+      "runtimeHeight": 200,
+      "resolution": 1,
+      "resizeScale": 1,
+      "quality": 85,
+      "alphaQuality": 90
     },
     {
       "source": "/assets/ui/components/Led/orange_led.png",
-      "runtime": "/assets/runtime/ui/components/Led/orange_led.webp"
+      "runtime": "/assets/runtime/ui/components/Led/orange_led.webp",
+      "sourceWidth": 59,
+      "sourceHeight": 200,
+      "runtimeWidth": 59,
+      "runtimeHeight": 200,
+      "resolution": 1,
+      "resizeScale": 1,
+      "quality": 85,
+      "alphaQuality": 90
     },
     {
       "source": "/assets/ui/components/Led/red_led.png",
-      "runtime": "/assets/runtime/ui/components/Led/red_led.webp"
+      "runtime": "/assets/runtime/ui/components/Led/red_led.webp",
+      "sourceWidth": 60,
+      "sourceHeight": 200,
+      "runtimeWidth": 60,
+      "runtimeHeight": 200,
+      "resolution": 1,
+      "resizeScale": 1,
+      "quality": 85,
+      "alphaQuality": 90
     },
     {
       "source": "/assets/ui/components/gauge/needle.png",
-      "runtime": "/assets/runtime/ui/components/gauge/needle.webp"
+      "runtime": "/assets/runtime/ui/components/gauge/needle.webp",
+      "sourceWidth": 191,
+      "sourceHeight": 1113,
+      "runtimeWidth": 191,
+      "runtimeHeight": 1113,
+      "resolution": 1,
+      "resizeScale": 1,
+      "quality": 85,
+      "alphaQuality": 90
     },
     {
       "source": "/assets/ui/components/upgrade.png",
-      "runtime": "/assets/runtime/ui/components/upgrade.webp"
+      "runtime": "/assets/runtime/ui/components/upgrade.webp",
+      "sourceWidth": 102,
+      "sourceHeight": 150,
+      "runtimeWidth": 102,
+      "runtimeHeight": 150,
+      "resolution": 1,
+      "resizeScale": 1,
+      "quality": 85,
+      "alphaQuality": 90
     }
   ],
   "howToAssets": [

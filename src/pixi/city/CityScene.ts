@@ -18,7 +18,7 @@ export type CitySceneTextures = {
   openAiSign: Texture;
   damWater: DamWaterTextures;
   windFrames: Texture[];
-  slots: Record<CitySlotId, Record<CityLevel, Texture>>;
+  slots: Record<CitySlotId, Partial<Record<CityLevel, Texture>>>;
 };
 
 export class CityScene extends Container {
@@ -116,6 +116,10 @@ export class CityScene extends Container {
     for (const [slotId, level] of Object.entries(levels) as Array<[CitySlotId, CityLevel]>) {
       this.slots.get(slotId)?.setLevel(level);
     }
+  }
+
+  public setSlotTexture(slotId: CitySlotId, level: CityLevel, texture: Texture): void {
+    this.slots.get(slotId)?.setTexture(level, texture);
   }
 
   public setViewState(state: CityViewState): void {

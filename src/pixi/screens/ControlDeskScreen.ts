@@ -4,7 +4,7 @@ import { GAME_CONFIG } from "../../gameplay/config";
 import type { PlayerCommand, ProductionConsoleState, WaterDamMode } from "../../gameplay/types";
 import type { AssetResolver } from "../assets";
 import { CityScene } from "../city/CityScene";
-import { citySceneTexturesFromResolver } from "../city/cityAssets";
+import { citySceneTexturesFromResolver, preloadDeferredCityTextures } from "../city/cityAssets";
 import { DESK_VIEWPORT } from "../city/citySceneConfig";
 import { cityViewStateFromProductionState, selectDamWaterVisualState, selectWindFarmVisualState } from "../city/cityState";
 import type { CitySectorOverlayState, CitySectorSlotId, CitySlotId } from "../city/cityTypes";
@@ -104,6 +104,11 @@ export class ControlDeskScreen extends Container {
     if (cityTextures) {
       this.cityScene = new CityScene(cityTextures);
       this.worldViewportLayer.addChild(this.cityScene);
+      scheduleAfterFirstFrame(() => {
+        if (this.cityScene) {
+          preloadDeferredCityTextures(assets, this.cityScene);
+        }
+      });
     }
     this.deskBackplateLayer.addChild(new Backplate(assets.texture("desk_background"), this.layout.backplate));
     this.deskContentLayer.addChild(
@@ -584,6 +589,16 @@ export class ControlDeskScreen extends Container {
       .rect(bounds.x, bounds.y, bounds.width, bounds.height)
       .stroke({ color: 0xffd447, alpha: 0.92, width: 3 });
   }
+}
+
+function scheduleAfterFirstFrame(callback: () => void): void {
+  if (typeof globalThis.requestAnimationFrame !== "function") {
+    globalThis.setTimeout(callback, 0);
+    return;
+  }
+  globalThis.requestAnimationFrame(() => {
+    globalThis.setTimeout(callback, 0);
+  });
 }
 
 const TOP_STATUS_READOUT_KEYS = new Set<ReadoutKey>(["cash", "score", "incidents", "city"]);

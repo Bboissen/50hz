@@ -179,6 +179,25 @@ describe("city view production integration", () => {
     expect(scene.debugSlotLevel("business")).toBe(1);
   });
 
+  it("accepts deferred slot textures after the city scene is already live", () => {
+    const textures = cityTextures();
+    textures.slots.household = {
+      1: textureWithSize(900, 500),
+    };
+    const scene = new CityScene(textures);
+    const initialSize = scene.debugSlotRenderedSize("household");
+
+    scene.setLevels({ ...cityViewStateFromProductionState(productionState()).levels, household: 2 });
+
+    expect(scene.debugSlotLevel("household")).toBe(2);
+    expect(scene.debugSlotRenderedSize("household")).toEqual(initialSize);
+
+    scene.setSlotTexture("household", 2, textureWithSize(1200, 650));
+
+    expect(scene.debugSlotLevel("household")).toBe(2);
+    expect(scene.debugSlotRenderedSize("household")).toEqual(initialSize);
+  });
+
   it("keeps each city slot rendered at one stable size across levels", () => {
     const textures = cityTextures();
     textures.slots.nuclear = {
