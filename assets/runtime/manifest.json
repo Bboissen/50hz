@@ -222,10 +222,6 @@
     {
       "source": "/assets/ui/components/upgrade.png",
       "runtime": "/assets/runtime/ui/components/upgrade.webp"
-    },
-    {
-      "source": "/assets/ui/full_clean.png",
-      "runtime": "/assets/runtime/ui/full_clean.webp"
     }
   ]
 }

@@ -23,7 +23,10 @@ export class GaugeNeedle extends Container {
   public update(value: number): void {
     const span = this.layout.maxValue - this.layout.minValue;
     const normalized = span === 0 ? 0 : Math.max(0, Math.min(1, (value - this.layout.minValue) / span));
-    this.rotation = this.layout.minAngle + (this.layout.maxAngle - this.layout.minAngle) * normalized;
+    const nextRotation = this.layout.minAngle + (this.layout.maxAngle - this.layout.minAngle) * normalized;
+    if (this.rotation !== nextRotation) {
+      this.rotation = nextRotation;
+    }
   }
 
   public debugNeedlePosition(): { x: number; y: number } {

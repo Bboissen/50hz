@@ -33,7 +33,7 @@ This is a **diagnostic and intervention screen**, not a passive dashboard. The M
 
 ## Macro layout
 
-Use `assets/ui/full_clean.png` only as a reference overlay. The shipped desk backplate is `assets/ui/background/empty_background_1920.runtime.png`; interactive controls are Pixi sprite overlays and approved live-state overlays.
+Use `assets/ui/full_clean.png` only as an offline art/layout reference. The shipped desk backplate is `assets/ui/background/empty_background_1920.runtime.png`; interactive controls are Pixi sprite overlays and approved live-state overlays. Do not include `full_clean` in the Pixi runtime asset resolver.
 
 ```txt
 ┌──────────────────────────────────────────────────────────────┬─────────────┐
@@ -138,8 +138,7 @@ MainControlRoomRoot
 │  └─ UpgradeRowHitZones
 ├─ AlarmOverlayLayer
 ├─ ContractOfferModal
-├─ BreakerResetModal
-└─ ReferenceOverlayLayer_optional
+└─ BreakerResetModal
 ```
 
 ## Confusion risks and fixes

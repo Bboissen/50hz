@@ -25,6 +25,8 @@ export class DemandForecastMonitor extends Container {
   private readonly labels: Text[] = [];
   private readonly plot: Rect;
   private debug?: DemandForecastMonitorDebugState;
+  private lastSignature = "";
+  private redrawCount = 0;
 
   public constructor(private readonly bounds: Rect, fontFamily: string) {
     super({ label: "DemandForecastMonitor" });
@@ -58,6 +60,11 @@ export class DemandForecastMonitor extends Container {
   }
 
   public update(state: DemandForecastMonitorState): void {
+    const signature = monitorSignature(state);
+    if (this.lastSignature === signature) {
+      return;
+    }
+    this.lastSignature = signature;
     const demandTrace = normalizeTrace(state.eventTrace, state.currentDemandMW);
     const safeMinMW = state.currentDemandMW * (1 - state.safeBalanceBand);
     const safeMaxMW = state.currentDemandMW * (1 + state.safeBalanceBand);
@@ -89,6 +96,10 @@ export class DemandForecastMonitor extends Container {
     return this.debug;
   }
 
+  public debugRedrawCount(): number {
+    return this.redrawCount;
+  }
+
   private drawFrame(): void {
     this.frame
       .clear()
@@ -103,6 +114,7 @@ export class DemandForecastMonitor extends Container {
   }
 
   private drawPlot(demandPoints: Point[], supplyPoint: Point, safeRange: { minY: number; maxY: number }): void {
+    this.redrawCount += 1;
     this.plotLayer.clear();
     for (let index = 1; index <= 6; index += 1) {
       const x = this.plot.x + (this.plot.w / 6) * index;
@@ -162,6 +174,25 @@ export class DemandForecastMonitor extends Container {
     label.position.set(x, y);
     return label;
   }
+}
+
+function monitorSignature(state: DemandForecastMonitorState): string {
+  const trace = state.eventTrace
+    .map((point) =>
+      [
+        rounded(point.timeOffsetSeconds),
+        rounded(point.demandMW),
+        point.breakerWouldTrip === true ? 1 : 0,
+        rounded(point.breakerTimer ?? 0),
+        point.breakerRiskSource ?? "",
+      ].join(":"),
+    )
+    .join("|");
+  return [rounded(state.generationMW), rounded(state.currentDemandMW), rounded(state.safeBalanceBand), trace].join(";");
+}
+
+function rounded(value: number): number {
+  return Math.round(value * 100) / 100;
 }
 
 function riskLevelForTracePoint(point: EventTracePoint): "warning" | "trip" | undefined {

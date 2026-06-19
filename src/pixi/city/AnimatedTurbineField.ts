@@ -69,11 +69,12 @@ export class AnimatedTurbineField extends Container {
   }
 
   public tick(deltaMS: number): void {
-    if (this.canAnimate()) {
-      const ratio = this.visualState.windOutputMW / Math.max(this.visualState.windPeakMW, 1);
-      const speed = lerp(0.35, 1.85, clamp01(ratio));
-      this.framePosition += Math.max(0, Math.min(deltaMS, 100)) / 1000 * BASE_FPS * speed;
+    if (!this.canAnimate()) {
+      return;
     }
+    const ratio = this.visualState.windOutputMW / Math.max(this.visualState.windPeakMW, 1);
+    const speed = lerp(0.35, 1.85, clamp01(ratio));
+    this.framePosition += Math.max(0, Math.min(deltaMS, 100)) / 1000 * BASE_FPS * speed;
     for (const [index, turbine] of this.turbines.entries()) {
       turbine.update(this.framePosition + TURBINE_MOUNTS[index].phase);
     }

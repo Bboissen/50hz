@@ -41,6 +41,7 @@ export class CityScene extends Container {
     business: 0,
     datacenter: 0,
   };
+  private hasAnimatedSectorOverlay = false;
   private animationSeconds = 0;
 
   public constructor(textures: CitySceneTextures) {
@@ -136,7 +137,9 @@ export class CityScene extends Container {
     this.animationSeconds += Math.max(0, Math.min(deltaMS, 100)) / 1000;
     this.damWater.tick(deltaMS);
     this.turbineField.tick(deltaMS);
-    this.renderSectorOverlays();
+    if (this.hasAnimatedSectorOverlay) {
+      this.renderSectorOverlays();
+    }
   }
 
   public debugSlotLevel(slotId: CitySlotId): CityLevel | undefined {
@@ -228,6 +231,7 @@ export class CityScene extends Container {
 
   private renderSectorOverlays(): void {
     this.sectorOverlay.clear();
+    this.hasAnimatedSectorOverlay = false;
     for (const slotId of ["household", "business", "datacenter"] as const) {
       const state = this.sectorOverlays[slotId];
       const config = CITY_SLOT_CONFIGS.find((slot) => slot.id === slotId);
@@ -239,6 +243,7 @@ export class CityScene extends Container {
         this.sectorOverlayAlpha[slotId] = 0;
         continue;
       }
+      this.hasAnimatedSectorOverlay = this.hasAnimatedSectorOverlay || state.isSpiking || state.isDemandCritical;
 
       const pulse = state.isSpiking ? 0.5 + Math.sin(this.animationSeconds * Math.PI * 5) * 0.5 : 0.45;
       const alpha = state.isBrownedOut ? 0.34 : state.isDemandCritical ? 0.24 + pulse * 0.16 : 0.16 + pulse * 0.18;

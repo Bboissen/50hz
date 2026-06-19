@@ -17,6 +17,7 @@ export class SpriteLedStrip extends Container {
   private readonly fallbackGraphics = new Graphics({ label: "test-fallback-leds" });
   private activeCount = 0;
   private activeColors: LedColorKey[] = [];
+  private activeMode: LedColorKey | "threshold" = "threshold";
 
   public constructor(
     private readonly layout: LedStripLayout,
@@ -66,18 +67,26 @@ export class SpriteLedStrip extends Container {
 
   public update(valueRatio: number, mode: LedColorKey | "threshold" = "threshold"): void {
     const clamped = Math.max(0, Math.min(1, valueRatio));
-    this.activeCount = Math.round(clamped * this.layout.cells);
-    this.activeColors = [];
+    const nextActiveCount = Math.round(clamped * this.layout.cells);
+    const nextActiveColors = Array.from({ length: this.litSprites.length }, (_, index) =>
+      mode === "threshold" ? this.colorForIndex(index) : mode,
+    );
+    if (this.activeCount === nextActiveCount && this.activeMode === mode && sameColors(this.activeColors, nextActiveColors)) {
+      return;
+    }
+    this.activeCount = nextActiveCount;
+    this.activeMode = mode;
+    this.activeColors = nextActiveColors;
     this.fallbackGraphics.clear();
 
     for (let index = 0; index < this.litSprites.length; index += 1) {
       const sprite = this.litSprites[index];
       const isActive = index < this.activeCount;
-      const color = mode === "threshold" ? this.colorForIndex(index) : mode;
-      this.activeColors.push(color);
+      const color = this.activeColors[index] ?? "green";
       sprite.visible = isActive && this.textures[color] !== undefined;
-      if (this.textures[color]) {
-        sprite.texture = this.textures[color];
+      const texture = this.textures[color];
+      if (texture && sprite.texture !== texture) {
+        sprite.texture = texture;
       }
       if (isActive && this.options.allowTestFallback && !this.textures[color]) {
         this.fallbackGraphics
@@ -118,4 +127,11 @@ export class SpriteLedStrip extends Container {
     }
     return 0x5ef06b;
   }
+}
+
+function sameColors(left: LedColorKey[], right: LedColorKey[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+  return left.every((color, index) => color === right[index]);
 }

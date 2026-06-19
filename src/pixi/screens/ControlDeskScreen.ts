@@ -1,4 +1,4 @@
-import { Container, Graphics, Sprite, Text } from "pixi.js";
+import { Container, Graphics, Text } from "pixi.js";
 
 import { GAME_CONFIG } from "../../gameplay/config";
 import type { PlayerCommand, ProductionConsoleState, WaterDamMode } from "../../gameplay/types";
@@ -24,7 +24,6 @@ import { weatherIconTexturesFromResolver } from "../controlDesk/weatherIconAsset
 
 export type ControlDeskScreenOptions = {
   layout?: ControlDeskLayout;
-  showReferenceOverlay?: boolean;
   showLayoutDebug?: boolean;
 };
 
@@ -55,7 +54,6 @@ export class ControlDeskScreen extends Container {
   public readonly instrumentOverlayLayer = new Container({ label: "InstrumentOverlayLayer" });
   public readonly hitZoneLayer = new Container({ label: "HitZoneLayer" });
   public readonly alignmentDebugLayer = new Container({ label: "AlignmentDebugLayer" });
-  public readonly referenceOverlayLayer = new Container({ label: "ReferenceOverlayLayer" });
   public readonly layoutSelectionLayer = new Graphics({ label: "LayoutSelectionLayer" });
 
   private readonly layout: ControlDeskLayout;
@@ -92,8 +90,6 @@ export class ControlDeskScreen extends Container {
     this.layout = options.layout ?? CONTROL_DESK_LAYOUT;
     this.eventMode = "passive";
 
-    this.referenceOverlayLayer.eventMode = "none";
-    this.referenceOverlayLayer.interactiveChildren = false;
     this.alignmentDebugLayer.eventMode = "none";
     this.alignmentDebugLayer.interactiveChildren = false;
     this.topStatusLayer.eventMode = "none";
@@ -117,7 +113,6 @@ export class ControlDeskScreen extends Container {
       this.instrumentOverlayLayer,
       this.hitZoneLayer,
       this.alignmentDebugLayer,
-      this.referenceOverlayLayer,
     );
     this.addChild(this.deskContentLayer, this.topStatusLayer, this.layoutSelectionLayer);
 
@@ -222,9 +217,6 @@ export class ControlDeskScreen extends Container {
     this.topStatusLayer.addChild(this.safetyNetCooldown);
 
     this.addHitZones(options.showLayoutDebug === true);
-    if (options.showReferenceOverlay) {
-      this.addReferenceOverlay();
-    }
     if (options.showLayoutDebug) {
       this.addLayoutDebug();
     }
@@ -246,7 +238,7 @@ export class ControlDeskScreen extends Container {
     this.boilerKnob.update(state.thermalThrottle);
     this.windSwitch.update(state.windEnabled ? "on" : "off");
     this.damRotary.update(state.waterDamMode);
-    this.forecastTape?.update({ seed: state.matchSeed, timeSeconds: state.timeSeconds });
+    this.forecastTape?.update({ seed: state.matchSeed, timeSeconds: state.timeSeconds, forecast: state.forecast });
     this.updateSafetyNetCooldown(state.gridShutdownReliefSeconds);
     this.demandMonitor.update({
       eventTrace: state.eventTrace,
@@ -494,19 +486,6 @@ export class ControlDeskScreen extends Container {
       .roundRect(x + 18, y + h - 13, (w - 36) * ratio, 8, 4)
       .fill({ color: 0xfff3b0, alpha: 1 });
     this.safetyNetCooldownLabel.text = `Reset safety net - ${Math.ceil(remaining)}s left to match the demand`;
-  }
-
-  private addReferenceOverlay(): void {
-    const texture = this.assets.texture("desk_reference_full_clean");
-    if (!texture) {
-      return;
-    }
-    const sprite = new Sprite({ texture, label: "desk-full-clean-reference-only" });
-    sprite.alpha = 0.38;
-    sprite.eventMode = "none";
-    sprite.width = this.layout.canvas.width;
-    sprite.height = this.layout.canvas.height;
-    this.referenceOverlayLayer.addChild(sprite);
   }
 
   private addLayoutDebug(): void {

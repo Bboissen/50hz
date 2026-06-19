@@ -31,6 +31,17 @@ function tickFixedUntil(seconds: number) {
   return state;
 }
 
+function tickGodModeUntil(seconds: number) {
+  let state = createInitialMatchState();
+  state = applyPlayerCommand(state, { type: "setGodMode", playerId: "player", enabled: true });
+  state = applyPlayerCommand(state, { type: "setGodMode", playerId: "rival", enabled: true });
+  const dt = 1 / GAME_CONFIG.match.tickRateHz;
+  while (state.timeSeconds < seconds) {
+    state = tickMatch(state, Math.min(dt, seconds - state.timeSeconds));
+  }
+  return state;
+}
+
 function forceUnderloadTrip() {
   let state = createInitialMatchState();
   state = applyPlayerCommand(state, { type: "setNuclearTarget", playerId: "player", targetMW: 0 });
@@ -634,6 +645,20 @@ describe("match", () => {
     expect(production.thermalOutputMW).toBeGreaterThanOrEqual(0);
     expect(production.waterDamCapacityMWh).toBeGreaterThan(0);
     expect(production.breakerResetProgress).toBeGreaterThanOrEqual(0);
+  });
+
+  it("keeps long-run weather forecast and solar potential on the same sampled timeline", () => {
+    for (const targetTime of [123.4, 179.8, 287.3]) {
+      const state = tickGodModeUntil(targetTime);
+      const production = selectProductionConsoleState(state);
+      const sampledWeather = sampleWeather(state.seed, state.timeSeconds);
+
+      expect(production.currentWeather.condition).toBe(sampledWeather.condition);
+      expect(production.forecast[0]?.id).toBe(sampledWeather.condition);
+      expect(production.forecast[0]?.remainingSeconds).toBe(0);
+      expect(production.solarPotentialMW).toBeCloseTo(production.solarPeakMW * production.solarFactor);
+      expect(production.solarOutputMW).toBeLessThanOrEqual(production.solarPotentialMW + 0.001);
+    }
   });
 
   it("does not carry near-full sunny solar output into cloud weather", () => {

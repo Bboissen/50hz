@@ -1,3 +1,5 @@
+import { Ticker } from "pixi.js";
+
 import { chooseBotCommands } from "./gameplay/bot";
 import {
   applyPlayerCommand,
@@ -40,6 +42,7 @@ async function bootstrap(): Promise<void> {
   const app = await createPixiApp(root);
   const assets = await createAssetResolver();
   let accumulator = 0;
+  let lastDocumentPhase = "";
 
   const dispatch = (command: PlayerCommand): void => {
     if (phase !== "playing") {
@@ -62,7 +65,6 @@ async function bootstrap(): Promise<void> {
     root.appendChild(debugPanel.element);
   }
   const screenManager = new ScreenManager(assets, dispatch, {
-    showReferenceOverlay: searchParams.get("deskRef") === "1",
     showLayoutDebug: searchParams.get("layoutDebug") === "1",
   });
   app.stage.addChild(screenManager);
@@ -76,32 +78,15 @@ async function bootstrap(): Promise<void> {
     root.appendChild(layoutEditor.element);
   }
 
-  const resetMatch = (): void => {
-    state = createInitialMatchState({ seed: matchSeed });
-    accumulator = 0;
-    phase = editorMode ? "editing" : "playing";
-    gameMenu.hide();
-  };
-  const returnToMainMenu = (): void => {
-    state = createInitialMatchState({ seed: matchSeed });
-    accumulator = 0;
-    phase = "menu";
-    gameMenu.showStart();
-  };
-  const gameMenu = createGameMenu({
-    onPlay: resetMatch,
-    onReplay: resetMatch,
-    onMainMenu: returnToMainMenu,
-  });
-  if (!autoStart) {
-    gameMenu.showStart();
-  }
-
-  const fixedDt = 1 / GAME_CONFIG.match.tickRateHz;
-
-  app.ticker.add((ticker) => {
-    const frameDt = Math.min(ticker.deltaMS / 1000, 0.1);
+  const updateDocumentPhase = (): void => {
+    if (lastDocumentPhase === phase) {
+      return;
+    }
     document.documentElement.dataset.appPhase = phase;
+    lastDocumentPhase = phase;
+  };
+  const renderCurrentFrame = (frameDt: number): void => {
+    updateDocumentPhase();
     if (phase === "playing") {
       accumulator += frameDt * GAME_CONFIG.match.simulationSpeed;
       while (accumulator >= fixedDt) {
@@ -119,6 +104,7 @@ async function bootstrap(): Promise<void> {
     const matchOver = isMatchOver(state);
     if (phase === "playing" && matchOver) {
       phase = "ended";
+      updateDocumentPhase();
       gameMenu.showEnd(result, state);
     }
     screenManager.update({
@@ -130,6 +116,69 @@ async function bootstrap(): Promise<void> {
       dt: phase === "editing" ? 0 : frameDt,
     });
     debugPanel?.update(dispatchState, productionState, state.isPaused);
+  };
+  const resetMatch = (): void => {
+    state = createInitialMatchState({ seed: matchSeed });
+    accumulator = 0;
+    phase = editorMode ? "editing" : "playing";
+    gameMenu.hide();
+    Ticker.system.start();
+    app.start();
+  };
+  const returnToMainMenu = (): void => {
+    state = createInitialMatchState({ seed: matchSeed });
+    accumulator = 0;
+    phase = "menu";
+    gameMenu.showStart();
+    renderCurrentFrame(0);
+    app.render();
+    app.stop();
+    Ticker.system.stop();
+  };
+  const gameMenu = createGameMenu({
+    onPlay: resetMatch,
+    onReplay: resetMatch,
+    onMainMenu: returnToMainMenu,
+  });
+  if (!autoStart) {
+    gameMenu.showStart();
+  }
+
+  const fixedDt = 1 / GAME_CONFIG.match.tickRateHz;
+
+  app.ticker.add((ticker) => {
+    const frameDt = Math.min(ticker.deltaMS / 1000, 0.1);
+    renderCurrentFrame(frameDt);
+    if (phase === "ended") {
+      app.render();
+      app.stop();
+      Ticker.system.stop();
+    }
+  });
+
+  renderCurrentFrame(0);
+  app.render();
+  if (phase === "playing" || phase === "editing") {
+    Ticker.system.start();
+    app.start();
+  } else {
+    app.stop();
+    Ticker.system.stop();
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      app.stop();
+      Ticker.system.stop();
+      return;
+    }
+    if (phase === "playing" || phase === "editing") {
+      Ticker.system.start();
+      app.start();
+    } else {
+      renderCurrentFrame(0);
+      app.render();
+      Ticker.system.stop();
+    }
   });
 }
 

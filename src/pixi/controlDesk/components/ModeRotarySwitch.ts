@@ -159,7 +159,11 @@ export class ModeRotarySwitch<Mode extends string> extends Container {
   }
 
   private applyIndex(index: number): void {
-    this.selectedIndex = Math.max(0, Math.min(this.options.length - 1, index));
+    const nextIndex = Math.max(0, Math.min(this.options.length - 1, index));
+    if (nextIndex === this.selectedIndex) {
+      return;
+    }
+    this.selectedIndex = nextIndex;
     const option = this.options[this.selectedIndex];
     if (!option) {
       return;

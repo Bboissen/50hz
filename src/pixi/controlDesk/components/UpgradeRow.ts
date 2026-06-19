@@ -13,6 +13,9 @@ export class UpgradeRow extends Container {
   private readonly strip: SpriteLedStrip;
   private readonly arrow?: Sprite;
   private state?: PlantUpgradeState;
+  private lastLabelText = "";
+  private lastPriceText = "";
+  private lastArrowAlpha = Number.NaN;
 
   public constructor(
     layout: UpgradeRowLayout,
@@ -84,11 +87,22 @@ export class UpgradeRow extends Container {
   public update(state: PlantUpgradeState): void {
     this.state = state;
     const displayedLevel = Math.max(state.level, state.purchasedLevel);
-    this.labelNode.text = `${state.shortLabel} L${displayedLevel}`;
-    this.priceNode.text = state.statusText;
+    const nextLabelText = `${state.shortLabel} L${displayedLevel}`;
+    if (this.lastLabelText !== nextLabelText) {
+      this.lastLabelText = nextLabelText;
+      this.labelNode.text = nextLabelText;
+    }
+    if (this.lastPriceText !== state.statusText) {
+      this.lastPriceText = state.statusText;
+      this.priceNode.text = state.statusText;
+    }
     this.strip.update(displayedLevel / state.maxLevel, "green");
     if (this.arrow) {
-      this.arrow.alpha = state.isMaxed ? 0.28 : 1;
+      const nextArrowAlpha = state.isMaxed ? 0.28 : 1;
+      if (this.lastArrowAlpha !== nextArrowAlpha) {
+        this.lastArrowAlpha = nextArrowAlpha;
+        this.arrow.alpha = nextArrowAlpha;
+      }
     }
   }
 

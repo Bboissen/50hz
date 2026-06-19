@@ -11,7 +11,6 @@ import { ScreenTransition } from "./ScreenTransition";
 
 type ScreenId = "desk" | "result";
 type ScreenManagerOptions = {
-  showReferenceOverlay?: boolean;
   showLayoutDebug?: boolean;
 };
 
@@ -26,7 +25,6 @@ export class ScreenManager extends Container {
   public constructor(assets: AssetResolver, sink: (command: PlayerCommand) => void, options: ScreenManagerOptions = {}) {
     super();
     this.controlDeskScreen = new ControlDeskScreen(assets, sink, {
-      showReferenceOverlay: options.showReferenceOverlay,
       showLayoutDebug: options.showLayoutDebug,
     });
     this.resultScreen = new ResultScreen();

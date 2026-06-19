@@ -137,7 +137,7 @@ The current sprite-backed desk migration uses authored assets for the physical c
 - forecast scan animation inside the monitor only,
 - no procedural dials, levers, lamp blocks, panel chrome, or gauge faces over the clean desk.
 
-The `assets/ui/full_clean.png` image is a dev reference only. Use it for `?deskRef=1` alignment overlays, not as the shipped interface.
+The `assets/ui/full_clean.png` image is an offline dev reference only. It must not be loaded by the shipped Pixi runtime or exposed through a live `deskRef` overlay.
 
 ## Acceptance criteria
 

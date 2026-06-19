@@ -27,8 +27,13 @@ export class RotaryKnob extends Container {
   }
 
   public update(valueRatio: number): void {
-    this.normalized = Math.max(0, Math.min(1, valueRatio));
-    this.rotation = this.layout.minAngle + (this.layout.maxAngle - this.layout.minAngle) * this.normalized;
+    const nextNormalized = Math.max(0, Math.min(1, valueRatio));
+    const nextRotation = this.layout.minAngle + (this.layout.maxAngle - this.layout.minAngle) * nextNormalized;
+    if (this.normalized === nextNormalized && this.rotation === nextRotation) {
+      return;
+    }
+    this.normalized = nextNormalized;
+    this.rotation = nextRotation;
   }
 
   public debugSetNormalized(valueRatio: number): void {

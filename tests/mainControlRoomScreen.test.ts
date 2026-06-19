@@ -70,7 +70,6 @@ describe("ControlDeskScreen", () => {
       "InstrumentOverlayLayer",
       "HitZoneLayer",
       "AlignmentDebugLayer",
-      "ReferenceOverlayLayer",
     ]);
     expect(screen.deskContentLayer.position.y).toBe(CONTROL_DESK_LAYOUT.deskTransform.y);
     expect(screen.deskContentLayer.scale.y).toBeCloseTo(CONTROL_DESK_LAYOUT.deskTransform.scaleY);
@@ -169,32 +168,6 @@ describe("ControlDeskScreen", () => {
       outputRatio: 0.6,
     });
     expect(JSON.stringify(state)).toBe(serializedState);
-  });
-
-  it("does not render the full reference PNG unless explicitly requested", () => {
-    const { calls, resolver } = recordingAssets({
-      desk_background: true,
-      desk_reference_full_clean: true,
-    });
-    const screen = new ControlDeskScreen(resolver, () => undefined, { showReferenceOverlay: false });
-
-    screen.update(productionState());
-
-    expect(calls).not.toContain("desk_reference_full_clean");
-    expect(screen.referenceOverlayLayer.children).toHaveLength(0);
-  });
-
-  it("renders full_clean only in a non-interactive reference overlay", () => {
-    const { calls, resolver } = recordingAssets({
-      desk_background: true,
-      desk_reference_full_clean: true,
-    });
-    const screen = new ControlDeskScreen(resolver, () => undefined, { showReferenceOverlay: true });
-
-    expect(calls).toContain("desk_reference_full_clean");
-    expect(screen.referenceOverlayLayer.eventMode).toBe("none");
-    expect(screen.referenceOverlayLayer.interactiveChildren).toBe(false);
-    expect(screen.referenceOverlayLayer.children[0]?.label).toBe("desk-full-clean-reference-only");
   });
 
   it("emits production control commands from sprite-backed controls", () => {
@@ -356,15 +329,21 @@ describe("ControlDeskScreen", () => {
     expect(commands).toEqual(expectedCommands);
   });
 
-  it("renders a moving weather forecast tape from deterministic sampled weather", () => {
+  it("renders the weather forecast tape from selector-owned sampled offsets", () => {
     const seed = "forecast-tape-proof";
     const { resolver } = recordingAssets(enabledWeatherIcons());
     const screen = new ControlDeskScreen(resolver, () => undefined);
     const baseState = { ...productionState(), matchSeed: seed, timeSeconds: 0 };
+    const forecast = [
+      { id: "sun", label: "SUN", phase: "impact" as const, remainingSeconds: 0 },
+      { id: "rain", label: "RAIN", phase: "warning" as const, remainingSeconds: 15 },
+      { id: "snow", label: "SNOW", phase: "warning" as const, remainingSeconds: 30 },
+      { id: "cloud", label: "CLOUD", phase: "warning" as const, remainingSeconds: 45 },
+    ];
 
-    screen.update(baseState);
+    screen.update({ ...baseState, forecast });
     const first = screen.debugForecastTapeState();
-    screen.update({ ...baseState, timeSeconds: FORECAST_BUCKET_SECONDS / 2 });
+    screen.update({ ...baseState, timeSeconds: FORECAST_BUCKET_SECONDS / 2, forecast });
     const second = screen.debugForecastTapeState();
 
     expect(first?.pointerX).toBe(second?.pointerX);
@@ -372,10 +351,10 @@ describe("ControlDeskScreen", () => {
     expect(second?.offsetPixels).toBeGreaterThan(0);
     expect(second?.tileXs).not.toEqual(first?.tileXs);
     expect(second?.pointerSlotIndex).toBe(0);
-    expect(second?.pointerIcon).toBe(sampleWeather(seed, FORECAST_BUCKET_SECONDS / 2).condition);
-    expect(second?.visibleIcons).toEqual(
-      second?.visibleSlots.map((slotIndex) => sampleWeather(seed, slotIndex * FORECAST_BUCKET_SECONDS).condition),
-    );
+    expect(second?.pointerIcon).toBe("sun");
+    expect(second?.visibleSlots).toEqual([0, 15, 30, 45]);
+    expect(second?.visibleIcons.slice(0, forecast.length)).toEqual(["sun", "rain", "snow", "cloud"]);
+    expect(second?.tileIconSizes.every((size) => size.width <= 58 && size.height <= 54)).toBe(true);
   });
 
   it("renders the bottom-right power demand forecast with a static supply marker", () => {
@@ -467,22 +446,23 @@ describe("ControlDeskScreen", () => {
     expect(monitor?.supplyPoint).toEqual(monitor?.demandPoints[0]);
   });
 
-  it("recycles forecast tape tiles while keeping stable slot indices", () => {
+  it("falls back to exact sampled forecast offsets when selector tokens are absent", () => {
     const seed = "forecast-recycle-proof";
     const tape = new ForecastTape(CONTROL_DESK_LAYOUT.forecast.plot, emptyWeatherIconTextures());
 
     tape.update({ seed, timeSeconds: 0 });
     const initial = tape.debugState();
     tape.update({ seed, timeSeconds: FORECAST_BUCKET_SECONDS * 9 + 3 });
-    const recycled = tape.debugState();
+    const updated = tape.debugState();
 
-    expect(initial.tileSlots).toEqual([0, 1, 2, 3, 4, 5, 6]);
-    expect(recycled.tileSlots).toEqual([9, 10, 11, 12, 13, 14, 15]);
-    expect(recycled.pointerX).toBe(initial.pointerX);
-    expect(recycled.pointerSlotIndex).toBe(9);
-    expect(recycled.pointerIcon).toBe(sampleWeather(seed, FORECAST_BUCKET_SECONDS * 9 + 3).condition);
-    expect(recycled.visibleIcons).toEqual(
-      recycled.visibleSlots.map((slotIndex) => sampleWeather(seed, slotIndex * FORECAST_BUCKET_SECONDS).condition),
+    expect(initial.tileSlots).toEqual([0, 15, 30, 45, 60]);
+    expect(updated.tileSlots).toEqual([0, 15, 30, 45, 60]);
+    expect(updated.pointerX).toBe(initial.pointerX);
+    expect(updated.pointerSlotIndex).toBe(0);
+    expect(updated.pointerIcon).toBe(sampleWeather(seed, FORECAST_BUCKET_SECONDS * 9 + 3).condition);
+    expect(updated.tileIconSizes.every((size) => size.width <= 58 && size.height <= 54)).toBe(true);
+    expect(updated.visibleIcons).toEqual(
+      updated.visibleSlots.map((offsetSeconds) => sampleWeather(seed, FORECAST_BUCKET_SECONDS * 9 + 3 + offsetSeconds).condition),
     );
   });
 

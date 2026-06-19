@@ -36,7 +36,6 @@ describe("createAssetResolver", () => {
 
     expect(resolver.fontFamily).toBe("Courier New, monospace");
     expect(resolver.texture("desk_background")).toBeUndefined();
-    expect(resolver.texture("desk_reference_full_clean")).toBeUndefined();
   });
 
   it("uses the authored clean 1920x1080 PNG as the runtime desk background", () => {
@@ -55,10 +54,16 @@ describe("createAssetResolver", () => {
     );
   });
 
+  it("keeps dev reference imagery out of Pixi runtime asset resolution", () => {
+    expect(existsSync(publicPathToRepoPath("/assets/ui/full_clean.png"))).toBe(true);
+    expect(Object.values(CONTROL_DESK_ASSET_SOURCES)).not.toContain("/assets/ui/full_clean.png");
+    expect(Object.values(PIXI_ASSET_SOURCES)).not.toContain("/assets/ui/full_clean.png");
+    expect(Object.values(PIXI_RUNTIME_ASSET_URLS).join("\n")).not.toContain("full_clean");
+  });
+
   it("declares loadable files for all sprite-backed control desk assets", () => {
     const requiredKeys: PixiAssetKey[] = [
       "desk_background",
-      "desk_reference_full_clean",
       "led_empty_10",
       "led_empty_3",
       "led_green",

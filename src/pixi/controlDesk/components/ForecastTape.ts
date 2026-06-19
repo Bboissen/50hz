@@ -1,12 +1,15 @@
 import { Container, Graphics, Sprite } from "pixi.js";
 
-import { sampleWeather, weatherSegmentSeconds, type WeatherCondition } from "../../../gameplay/weather";
+import { GAME_CONFIG } from "../../../gameplay/config";
+import type { TimelineToken } from "../../../gameplay/types";
+import { sampleWeather, type WeatherCondition } from "../../../gameplay/weather";
 import type { Rect } from "../controlDeskLayout";
 import type { WeatherIconTextures } from "../weatherIconAssets";
 
 export type ForecastTapeState = {
   seed: string;
   timeSeconds: number;
+  forecast?: TimelineToken[];
 };
 
 export type ForecastBucket = {
@@ -22,12 +25,19 @@ export type ForecastTapeDebugState = {
   pointerIcon: WeatherCondition | undefined;
   tileSlots: number[];
   tileXs: number[];
+  tileIconSizes: Array<{ width: number; height: number }>;
   visibleSlots: number[];
   visibleIcons: WeatherCondition[];
 };
 
-export const FORECAST_BUCKET_SECONDS = weatherSegmentSeconds();
-const FORECAST_TILE_COUNT = 7;
+export const FORECAST_BUCKET_SECONDS = GAME_CONFIG.weather.forecastOffsetsSeconds[1] ?? GAME_CONFIG.weather.conditionSegmentSeconds;
+const FORECAST_OFFSETS_SECONDS = GAME_CONFIG.weather.forecastOffsetsSeconds;
+const FORECAST_TILE_OFFSETS_SECONDS = [
+  ...FORECAST_OFFSETS_SECONDS,
+  (FORECAST_OFFSETS_SECONDS.at(-1) ?? 0) + FORECAST_BUCKET_SECONDS,
+];
+const FORECAST_VISIBLE_BUCKET_COUNT = FORECAST_OFFSETS_SECONDS.length;
+const FORECAST_TILE_COUNT = FORECAST_TILE_OFFSETS_SECONDS.length;
 
 const WEATHER_COLORS: Record<WeatherCondition, number> = {
   sun: 0x9fd7dc,
@@ -57,9 +67,8 @@ export class ForecastTape extends Container {
   private readonly leftPad: number;
   private readonly compact: boolean;
   private readonly pointerX: number;
-  private lastSeed = "";
-  private nextSlotIndex = 0;
   private offsetPixels = 0;
+  private lastSignature = "";
 
   public constructor(private readonly bounds: Rect, iconTextures: WeatherIconTextures) {
     super({ label: "ForecastTape" });
@@ -67,7 +76,7 @@ export class ForecastTape extends Container {
     this.interactiveChildren = false;
     this.compact = bounds.h < 80;
     this.leftPad = this.compact ? 16 : 22;
-    this.cellW = (bounds.w - this.leftPad * 2) / 4;
+    this.cellW = (bounds.w - this.leftPad * 2) / FORECAST_VISIBLE_BUCKET_COUNT;
     this.tileW = this.cellW - (this.compact ? 10 : 14);
     this.cellY = bounds.y + (this.compact ? 10 : 24);
     this.cellH = bounds.h - (this.compact ? 20 : 62);
@@ -85,20 +94,24 @@ export class ForecastTape extends Container {
   }
 
   public update(state: ForecastTapeState): ForecastBucket[] {
-    const currentSlotIndex = Math.floor(state.timeSeconds / FORECAST_BUCKET_SECONDS);
-    const progress = positiveModulo(state.timeSeconds, FORECAST_BUCKET_SECONDS) / FORECAST_BUCKET_SECONDS;
-    this.offsetPixels = progress * this.cellW;
-
-    if (this.lastSeed !== state.seed || currentSlotIndex < this.minSlotIndex() || currentSlotIndex >= this.nextSlotIndex) {
-      this.seedTiles(state.seed, currentSlotIndex);
-    } else if (currentSlotIndex + FORECAST_TILE_COUNT > this.nextSlotIndex) {
-      this.recycleTilesThrough(state.seed, currentSlotIndex + FORECAST_TILE_COUNT);
+    this.offsetPixels = positiveModulo(state.timeSeconds, FORECAST_BUCKET_SECONDS) / FORECAST_BUCKET_SECONDS * this.cellW;
+    const buckets = FORECAST_TILE_OFFSETS_SECONDS.map((offsetSeconds, index) =>
+      bucketForOffset(state.seed, state.timeSeconds, offsetSeconds, index, state.forecast),
+    );
+    const signature = buckets.map((bucket) => `${bucket.slotIndex}:${bucket.icon}`).join("|");
+    if (signature !== this.lastSignature) {
+      this.lastSignature = signature;
+      for (const [index, tile] of this.tileViews.entries()) {
+        const bucket = buckets[index];
+        if (bucket) {
+          tile.update(bucket);
+        }
+      }
     }
 
     const visibleBuckets: ForecastBucket[] = [];
-    for (const tile of this.tileViews) {
-      const slotOffset = tile.slotIndex - currentSlotIndex;
-      const x = this.pointerX + slotOffset * this.cellW - this.offsetPixels;
+    for (const [index, tile] of this.tileViews.entries()) {
+      const x = this.pointerX + index * this.cellW - this.offsetPixels;
       tile.position.set(Math.round(x), this.cellY);
       tile.visible = x + this.cellW > this.bounds.x + this.leftPad && x < this.bounds.x + this.bounds.w - this.leftPad;
       if (tile.visible) {
@@ -106,13 +119,13 @@ export class ForecastTape extends Container {
       }
     }
 
-    return visibleBuckets.sort((a, b) => a.slotIndex - b.slotIndex);
+    return visibleBuckets;
   }
 
   public debugState(): ForecastTapeDebugState {
     const ordered = [...this.tileViews].sort((a, b) => a.slotIndex - b.slotIndex);
     const visible = ordered.filter((tile) => tile.visible);
-    const pointerTile = ordered.find((tile) => this.pointerX >= tile.x && this.pointerX < tile.x + this.cellW);
+    const pointerTile = ordered.find((tile) => tile.slotIndex === 0);
     return {
       offsetPixels: this.offsetPixels,
       pointerX: this.pointerX,
@@ -120,34 +133,10 @@ export class ForecastTape extends Container {
       pointerIcon: pointerTile?.bucket.icon,
       tileSlots: ordered.map((tile) => tile.slotIndex),
       tileXs: ordered.map((tile) => tile.x),
+      tileIconSizes: ordered.map((tile) => tile.debugIconSize()),
       visibleSlots: visible.map((tile) => tile.slotIndex),
       visibleIcons: visible.map((tile) => tile.bucket.icon),
     };
-  }
-
-  private seedTiles(seed: string, currentSlotIndex: number): void {
-    this.lastSeed = seed;
-    this.nextSlotIndex = currentSlotIndex;
-    for (const tile of this.tileViews) {
-      this.assignTile(seed, tile, this.nextSlotIndex);
-      this.nextSlotIndex += 1;
-    }
-  }
-
-  private recycleTilesThrough(seed: string, requiredNextSlotIndex: number): void {
-    while (this.nextSlotIndex < requiredNextSlotIndex) {
-      const oldestTile = this.tileViews.reduce((oldest, tile) => (tile.slotIndex < oldest.slotIndex ? tile : oldest));
-      this.assignTile(seed, oldestTile, this.nextSlotIndex);
-      this.nextSlotIndex += 1;
-    }
-  }
-
-  private assignTile(seed: string, tile: ForecastBucketView, slotIndex: number): void {
-    tile.update(bucketForSlot(seed, slotIndex));
-  }
-
-  private minSlotIndex(): number {
-    return Math.min(...this.tileViews.map((tile) => tile.slotIndex));
   }
 
   private renderFrame(): void {
@@ -204,6 +193,7 @@ class ForecastBucketView extends Container {
     absoluteTimeSeconds: 0,
     slotIndex: 0,
   };
+  private renderedIcon?: WeatherCondition;
 
   public constructor(
     index: number,
@@ -232,6 +222,10 @@ class ForecastBucketView extends Container {
 
   public update(bucket: ForecastBucket): void {
     this.currentBucket = bucket;
+    if (this.renderedIcon === bucket.icon) {
+      return;
+    }
+    this.renderedIcon = bucket.icon;
     this.background
       .clear()
       .rect(0, 0, this.cellW, this.cellH)
@@ -243,16 +237,40 @@ class ForecastBucketView extends Container {
     fitSprite(this.icon, Math.min(58, this.cellW * 0.54), Math.min(64, Math.max(16, this.cellH - 5)));
     this.icon.position.set(Math.round(this.cellW * 0.5), Math.round(this.cellH * 0.5));
   }
+
+  public debugIconSize(): { width: number; height: number } {
+    return { width: this.icon.width, height: this.icon.height };
+  }
 }
 
-function bucketForSlot(seed: string, slotIndex: number): ForecastBucket {
-  const absoluteTimeSeconds = slotIndex * FORECAST_BUCKET_SECONDS;
-  const sample = sampleWeather(seed, absoluteTimeSeconds);
+function bucketForOffset(
+  seed: string,
+  timeSeconds: number,
+  offsetSeconds: number,
+  index: number,
+  forecast: TimelineToken[] | undefined,
+): ForecastBucket {
+  const token = forecast?.find((item) => Math.abs(item.remainingSeconds - offsetSeconds) < 0.001);
+  const absoluteTimeSeconds = timeSeconds + offsetSeconds;
+  const icon = weatherConditionFromToken(token) ?? sampleWeather(seed, absoluteTimeSeconds).condition;
   return {
-    icon: sample.condition,
+    icon,
     absoluteTimeSeconds,
-    slotIndex,
+    slotIndex: index === 0 ? 0 : offsetSeconds,
   };
+}
+
+function weatherConditionFromToken(token: TimelineToken | undefined): WeatherCondition | undefined {
+  if (
+    token?.id === "sun" ||
+    token?.id === "cloud" ||
+    token?.id === "rain" ||
+    token?.id === "wind" ||
+    token?.id === "snow"
+  ) {
+    return token.id;
+  }
+  return undefined;
 }
 
 function fitSprite(sprite: Sprite, maxWidth: number, maxHeight: number): void {
