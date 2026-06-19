@@ -20,6 +20,51 @@ const PIXEL = {
   smoke: DESIGN_TOKENS.colors.smokeGrey,
 };
 
+type PolygonPoint = { x: number; y: number };
+
+function clipPolygonToRect(points: PolygonPoint[], x: number, y: number, w: number, h: number): PolygonPoint[] {
+  const right = x + w;
+  const bottom = y + h;
+  const edges = [
+    { inside: (point: PolygonPoint) => point.x >= x, intersect: (a: PolygonPoint, b: PolygonPoint) => intersectAtX(a, b, x) },
+    { inside: (point: PolygonPoint) => point.x <= right, intersect: (a: PolygonPoint, b: PolygonPoint) => intersectAtX(a, b, right) },
+    { inside: (point: PolygonPoint) => point.y >= y, intersect: (a: PolygonPoint, b: PolygonPoint) => intersectAtY(a, b, y) },
+    { inside: (point: PolygonPoint) => point.y <= bottom, intersect: (a: PolygonPoint, b: PolygonPoint) => intersectAtY(a, b, bottom) },
+  ];
+
+  return edges.reduce((polygon, edge) => {
+    if (polygon.length === 0) {
+      return polygon;
+    }
+    const clipped: PolygonPoint[] = [];
+    for (let index = 0; index < polygon.length; index += 1) {
+      const current = polygon[index];
+      const previous = polygon[(index + polygon.length - 1) % polygon.length];
+      const currentInside = edge.inside(current);
+      const previousInside = edge.inside(previous);
+      if (currentInside) {
+        if (!previousInside) {
+          clipped.push(edge.intersect(previous, current));
+        }
+        clipped.push(current);
+      } else if (previousInside) {
+        clipped.push(edge.intersect(previous, current));
+      }
+    }
+    return clipped;
+  }, points);
+}
+
+function intersectAtX(a: PolygonPoint, b: PolygonPoint, x: number): PolygonPoint {
+  const ratio = (x - a.x) / (b.x - a.x || Number.EPSILON);
+  return { x, y: a.y + (b.y - a.y) * ratio };
+}
+
+function intersectAtY(a: PolygonPoint, b: PolygonPoint, y: number): PolygonPoint {
+  const ratio = (y - a.y) / (b.y - a.y || Number.EPSILON);
+  return { x: a.x + (b.x - a.x) * ratio, y };
+}
+
 function makeLabel(text: string, size = 18, color = PIXEL.cream, align: "left" | "center" | "right" = "left"): Text {
   return new Text({
     text,
@@ -137,12 +182,27 @@ export class BreakerResetModal extends Container {
   private renderHazardSwitch(x: number, y: number, w: number, h: number): void {
     this.g.rect(x, y, w, h).fill({ color: PIXEL.hazard }).stroke({ color: PIXEL.black, width: 6 });
     for (let stripe = -60; stripe < w + h; stripe += 58) {
+      const clippedStripe = clipPolygonToRect(
+        [
+          { x: x + stripe, y },
+          { x: x + stripe + 34, y },
+          { x: x + stripe - h + 34, y: y + h },
+          { x: x + stripe - h, y: y + h },
+        ],
+        x,
+        y,
+        w,
+        h,
+      );
+      if (clippedStripe.length < 3) {
+        continue;
+      }
       this.g
-        .moveTo(x + stripe, y)
-        .lineTo(x + stripe + 34, y)
-        .lineTo(x + stripe - h + 34, y + h)
-        .lineTo(x + stripe - h, y + h)
-        .closePath()
+        .moveTo(clippedStripe[0].x, clippedStripe[0].y);
+      for (const point of clippedStripe.slice(1)) {
+        this.g.lineTo(point.x, point.y);
+      }
+      this.g.closePath()
         .fill({ color: PIXEL.hazardDark, alpha: 0.9 });
     }
     this.g
